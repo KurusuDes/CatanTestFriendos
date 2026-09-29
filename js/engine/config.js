@@ -18,14 +18,15 @@ export function defaultConfig() {
       startBonus: 0, productionMult: 1, devDeck: 'normal', diceMode: 'random',
       maxRoads: 15, maxSettlements: 5, maxCities: 4, randomStart: true, noRobber: false,
     },
-    modes: { blindfold: false, fog: false, hiddenNumbers: false, events: false, chaosEvery: 0, chaosWhat: 'numbers', privacy: 'auto' },
+    modes: { flipped: false, blindfold: false, fog: false, hiddenNumbers: false, events: false, chaosEvery: 0, chaosWhat: 'numbers', privacy: 'auto' },
   };
 }
 
 // Toggleable game modes shown in the lobby. `apply` receives the config.
 export const MODES = [
-  { id: 'blindfold', icon: '🙈', name: 'Blindfold', desc: 'Nadie ve dónde ponen los demás sus casas iniciales hasta que todos terminan. Si chocan, el que llegó tarde reubica.', get: c => c.modes.blindfold, set: (c, v) => (c.modes.blindfold = v) },
-  { id: 'fog', icon: '🌫️', name: 'Niebla de guerra', desc: 'El mapa está oculto. Las casillas se revelan al construir cerca o cuando producen.', get: c => c.modes.fog, set: (c, v) => (c.modes.fog = v) },
+  { id: 'flipped', icon: '🙈', name: 'Blindfold: tablero volteado', flagship: true, desc: 'Todas las casillas están boca abajo. Pones tus casas a ciegas (los demás sí las ven) y al terminar la colocación se voltea todo el tablero.', get: c => c.modes.flipped, set: (c, v) => (c.modes.flipped = v) },
+  { id: 'fog', icon: '🌑', name: 'Niebla de guerra', flagship: true, desc: 'Todo oscuro: solo ves alrededor de tus casas, y medio hexágono a los lados de tus caminos. Si construyes donde hay alguien que no ves, tu pieza se desvía al hueco libre más cercano.', get: c => c.modes.fog, set: (c, v) => (c.modes.fog = v) },
+  { id: 'blindfold', icon: '🤫', name: 'Casas secretas', desc: 'Nadie ve dónde ponen los demás sus casas iniciales hasta la revelación. Si chocan, el que llegó tarde reubica.', get: c => c.modes.blindfold, set: (c, v) => (c.modes.blindfold = v) },
   { id: 'hiddenNumbers', icon: '❓', name: 'Números secretos', desc: 'Ves los recursos, pero los números se revelan al construir al lado.', get: c => c.modes.hiddenNumbers, set: (c, v) => (c.modes.hiddenNumbers = v) },
   { id: 'events', icon: '🎲', name: 'Eventos por ronda', desc: 'Cada ronda sale un evento: sequía, terremoto, mercado negro, tormenta, plaga...', get: c => c.modes.events, set: (c, v) => (c.modes.events = v) },
   { id: 'chaos', icon: '🌀', name: 'Tierra viva', desc: 'Cada 3 rondas los números (o los recursos) del mapa se barajan.', get: c => c.modes.chaosEvery > 0, set: (c, v) => (c.modes.chaosEvery = v ? 3 : 0) },
@@ -38,8 +39,10 @@ export const MODES = [
 
 export const PRESETS = [
   { id: 'classic', icon: '🏝️', name: 'Clásico', desc: 'Reglas de siempre.', apply: c => {} },
-  { id: 'blind', icon: '🙈', name: 'A ciegas', desc: 'Blindfold + números secretos.', apply: c => { c.modes.blindfold = true; c.modes.hiddenNumbers = true; } },
+  { id: 'blind', icon: '🙈', name: 'Blindfold', desc: 'Tablero volteado durante la colocación inicial.', apply: c => { c.modes.flipped = true; } },
+  { id: 'fog', icon: '🌑', name: 'Niebla de guerra', desc: 'Visión propia, todo oscuro alrededor.', apply: c => { c.modes.fog = true; c.map.shape = 'big'; } },
   { id: 'explorer', icon: '🧭', name: 'Exploradores', desc: 'Niebla de guerra en un archipiélago.', apply: c => { c.modes.fog = true; c.map.shape = 'islands'; c.map.size = 27; } },
+  { id: 'paranoia', icon: '😱', name: 'Paranoia', desc: 'Blindfold + niebla + casas secretas.', apply: c => { c.modes.flipped = true; c.modes.fog = true; c.modes.blindfold = true; } },
   { id: 'chaos', icon: '🌀', name: 'Caos total', desc: 'Eventos, tierra viva, recursos caóticos y oro.', apply: c => { c.modes.events = true; c.modes.chaosEvery = 3; c.map.resources = 'chaos'; c.map.gold = 2; c.map.shape = 'pangea'; } },
   { id: 'speed', icon: '⚡', name: 'Rápida', desc: 'A 7 puntos, producción doble y bonus inicial.', apply: c => { c.rules.vpTarget = 7; c.rules.productionMult = 2; c.rules.startBonus = 1; } },
   { id: 'war', icon: '⚔️', name: 'Guerra', desc: 'Mazo de caballeros y ladrón sin piedad.', apply: c => { c.rules.devDeck = 'war'; c.rules.startBonus = 1; } },

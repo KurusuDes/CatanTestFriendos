@@ -4,7 +4,7 @@ import { RES, COSTS, pips } from './constants.js';
 import {
   canAfford, handSize, victoryPoints, tradeRatio, playableDev, pendingActors,
   legalSetupSettlements, legalSetupRoads, legalRoads, legalSettlements, legalCities,
-  legalRobberTiles, stealTargets, zeroRes,
+  legalRobberTiles, stealTargets, zeroRes, viewFor,
 } from './game.js';
 
 const LEVELS = {
@@ -309,8 +309,9 @@ function robber(s, pid) {
   return { type: 'moveRobber', pid, tile, victim };
 }
 
-export function botAct(s, pid) {
-  if (s.phase === 'gameOver') return null;
+export function botAct(real, pid) {
+  if (real.phase === 'gameOver') return null;
+  const s = viewFor(real, pid); // in fog mode bots only know what they can see
   if (!pendingActors(s).includes(pid)) return null;
   if (s.phase === 'discard') return s.pendingDiscards[pid] ? discard(s, pid) : null;
   if (s.trade && s.trade.from !== pid && s.trade.responses[pid] == null) return respond(s, pid);

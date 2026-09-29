@@ -10,6 +10,7 @@ export const canAfford = (h, cost) => Object.entries(cost).every(([r, n]) => (h[
 const resName = r => `:${r}:`;
 
 class GameError extends Error {}
+class Blocked extends Error {}
 const fail = m => {
   throw new GameError(m);
 };
@@ -83,11 +84,9 @@ export function createGame(configIn) {
   s.devDeck = buildDevDeck(config, n, rng);
   s.devTotal = s.devDeck.length;
 
-  if (M.fog) {
+  if (M.flipped) {
+    // Volteado: every tile starts face down until the initial placement ends
     for (const t of board.tiles) t.revealed = t.numRevealed = false;
-    // a few scouted tiles so the first placement is not totally blind
-    const scouted = shuffle(rng, board.tiles.map(t => t.id)).slice(0, Math.max(1, Math.round(board.tiles.length * 0.15)));
-    for (const id of scouted) board.tiles[id].revealed = board.tiles[id].numRevealed = true;
   } else if (M.hiddenNumbers) {
     for (const t of board.tiles) t.numRevealed = false;
   }
@@ -110,12 +109,74 @@ export function createGame(configIn) {
   s.setup = { queue, idx: 0, step: 'settlement', lastVid: null, blindActive: !!M.blindfold, lastRound: R.setupRounds - 1, fixing: false };
   s.current = queue[0].pid;
   log(s, `¡Empieza la partida! Mapa: ${board.tiles.length} hexágonos.`);
-  if (M.blindfold) log(s, '🙈 Modo Blindfold: las colocaciones iniciales son secretas.');
+  if (M.flipped) log(s, '🔄 Tablero volteado: coloca tus casas sin saber qué hay debajo.');
+  if (M.blindfold) log(s, '🤫 Casas secretas: nadie ve dónde pones hasta la revelación.');
+  if (M.fog) log(s, '🌑 Niebla de guerra: solo ves lo que rodea a tus piezas.');
   return s;
 }
 
 // ---------------- queries ----------------
 export const B = s => s.board;
+
+// ---- Fog of war: per-player vision ----
+// Houses light a circle that covers the three surrounding tiles; roads light a
+// half-tile band on each side (you see the terrain but not the number token).
+export const VISION = { house: 1.25, road: 0.55 };
+
+export function visionOf(s, pid) {
+  const bd = s.board;
+  const circles = [], caps = [];
+  const house = v => circles.push([bd.vertices[v].x, bd.vertices[v].y, VISION.house]);
+  const road = e => {
+    const E = bd.edges[e], a = bd.vertices[E.a], b = bd.vertices[E.b];
+    caps.push([a.x, a.y, b.x, b.y, VISION.road]);
+  };
+  for (const k in s.buildings) if (s.buildings[k].owner === pid) house(+k);
+  for (const k in s.roads) if (s.roads[k] === pid) road(+k);
+  for (const b of s.blind || []) if (b.pid === pid) {
+    house(b.vid);
+    if (b.eid != null) road(b.eid);
+  }
+  return { circles, caps };
+}
+
+function segDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy || 1)));
+  return Math.hypot(px - x1 - t * dx, py - y1 - t * dy);
+}
+
+// how deep (x,y) lies inside the lit area (> 0 means visible)
+export function visibility(vis, x, y) {
+  let best = -Infinity;
+  for (const [cx, cy, r] of vis.circles) best = Math.max(best, r - Math.hypot(x - cx, y - cy));
+  for (const [x1, y1, x2, y2, r] of vis.caps) best = Math.max(best, r - segDist(x, y, x1, y1, x2, y2));
+  return best;
+}
+
+// What `pid` knows: other players' pieces outside their vision are removed and
+// unseen tiles are marked hidden. Used by the UI and by bots (so they don't cheat).
+export function viewFor(s, pid) {
+  if (!s.config.modes.fog || pid == null || pid < 0 || s.phase === 'gameOver') return s;
+  const vis = visionOf(s, pid);
+  const bd = s.board;
+  const buildings = {}, roads = {};
+  const disc = (s.discovered && s.discovered[pid]) || { v: [], e: [] };
+  for (const k in s.buildings) {
+    const b = s.buildings[k], V = bd.vertices[k];
+    if (b.owner === pid || visibility(vis, V.x, V.y) > 0 || disc.v.includes(+k)) buildings[k] = b;
+  }
+  for (const k in s.roads) {
+    const E = bd.edges[k], a = bd.vertices[E.a], c = bd.vertices[E.b];
+    if (s.roads[k] === pid || visibility(vis, (a.x + c.x) / 2, (a.y + c.y) / 2) > 0 || disc.e.includes(+k)) roads[k] = s.roads[k];
+  }
+  const tiles = bd.tiles.map(t => {
+    const lit = visibility(vis, t.x, t.y);
+    return { ...t, revealed: t.revealed && lit > -0.86, numRevealed: t.numRevealed && lit > 0 };
+  });
+  const robberSeen = bd.robber >= 0 && tiles[bd.robber].numRevealed;
+  return { ...s, buildings, roads, board: { ...bd, tiles, robberHidden: !robberSeen }, vision: vis };
+}
 
 export function victoryPoints(s, pid, hidden = true) {
   let vp = 0;
@@ -278,6 +339,7 @@ function giveFromBank(s, pid, r, k) {
 }
 
 function revealAround(s, v) {
+  if (s.config.modes.flipped && s.phase === 'setup') return;
   for (const h of s.board.vertices[v].hexes) {
     const t = s.board.tiles[h];
     if (!t.revealed || !t.numRevealed) {
@@ -392,8 +454,8 @@ function produce(s, sum) {
       gains[b.owner][r] += amt;
       produced = true;
     }
-    if (produced && (!t.revealed || !t.numRevealed)) {
-      t.revealed = t.numRevealed = true;
+    if (produced && t.revealed && !t.numRevealed) {
+      t.numRevealed = true;
       s.fx.push({ kind: 'revealTile', tile: t.id });
     }
   }
@@ -519,6 +581,16 @@ function startRound(s) {
 }
 
 function beginTurns(s) {
+  if (s.config.modes.flipped) {
+    const hideNums = s.config.modes.hiddenNumbers;
+    for (const t of s.board.tiles) {
+      t.revealed = true;
+      t.numRevealed = !hideNums;
+    }
+    if (hideNums) for (const k in s.buildings) for (const h of s.board.vertices[k].hexes) s.board.tiles[h].numRevealed = true;
+    s.fx.push({ kind: 'flipAll' });
+    log(s, '🔄 ¡Se voltea el tablero! Ahora todos ven qué hay debajo.');
+  }
   s.phase = 'roll';
   s.current = s.first;
   s.turn = 1;
@@ -614,6 +686,63 @@ function nextFixOrBegin(s) {
   beginTurns(s);
 }
 
+// ---- fog relocation ----
+// In fog mode a move that looks legal to the player (given what they can see) but
+// collides with an unseen piece is moved to a random nearest legal spot.
+function nearest(s, kind, from, ok) {
+  const bd = s.board;
+  const seen = new Set([from]);
+  let level = [from];
+  while (level.length) {
+    const hits = level.filter(x => x !== from && ok(x));
+    if (hits.length) return pick(s.rng, hits);
+    const next = [];
+    for (const x of level) {
+      const nbs = kind === 'vertex' ? bd.vertices[x].adj : [bd.edges[x].a, bd.edges[x].b].flatMap(v => bd.vertices[v].edges);
+      for (const y of nbs) if (!seen.has(y)) {
+        seen.add(y);
+        next.push(y);
+      }
+    }
+    level = next;
+  }
+  return null;
+}
+
+// remember the hidden pieces you bumped into
+function discover(s, pid, kind, id) {
+  const bd = s.board;
+  s.discovered = s.discovered || {};
+  const d = (s.discovered[pid] = s.discovered[pid] || { v: [], e: [] });
+  const addV = v => { const b = s.buildings[v]; if (b && b.owner !== pid && !d.v.includes(v)) d.v.push(v); };
+  const addE = e => { if (s.roads[e] !== undefined && s.roads[e] !== pid && !d.e.includes(e)) d.e.push(e); };
+  if (kind === 'vertex') {
+    addV(id);
+    bd.vertices[id].adj.forEach(addV);
+    bd.vertices[id].edges.forEach(addE);
+  } else {
+    addE(id);
+    addV(bd.edges[id].a);
+    addV(bd.edges[id].b);
+  }
+}
+
+function fogResolve(s, a, kind, okReal, okKnown, key) {
+  if (!s.config.modes.fog || (s.phase === 'setup' && s.setup.blindActive)) return a;
+  if (okReal(a[key])) return a;
+  if (!okKnown(viewFor(s, a.pid))) return a; // plainly illegal even with what you see: normal error
+  discover(s, a.pid, kind, a[key]);
+  const to = nearest(s, kind, a[key], okReal);
+  if (to === null) {
+    s.fx.push({ kind: 'blocked', pid: a.pid, what: kind, at: a[key] });
+    log(s, `🌑 @${a.pid} tropezó con alguien en la niebla y no pudo construir.`, a.pid);
+    throw new Blocked();
+  }
+  s.fx.push({ kind: 'relocated', pid: a.pid, what: kind, from: a[key], to });
+  log(s, `🌑 ¡Había alguien en la niebla! La pieza de @${a.pid} se desvió.`, a.pid);
+  return { ...a, [key]: to };
+}
+
 // ---------------- action handlers ----------------
 const H = {};
 
@@ -622,6 +751,7 @@ H.placeSettlement = (s, a) => {
   const st = s.setup;
   const entry = st.queue[st.idx];
   if (entry.pid !== a.pid) fail('No es tu turno.');
+  a = fogResolve(s, a, 'vertex', v => canSetupSettlement(s, a.pid, v), kv => canSetupSettlement(kv, a.pid, a.vid), 'vid');
   if (!canSetupSettlement(s, a.pid, a.vid)) fail('No puedes colocar ahí (regla de distancia).');
   const p = s.players[a.pid];
   const isCity = s.config.rules.setupCity && entry.round === st.lastRound && p.citiesLeft > 0;
@@ -649,6 +779,7 @@ H.placeRoad = (s, a) => {
   if (s.phase !== 'setup' || s.setup.step !== 'road') fail('No es momento de colocar un camino.');
   const st = s.setup;
   if (st.queue[st.idx].pid !== a.pid) fail('No es tu turno.');
+  a = fogResolve(s, a, 'edge', e => canSetupRoad(s, a.pid, e), kv => canSetupRoad(kv, a.pid, a.eid), 'eid');
   if (!canSetupRoad(s, a.pid, a.eid)) fail('El camino debe salir de tu nuevo poblado.');
   const p = s.players[a.pid];
   if (p.roadsLeft <= 0) fail('No te quedan caminos.');
@@ -719,10 +850,13 @@ H.discard = (s, a) => {
 H.moveRobber = (s, a) => {
   if (s.phase !== 'robber') fail('No toca mover el ladrón.');
   if (a.pid !== s.current) fail('No es tu turno.');
-  if (!legalRobberTiles(s, a.pid).includes(a.tile)) fail('No puedes poner el ladrón ahí.');
+  const known = s.config.modes.fog ? viewFor(s, a.pid) : s;
+  if (!legalRobberTiles(known, a.pid).includes(a.tile)) fail('No puedes poner el ladrón ahí.');
   const victims = stealTargets(s, a.pid, a.tile);
   let victim = a.victim;
   if (victims.length === 1 && victim == null) victim = victims[0];
+  // in the fog you may not see who is there: steal from a random neighbour
+  if (s.config.modes.fog && victims.length && !victims.includes(victim)) victim = pick(s.rng, victims);
   if (victims.length && !victims.includes(victim)) fail('Elige a quién robar.');
   if (!victims.length) victim = null;
   s.board.robber = a.tile;
@@ -748,6 +882,7 @@ H.build = (s, a) => {
   if (!free) assertMain(s, a);
   if (a.what === 'road') {
     if (p.roadsLeft <= 0) fail('No te quedan caminos.');
+    a = fogResolve(s, a, 'edge', e => canBuildRoad(s, a.pid, e), kv => canBuildRoad(kv, a.pid, a.at), 'at');
     if (!canBuildRoad(s, a.pid, a.at)) fail('El camino debe conectar con tu red.');
     if (!free && !canAfford(p.res, COSTS.road)) fail('Te faltan recursos.');
     if (!free) pay(s, a.pid, COSTS.road);
@@ -763,6 +898,7 @@ H.build = (s, a) => {
     }
   } else if (a.what === 'settlement') {
     if (p.settlementsLeft <= 0) fail('No te quedan poblados.');
+    a = fogResolve(s, a, 'vertex', v => canBuildSettlement(s, a.pid, v), kv => canBuildSettlement(kv, a.pid, a.at), 'at');
     if (!canBuildSettlement(s, a.pid, a.at)) fail('Ahí no se puede construir un poblado.');
     if (!canAfford(p.res, COSTS.settlement)) fail('Te faltan recursos.');
     pay(s, a.pid, COSTS.settlement);
@@ -950,6 +1086,10 @@ export function applyAction(s, a) {
     checkWin(s);
     return { ok: true };
   } catch (e) {
+    if (e instanceof Blocked) {
+      s.actions++;
+      return { ok: true, blocked: true };
+    }
     if (e instanceof GameError) return { ok: false, error: e.message };
     throw e;
   }

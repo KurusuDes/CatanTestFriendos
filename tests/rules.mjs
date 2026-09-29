@@ -264,5 +264,51 @@ t('blindfold: choque en el mismo vértice obliga a reubicar', () => {
   eq(s.buildings[v].owner, 0, 'P0 llegó primero');
 });
 
+t('volteado: casillas boca abajo durante la colocación, casas visibles, y se voltea todo al terminar', () => {
+  const c = defaultConfig();
+  c.seed = 8;
+  c.rules.randomStart = false;
+  c.modes.flipped = true;
+  c.players = c.players.slice(0, 2).map(p => ({ ...p, kind: 'bot' }));
+  const s = G.createGame(c);
+  ok(s.board.tiles.every(t => !t.revealed), 'todo boca abajo');
+  ok(act(s, { type: 'placeSettlement', pid: 0, vid: 12 }).ok);
+  eq(s.buildings[12].owner, 0, 'la casa es visible para todos');
+  ok(s.board.tiles.every(t => !t.revealed), 'poner casa no revela');
+  ok(act(s, { type: 'placeRoad', pid: 0, eid: G.legalSetupRoads(s, 0)[0] }).ok);
+  for (const pid of [1, 1, 0]) {
+    const v = G.legalSetupSettlements(s, pid)[5];
+    ok(act(s, { type: 'placeSettlement', pid, vid: v }).ok);
+    ok(act(s, { type: 'placeRoad', pid, eid: G.legalSetupRoads(s, pid)[0] }).ok);
+  }
+  eq(s.phase, 'roll');
+  ok(s.board.tiles.every(t => t.revealed && t.numRevealed), 'todo volteado');
+  ok(s.fx.some(f => f.kind === 'flipAll'), 'animación de volteo');
+});
+
+t('niebla: solo ves lo tuyo; construir sobre alguien oculto te desvía al hueco más cercano', () => {
+  const c = defaultConfig();
+  c.seed = 3;
+  c.rules.randomStart = false;
+  c.modes.fog = true;
+  c.players = c.players.slice(0, 2).map(p => ({ ...p, kind: 'bot' }));
+  const s = G.createGame(c);
+  const v0 = s.board.vertices.find(x => x.hexes.length === 3).id;
+  ok(act(s, { type: 'placeSettlement', pid: 0, vid: v0 }).ok);
+  ok(act(s, { type: 'placeRoad', pid: 0, eid: G.legalSetupRoads(s, 0)[0] }).ok);
+  const v1 = G.viewFor(s, 1);
+  eq(Object.keys(v1.buildings).length, 0, 'P1 no ve la casa de P0');
+  ok(v1.board.tiles.every(t => !t.numRevealed), 'P1 lo ve todo oscuro');
+  eq(G.viewFor(s, 0).board.tiles.filter(t => t.numRevealed).length, 3, 'P0 ve sus 3 casillas');
+  const target = s.board.vertices[v0].adj[0];
+  const r = act(s, { type: 'placeSettlement', pid: 1, vid: target });
+  ok(r.ok, r.error);
+  ok(s.fx.some(f => f.kind === 'relocated'), 'se desvió');
+  const placed = Object.keys(s.buildings).map(Number).find(v => s.buildings[v].owner === 1);
+  ok(placed !== target, 'no quedó donde apuntó');
+  ok(!s.board.vertices[placed].adj.some(u => s.buildings[u]), 'respeta la distancia');
+  ok(G.viewFor(s, 1).buildings[v0], 'P1 descubrió la casa de P0');
+});
+
 console.log(`\n${pass} ok, ${failN} fallos`);
 process.exit(failN ? 1 : 0);
