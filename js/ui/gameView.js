@@ -743,6 +743,7 @@ function openMenu() {
       ui.is3D && ui.board3d ? h('div', null, h('div', { class: 'section-label' }, 'Gráficos 3D'), h('div', { class: 'gfx-row' },
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_TILT() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ tiltShift: !ui.board3d.constructor.SETTINGS_TILT() }); renderModal(App.state); } }, '📷 Tilt-shift'),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ pixel: ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? 1 : 3 }); renderModal(App.state); } }, '👾 Filtro pixel'),
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_AO() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ ao: !ui.board3d.constructor.SETTINGS_AO() }); renderModal(App.state); } }, '🌑 Oclusión ambiental'),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_Q() === 'high' ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ quality: ui.board3d.constructor.SETTINGS_Q() === 'high' ? 'low' : 'high' }); toast('Calidad cambiada: se aplica al recargar el mapa'); renderModal(App.state); } }, '✨ Alta calidad'))) : null,
       h('button', { class: 'btn', onclick: () => { closeModal(); showHelp(); } }, '📖 Cómo se juega'),
       h('button', { class: 'btn', onclick: () => { const on = App.toggleSound(); toast(on ? '🔊 Sonido activado' : '🔇 Sonido desactivado'); } }, '🔊 Sonido on/off'),

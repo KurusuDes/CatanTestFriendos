@@ -11,7 +11,7 @@ Catan en el navegador con mapas personalizables y modos que no existen en la caj
 - **Modos insignia:** *Blindfold* (tablero boca abajo durante la colocación; al terminar se voltea todo) y *Niebla de guerra* (visión propia: alrededor de tus casas y medio hexágono junto a tus caminos; si construyes sobre alguien oculto, te desvías al hueco libre más cercano).
 - **Más modos combinables:** Casas secretas, Números secretos, Eventos por ronda, Tierra viva, Dados equilibrados, Ladrón amable, Sin ladrón, Ciudad inicial, Turbo.
 - **Reglas ajustables:** puntos para ganar, límite de mano, rondas de colocación, bonus inicial, piezas por jugador, mazos de desarrollo, oro, puertos, desiertos.
-- **Bots** en 3 niveles, **hotseat** con pantalla de pase, **online** P2P (WebRTC/PeerJS, sin servidor) y **mapa 3D estilo Civilization VI** (three.js: terreno continuo, modelos hechos en Blender en `tools/blender/`, tilt-shift) con **UI pixel art**.
+- **Bots** en 3 niveles, **hotseat** con pantalla de pase, **online** P2P (WebRTC/PeerJS, sin servidor) y **mapa 3D de maqueta realista** (three.js: terreno continuo con 8 texturas PBR mezcladas, cielo físico con IBL, agua con espuma según profundidad, hierba y trigo al viento, sombras de nubes, GTAO, tilt-shift; modelos texturizados con AO horneado hechos en Blender en `tools/blender/`) con **UI pixel art**.
 - Reglas completas: ladrón, descartes, puertos 3:1 y 2:1, comercio entre jugadores, cartas de desarrollo, camino más largo y ejército más grande.
 
 ## Desarrollo

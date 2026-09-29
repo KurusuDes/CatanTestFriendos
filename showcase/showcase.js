@@ -128,7 +128,7 @@ scene('civ', 7000, {
   enter(root, sc) {
     sc.st = JSON.parse(botFrames[Math.floor(botFrames.length * 0.7)]);
     show3d(sc.st, {});
-    sc.title = makeTitle(root, '01 · Un mapa vivo', 'Mapa 3D estilo Civ', 'Montañas, bosques, campos y colinas que se funden entre casillas. Modelos hechos en Blender.');
+    sc.title = makeTitle(root, '01 · Un mapa vivo', 'Una maqueta viva', 'Terreno texturizado, trigo y hierba al viento, agua con espuma y sombras de nubes. Modelos hechos en Blender.');
   },
   update(lt, sc) {
     sc.title(lt, 7000);
@@ -376,7 +376,7 @@ scene('online', 5600, {
 });
 
 // 8 · OUTRO
-const FEATURES = ['🙈 Blindfold', '🌑 Niebla', '🤫 Casas secretas', '❓ Números secretos', '🎲 Eventos', '🌀 Tierra viva', '💰 Oro', '🗺️ 10 mapas', '✏️ Editor', '🤖 Bots', '🌐 Online', '🏔️ Mapa 3D', '📱 Móvil'];
+const FEATURES = ['🙈 Blindfold', '🌑 Niebla', '🤫 Casas secretas', '❓ Números secretos', '🎲 Eventos', '🌀 Tierra viva', '💰 Oro', '🗺️ 10 mapas', '✏️ Editor', '🤖 Bots', '🌐 Online', '🏔️ Maqueta 3D', '📱 Móvil'];
 scene('outro', 6200, {
   use3d: true,
   enter(root, sc) {
