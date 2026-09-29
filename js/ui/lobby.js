@@ -207,8 +207,8 @@ export function lobbyScreen(root, opts = {}) {
       h('h3', null, '🎭 Modos de juego ', h('small', null, 'combínalos como quieras')),
       h('div', { class: 'modes' }, MODES.map(md => {
         const on = md.get(cfg);
-        return h('div', { class: 'mode' + (on ? ' on' : ''), onclick: () => { md.set(cfg, !on); refresh(); } },
-          h('div', { class: 'mi' }, md.icon), h('div', null, h('b', null, md.name), h('small', null, md.desc)), h('div', { class: 'switch' }));
+        return h('div', { class: 'mode' + (on ? ' on' : '') + (md.flagship ? ' flag' : ''), onclick: () => { md.set(cfg, !on); refresh(); } },
+          h('div', { class: 'mi' }, md.icon), h('div', null, md.flagship ? h('span', { class: 'flagship' }, '★ MODO INSIGNIA') : null, h('b', null, md.name), h('small', null, md.desc)), h('div', { class: 'switch' }));
       })),
       cfg.modes.chaosEvery ? h('div', { class: 'opt-grid' },
         h('div', null, h('label', null, 'Tierra viva: qué se baraja'), h('select', { onchange: e => { cfg.modes.chaosWhat = e.target.value; refresh(); } },

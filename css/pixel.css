@@ -8,13 +8,13 @@
   --white: #f4f4f4; --steel: #94b0c2; --slate: #566c86; --dusk: #333c57;
   --gold: var(--sand); --pink: var(--coral); --red: var(--wine); --text: var(--white); --muted: var(--steel);
   --panel: #232b47; --panel2: #333c57; --line: rgba(148,176,194,.25);
-  --font: 'Pixelify Sans', 'Nunito', monospace; --display: 'Pixelify Sans', monospace;
+  --font: 'Pixelify Sans', 'Nunito', monospace; --display: 'Silkscreen', 'Pixelify Sans', monospace; --num: 'Silkscreen', monospace;
   --px: 3px;
 }
 * { border-radius: 0 !important; }
 html { image-rendering: pixelated; }
 body {
-  font-family: var(--font); font-size: 16px; letter-spacing: .3px;
+  font-family: var(--font); font-weight: 500; font-size: 16px; letter-spacing: .3px;
   background: var(--ink) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Crect width='8' height='8' fill='%231a1c2c'/%3E%3Crect width='1' height='1' fill='%23232b47'/%3E%3C/svg%3E") repeat;
   -webkit-font-smoothing: none; font-smooth: never;
 }
@@ -49,7 +49,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: 1px;
 
 /* ---------- buttons ---------- */
 .btn {
-  font-family: var(--font); font-weight: 700; font-size: 16px; letter-spacing: .5px;
+  font-family: var(--font); font-weight: 600; font-size: 16px; letter-spacing: .5px;
   background: var(--blue); color: var(--white); border: 0;
   box-shadow: 0 0 0 3px var(--ink), inset -4px -4px 0 rgba(0,0,0,.35), inset 4px 4px 0 rgba(255,255,255,.28);
   padding: 10px 16px; margin: 3px; text-shadow: 2px 2px 0 rgba(0,0,0,.4);
@@ -135,13 +135,13 @@ input[type=range] { accent-color: var(--sand); }
 
 /* ---------- 3D pixel labels ---------- */
 .labels-3d { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.tok3d { font-family: var(--display); background: #f7ecd0; color: var(--ink); min-width: 26px; height: 27px; opacity: .93; display: grid; place-items: center; line-height: .9;
+.tok3d { font-family: var(--num); background: #f7ecd0; color: var(--ink); min-width: 26px; height: 27px; opacity: .93; display: grid; place-items: center; line-height: .9;
   box-shadow: 0 0 0 3px var(--ink), inset -3px -3px 0 #d7c49b, 4px 5px 0 1px rgba(0,0,0,.35); font-weight: 700; font-size: 14px; padding: 2px 3px 0; text-align: center; }
 .tok3d i { font-style: normal; font-size: 7px; letter-spacing: -1px; margin-top: -3px; }
 .tok3d.red { color: var(--wine); }
 .tok3d.rolled { animation: tokPulse .35s steps(2) infinite; }
 @keyframes tokPulse { 50% { background: var(--sand); transform: translateY(-4px); } }
-.port3d { font-family: var(--display); background: var(--white); color: var(--ink); padding: 2px 6px; font-size: 14px; font-weight: 700; box-shadow: 0 0 0 3px var(--ink), 3px 4px 0 1px rgba(0,0,0,.35); display: flex; gap: 3px; align-items: center; }
+.port3d { font-family: var(--num); background: var(--white); color: var(--ink); padding: 2px 6px; font-size: 14px; font-weight: 700; box-shadow: 0 0 0 3px var(--ink), 3px 4px 0 1px rgba(0,0,0,.35); display: flex; gap: 3px; align-items: center; }
 .rune3d { font-size: 26px; color: #f3d9a4; text-shadow: 2px 2px 0 var(--ink); }
 .hot3d { pointer-events: auto; border: 0; cursor: pointer; background: var(--pc); box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px #fff; animation: hotBlink .5s steps(2) infinite; padding: 0; }
 .hot3d.v { width: 16px; height: 16px; }
@@ -152,3 +152,10 @@ input[type=range] { accent-color: var(--sand); }
 @keyframes hotBlink { 50% { box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--pc); } }
 .board-wrap { background: var(--ink); }
 .gfx-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+/* numbers must be unambiguous (3 vs 8): Silkscreen digits */
+.vp, .dice-sum, .rcard b, .dcard b, .stepper .n, .token-num, .pcard .stats, .bank-info, .room-code, .hist em, .hist span { font-family: var(--num); }
+.pcard .name, .btn, .chip, .banner { font-weight: 600; }
+.logo .t1, .logo .t2, .brand, .card h3, .modal h2, .announce .at { font-family: var(--display); font-weight: 700; }
+.logo .t1 { font-size: clamp(54px, 11vw, 124px); }
+.logo .t2 { font-size: clamp(34px, 7vw, 76px); }

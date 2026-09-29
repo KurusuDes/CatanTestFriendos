@@ -450,6 +450,12 @@ function frame(T) {
     B.clock = { getElapsedTime: () => T / 1000 };
     B.now = () => T;
     B.tick();
+    // keep the left text column clean
+    for (const el of B.labels.domElement.children) {
+      const m = /translate\((-?[\d.]+)px/.exec(el.style.transform.split('translate(-50%,-50%)').pop() || '');
+      const x = m ? parseFloat(m[1]) : 9999;
+      el.style.visibility = x < 600 ? 'hidden' : '';
+    }
   }
   document.getElementById('barFill').style.width = (T / TOTAL) * 100 + '%';
 }
