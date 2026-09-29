@@ -90,7 +90,9 @@ export const App = {
       const a = botAct(st, pid);
       if (!a) continue;
       const quick = a.type === 'respondTrade' || a.type === 'discard' || a.type === 'placeRoad';
-      const delay = quick ? this.speed * 0.6 : a.type === 'endTurn' ? this.speed * 0.8 : this.speed;
+      // give big moments (reveal, flip, events) time to breathe before bots continue
+      const drama = (st.fx || []).some(f => ['flipAll', 'blindReveal', 'event', 'chaos', 'win'].includes(f.kind)) ? 2200 : 0;
+      const delay = drama + (quick ? this.speed * 0.6 : a.type === 'endTurn' ? this.speed * 0.8 : this.speed);
       this.botTimer = setTimeout(() => {
         if (this.state !== st) return;
         const r = applyAction(st, a);

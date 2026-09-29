@@ -588,6 +588,8 @@ function beginTurns(s) {
       t.numRevealed = !hideNums;
     }
     if (hideNums) for (const k in s.buildings) for (const h of s.board.vertices[k].hexes) s.board.tiles[h].numRevealed = true;
+    for (const [pid, vid] of s.setup.pendingRes || []) setupResources(s, pid, vid);
+    s.setup.pendingRes = [];
     s.fx.push({ kind: 'flipAll' });
     log(s, '🔄 ¡Se voltea el tablero! Ahora todos ven qué hay debajo.');
   }
@@ -656,7 +658,10 @@ function resolveBlind(s) {
   s.fx.push({ kind: 'blindReveal', placements: s.blind.map(b => ({ pid: b.pid, vid: b.vid, eid: b.eid, ok: accepted.includes(b) })) });
   for (const b of accepted) {
     revealAround(s, b.vid);
-    if (b.round === st.lastRound) setupResources(s, b.pid, b.vid);
+    if (b.round === st.lastRound) {
+      if (s.config.modes.flipped) (st.pendingRes = st.pendingRes || []).push([b.pid, b.vid]);
+      else setupResources(s, b.pid, b.vid);
+    }
   }
   log(s, `🙈 ¡Revelación! Todas las casas iniciales ya son visibles.`);
   s.blind = [];
@@ -769,7 +774,11 @@ H.placeSettlement = (s, a) => {
   } else {
     s.buildings[a.vid] = { owner: a.pid, type };
     revealAround(s, a.vid);
-    if (entry.round === st.lastRound) setupResources(s, a.pid, a.vid);
+    if (entry.round === st.lastRound) {
+      // face-down board: resources would give away what's underneath, pay them on the flip
+      if (s.config.modes.flipped) (st.pendingRes = st.pendingRes || []).push([a.pid, a.vid]);
+      else setupResources(s, a.pid, a.vid);
+    }
     log(s, `🏠 @${a.pid} coloca ${isCity ? 'una ciudad' : 'un poblado'}.`, a.pid);
   }
   s.fx.push({ kind: 'build', what: type, pid: a.pid, at: a.vid, hidden: st.blindActive });

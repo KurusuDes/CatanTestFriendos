@@ -314,3 +314,10 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 .help-body h3 { margin: 16px 0 6px; font-size: 17px; color: var(--gold); }
 .help-body li { margin-bottom: 4px; color: #cfd8ee; }
 .room-code { font-family: var(--display); font-size: 44px; letter-spacing: 8px; color: var(--gold); text-align: center; background: rgba(0,0,0,.3); border-radius: 14px; padding: 8px; user-select: all; }
+
+/* face-down tiles (Blindfold) and the flip */
+.back-rune { text-anchor: middle; font-size: 44px; fill: #f3d9a4; opacity: .85; pointer-events: none; }
+.tile.flip { animation: tileFlip .7s cubic-bezier(.3,1.4,.5,1) both; transform-box: fill-box; transform-origin: center; }
+@keyframes tileFlip { 0% { transform: scaleX(0) scaleY(.85); filter: brightness(2); } 60% { transform: scaleX(1.08); } 100% { transform: none; filter: none; } }
+/* fog of war */
+.fog-layer { fill: #060912; opacity: .94; pointer-events: none; }

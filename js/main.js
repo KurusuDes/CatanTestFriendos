@@ -5,6 +5,31 @@ import { gameScreen } from './ui/gameView.js';
 import { editorScreen, decodeMap } from './ui/editor.js';
 import { showHelp } from './ui/help.js';
 import { Net } from './net.js';
+import { autoPixelize } from './ui/pixel.js';
+
+// live 3D island slowly orbiting behind the title
+async function menuDiorama(el) {
+  try {
+    const [{ Board3D }, { createGame }, { defaultConfig }] = await Promise.all([import('./ui/board3d.js'), import('./engine/game.js'), import('./engine/config.js')]);
+    if (!el.isConnected) return;
+    const c = defaultConfig();
+    c.map.shape = ['pangea', 'big', 'star', 'ring'][Math.floor(Math.random() * 4)];
+    c.map.size = 30;
+    c.map.gold = 1;
+    const st = createGame(c);
+    const b = await Board3D.create(el);
+    if (!el.isConnected) return b.dispose();
+    b.render(st, {});
+    b.labels.domElement.style.display = 'none';
+    b.controls.enabled = false;
+    b.controls.autoRotate = true;
+    b.controls.autoRotateSpeed = 0.35;
+    b.setZoom(1.15);
+    App.onLeave = () => b.dispose();
+  } catch (e) {
+    console.warn('diorama', e);
+  }
+}
 
 function menuScreen(root) {
   const save = storage(SAVE_KEY);
@@ -12,11 +37,12 @@ function menuScreen(root) {
   const bg = h('div', { class: 'menu-bg' }, Array.from({ length: 26 }, (_, i) => h('div', {
     class: 'fhex', style: { left: ((i * 37) % 100) + '%', top: ((i * 53) % 100) + '%', animationDelay: -(i * 0.7) + 's', fontSize: 26 + ((i * 7) % 30) + 'px' },
   }, icons[i % icons.length])));
-  root.append(h('div', { class: 'menu screen' }, bg,
+  const dio = h('div', { class: 'menu-bg3d' });
+  root.append(h('div', { class: 'menu screen' }, bg, dio,
     h('div', { class: 'logo' },
-      h('div', { class: 't1' }, 'CATAN'),
-      h('span', { class: 'x' }, '✕'),
-      h('div', { class: 't2' }, 'KCHUDITES'),
+      h('div', { class: 't1 jit' }, 'CATAN'),
+      h('span', { class: 'x jit' }, 'x'),
+      h('div', { class: 't2 jit' }, 'KCHUDITES'),
       h('div', { class: 'sub' }, 'Colonos, caos y modos que no existen en la caja.')),
     h('div', { class: 'menu-buttons' },
       save ? h('button', { class: 'btn green', onclick: () => App.resume() }, `▶️ Continuar partida (ronda ${save.round || 0})`) : null,
@@ -27,6 +53,7 @@ function menuScreen(root) {
       h('button', { class: 'btn', onclick: () => showHelp() }, '📖 Cómo se juega'),
       h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none' } }, '🎬 Showcase')),
     h('div', { class: 'menu-foot' }, 'Hecho para los Kchudites · funciona en PC y móvil · sin instalar nada')));
+  menuDiorama(dio);
 }
 
 async function quickBots() {
@@ -100,6 +127,7 @@ function onlineScreen(root) {
     h('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Conexión directa entre navegadores (WebRTC). En algunas redes muy cerradas puede no funcionar.')));
 }
 
+autoPixelize(document.body);
 App.screens = { menu: menuScreen, lobby: lobbyScreen, game: gameScreen, editor: editorScreen, online: onlineScreen };
 
 // shared map link: ?mapa=<code>

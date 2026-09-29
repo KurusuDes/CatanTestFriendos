@@ -132,6 +132,10 @@ export class BoardView {
         S('radialGradient', { id: 'tokenG', cx: '40%', cy: '35%', r: '70%' },
           S('stop', { offset: '0%', 'stop-color': '#fffaf0' }),
           S('stop', { offset: '100%', 'stop-color': '#eadcbc' })),
+        S('filter', { id: 'fogBlur', x: '-20%', y: '-20%', width: '140%', height: '140%' }, S('feGaussianBlur', { stdDeviation: 14 })),
+        S('pattern', { id: 'backP', width: 28, height: 28, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' },
+          S('rect', { width: 28, height: 28, fill: '#8a6443' }),
+          S('rect', { width: 14, height: 28, fill: '#7d5a3b' })),
         S('filter', { id: 'shadow', x: '-50%', y: '-50%', width: '200%', height: '200%' },
           S('feDropShadow', { dx: 0, dy: 3, stdDeviation: 3, 'flood-opacity': 0.45 })),
         S('pattern', { id: 'fogP', width: 24, height: 24, patternUnits: 'userSpaceOnUse' },
@@ -152,10 +156,14 @@ export class BoardView {
       const cx = t.x * U, cy = t.y * U;
       const info = TILE_INFO[t.res] || TILE_INFO.desert;
       const hidden = !t.revealed;
-      const g = S('g', { class: 'tile' + (hidden ? ' fog' : '') + (rolled && t.num === rolled && t.revealed ? ' rolled' : '') + (view.pulseTiles && view.pulseTiles.has(t.id) ? ' pulse' : ''), 'data-tile': t.id });
-      g.append(S('polygon', { points: hexPoints(cx, cy, U * 0.97), fill: hidden ? 'url(#fogP)' : info.color, stroke: hidden ? '#3e465a' : shade(info.color, 0.62), 'stroke-width': 5, class: 'hex' }));
-      g.append(S('polygon', { points: hexPoints(cx, cy, U * 0.8), fill: 'none', stroke: hidden ? '#6d7894' : shade(info.color, 1.18), 'stroke-width': 3, opacity: 0.55 }));
-      if (hidden) {
+      const faceDown = hidden && view.faceDown;
+      const flip = view.flipAt ? ` flip` : '';
+      const g = S('g', { style: view.flipAt ? `animation-delay:${(Math.hypot(t.x, t.y) * 90) | 0}ms` : null, class: 'tile' + flip + (faceDown ? ' facedown' : hidden ? ' fog' : '') + (rolled && t.num === rolled && t.revealed ? ' rolled' : '') + (view.pulseTiles && view.pulseTiles.has(t.id) ? ' pulse' : ''), 'data-tile': t.id });
+      g.append(S('polygon', { points: hexPoints(cx, cy, U * 0.97), fill: faceDown ? 'url(#backP)' : hidden ? 'url(#fogP)' : info.color, stroke: faceDown ? '#4e3522' : hidden ? '#3e465a' : shade(info.color, 0.62), 'stroke-width': 5, class: 'hex' }));
+      g.append(S('polygon', { points: hexPoints(cx, cy, U * 0.8), fill: 'none', stroke: faceDown ? '#c9a46a' : hidden ? '#6d7894' : shade(info.color, 1.18), 'stroke-width': faceDown ? 4 : 3, opacity: faceDown ? 0.8 : 0.55 }));
+      if (faceDown) {
+        g.append(S('text', { x: cx, y: cy + 8, class: 'back-rune' }, '✦'));
+      } else if (hidden) {
         g.append(S('text', { x: cx, y: cy + 16, class: 'tile-icon fog-icon', 'font-size': 58 }, '☁️'));
         g.append(S('text', { x: cx, y: cy + 8, class: 'fog-q' }, '?'));
       } else {
@@ -241,7 +249,7 @@ export class BoardView {
     svg.append(gB);
 
     // robber
-    if (bd.robber >= 0 && !st.config.rules.noRobber && bd.tiles[bd.robber].revealed) {
+    if (bd.robber >= 0 && !st.config.rules.noRobber && bd.tiles[bd.robber].revealed && !bd.robberHidden) {
       const t = bd.tiles[bd.robber];
       const g = S('g', { class: 'robber', transform: `translate(${t.x * U - 40},${t.y * U + 6})` });
       g.append(S('ellipse', { cx: 0, cy: 22, rx: 15, ry: 5, fill: 'rgba(0,0,0,.35)' }));
@@ -249,6 +257,17 @@ export class BoardView {
       g.append(S('circle', { cx: 0, cy: -12, r: 10, class: 'robber-body' }));
       g.append(S('rect', { x: -7, y: -15, width: 14, height: 4, rx: 2, fill: '#e53935' }));
       svg.append(g);
+    }
+
+    // fog of war: darkness everywhere except around the viewer's pieces
+    if (view.vision) {
+      const pad = 12 * U;
+      const box = { x: b.minX * U - pad, y: b.minY * U - pad, width: (b.maxX - b.minX) * U + 2 * pad, height: (b.maxY - b.minY) * U + 2 * pad };
+      const holes = S('g', { filter: 'url(#fogBlur)' });
+      for (const [x, y, r] of view.vision.circles) holes.append(S('circle', { cx: x * U, cy: y * U, r: r * U, fill: '#000' }));
+      for (const [x1, y1, x2, y2, r] of view.vision.caps) holes.append(S('line', { x1: x1 * U, y1: y1 * U, x2: x2 * U, y2: y2 * U, stroke: '#000', 'stroke-width': r * 2 * U, 'stroke-linecap': 'round' }));
+      svg.firstChild.append(S('mask', { id: 'fogMask', maskUnits: 'userSpaceOnUse', ...box }, S('rect', { ...box, fill: '#fff' }), holes));
+      svg.append(S('rect', { ...box, class: 'fog-layer', mask: 'url(#fogMask)' }));
     }
 
     // hotspots

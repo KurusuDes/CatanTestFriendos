@@ -66,7 +66,7 @@ export function blob(rng, n) {
   return [...set.values()];
 }
 
-function pixelToHex(x, y) {
+export function pixelToHex(x, y) {
   const q = (SQ3 / 3) * x - y / 3;
   const r = (2 / 3) * y;
   let rx = Math.round(q), rz = Math.round(r), ry = Math.round(-q - r);

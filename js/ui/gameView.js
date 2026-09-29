@@ -22,7 +22,7 @@ export function gameScreen(root) {
     turn: h('div', { class: 'turn-info' }),
     dice: h('div', { class: 'dice' }),
     event: h('div'),
-    banner: h('div', { class: 'banner hidden' }),
+    banner: h('div', { class: 'banner jit hidden' }),
     players: h('div', { class: 'players' }),
     bank: h('div', { class: 'bank-info' }),
     log: h('div', { class: 'log' }),
@@ -53,7 +53,7 @@ export function gameScreen(root) {
   };
   ui.board2d = ui.board = new BoardView(boardWrap);
   ui.boardWrap = boardWrap;
-  if (storage('kchudites.view3d')) setView3D(true);
+  if (storage('kchudites.view3d') !== false) setView3D(true);
   boardWrap.addEventListener('click', e => {
     if (ui.pick && e.target.tagName !== 'CANVAS') {
       ui.pick = null;
@@ -86,7 +86,8 @@ async function setView3D(on) {
     try {
       const { Board3D } = await import('./board3d.js');
       if (ui !== u) return;
-      u.board3d = u.board3d || new Board3D(u.boardWrap);
+      u.board3d = u.board3d || (await Board3D.create(u.boardWrap));
+      if (ui !== u) return u.board3d.dispose();
       u.board2d.svg.style.display = 'none';
       u.board3d.canvas.style.display = '';
       u.board = u.board3d;
@@ -136,6 +137,8 @@ function privacyOn(st) {
   const mode = st.config.modes.privacy || 'auto';
   if (mode === 'off') return false;
   if (mode === 'on') return st.phase !== 'gameOver';
+  // each player has their own vision in the fog, so always hide the screen between humans
+  if (st.config.modes.fog) return st.phase !== 'gameOver';
   return st.phase === 'setup' && st.setup.blindActive;
 }
 
@@ -200,6 +203,18 @@ function handleFx(st) {
         play.win();
         confetti();
         break;
+      case 'flipAll':
+        ui.flipAt = Date.now();
+        ui.flipPending = true;
+        announce('🙈', '¡SE VOLTEA EL TABLERO!', 'Ahora todos ven qué hay debajo');
+        play.reveal();
+        break;
+      case 'relocated':
+        if (f.pid === v) toast('🌑 ¡Había alguien en la niebla! Tu pieza se desvió al hueco libre más cercano.', 'error', 3500);
+        break;
+      case 'blocked':
+        if (f.pid === v) toast('🌑 ¡Te topaste con alguien en la niebla! No había sitio: no pagaste nada.', 'error', 3500);
+        break;
     }
   }
   if (st.current !== ui.lastCurrent) {
@@ -210,7 +225,7 @@ function handleFx(st) {
 }
 
 function announce(icon, title, desc) {
-  const a = h('div', { class: 'announce' }, h('div', null, h('div', { class: 'ai' }, icon), h('div', { class: 'at' }, title), h('div', { class: 'ad' }, desc)));
+  const a = h('div', { class: 'announce' }, h('div', null, h('div', { class: 'ai' }, icon), h('div', { class: 'at jit' }, title), h('div', { class: 'ad' }, desc)));
   document.body.append(a);
   setTimeout(() => a.remove(), 2700);
 }
@@ -283,8 +298,9 @@ function renderTop(st) {
   }
 }
 
-function interaction(st, v) {
+function interaction(real, v) {
   if (v < 0) return null;
+  const st = G.viewFor(real, v);
   const color = st.players[v].color;
   const mk = (kind, list, onPick) => ({ kind, legal: new Set(list), onPick, color });
   if (st.phase === 'setup') {
@@ -310,7 +326,7 @@ function interaction(st, v) {
 }
 
 function robberPick(st, v, tile) {
-  const victims = G.stealTargets(st, v, tile);
+  const victims = G.stealTargets(G.viewFor(st, v), v, tile);
   if (victims.length <= 1) {
     App.dispatch({ type: 'moveRobber', pid: v, tile, victim: victims[0] });
     return;
@@ -351,14 +367,24 @@ function renderBoard(st, v, locked) {
   if (Date.now() - ui.pulseAt > 2600) ui.pulseTiles.clear();
   let blindOwn = [];
   if (st.phase === 'setup' && st.setup.blindActive) blindOwn = v < 0 ? st.blind : locked ? [] : st.blind.filter(b => b.pid === v);
-  ui.board.render(st, {
+  const vst = locked ? { ...G.viewFor(st, v), buildings: {}, roads: {}, vision: { circles: [], caps: [] } } : G.viewFor(st, v);
+  const flipAt = ui.flipPending ? ui.flipAt : 0;
+  ui.flipPending = false;
+  ui.board.render(vst, {
+    vision: st.config.modes.fog && v >= 0 ? vst.vision || { circles: [], caps: [] } : null,
+    faceDown: st.config.modes.flipped,
+    flipAt,
     interaction: inter,
     rolled: Date.now() - ui.rolledAt < 2600 ? ui.rolled : null,
     pulseTiles: ui.pulseTiles,
     blindOwn,
   });
   const txt = locked ? '' : bannerText(st, v, inter);
-  ui.els.banner.textContent = txt;
+  if (ui.els.banner.dataset.txt !== txt) {
+    ui.els.banner.dataset.txt = txt;
+    delete ui.els.banner.dataset.jit;
+    ui.els.banner.textContent = txt;
+  }
   ui.els.banner.classList.toggle('hidden', !txt);
 }
 
@@ -713,7 +739,11 @@ function openMenu() {
   openModal(() => h('div', null,
     h('h2', null, '☰ Menú'),
     h('div', { style: { display: 'grid', gap: '10px' } },
-      h('button', { class: 'btn', onclick: () => { closeModal(); setView3D(!ui.is3D); } }, ui.is3D ? '🗺️ Vista 2D' : '🧊 Vista 3D'),
+      h('button', { class: 'btn', onclick: () => { closeModal(); setView3D(!ui.is3D); } }, ui.is3D ? '🗺️ Vista plano 2D' : '🏔️ Vista mapa 3D'),
+      ui.is3D && ui.board3d ? h('div', null, h('div', { class: 'section-label' }, 'Gráficos 3D'), h('div', { class: 'gfx-row' },
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_TILT() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ tiltShift: !ui.board3d.constructor.SETTINGS_TILT() }); renderModal(App.state); } }, '📷 Tilt-shift'),
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ pixel: ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? 1 : 3 }); renderModal(App.state); } }, '👾 Filtro pixel'),
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_Q() === 'high' ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ quality: ui.board3d.constructor.SETTINGS_Q() === 'high' ? 'low' : 'high' }); toast('Calidad cambiada: se aplica al recargar el mapa'); renderModal(App.state); } }, '✨ Alta calidad'))) : null,
       h('button', { class: 'btn', onclick: () => { closeModal(); showHelp(); } }, '📖 Cómo se juega'),
       h('button', { class: 'btn', onclick: () => { const on = App.toggleSound(); toast(on ? '🔊 Sonido activado' : '🔇 Sonido desactivado'); } }, '🔊 Sonido on/off'),
       h('div', null, h('div', { class: 'section-label' }, 'Velocidad de los bots'), speedControl()),
