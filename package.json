@@ -1,0 +1,1 @@
+{"type":"module","name":"catan-x-kchudites","private":true,"scripts":{"test":"node tests/sim.mjs 300"}}
