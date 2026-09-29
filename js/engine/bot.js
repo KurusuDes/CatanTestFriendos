@@ -81,7 +81,9 @@ function setupSettlement(s, pid) {
   const L = lvl(s, pid);
   const prod = production(s, pid);
   const cands = legalSetupSettlements(s, pid);
-  return best(cands, v => vertexScore(s, pid, v, prod) + noise(s, v) * L.noise * 3);
+  // blind: nobody sees the others, so spread out instead of all rushing the same top spot
+  const spread = s.setup.blindActive ? 3.5 + L.noise * 3 : L.noise * 3;
+  return best(cands, v => vertexScore(s, pid, v, prod) + noise(s, v + pid * 7919) * spread);
 }
 
 function openFor(s, v) {
