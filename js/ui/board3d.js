@@ -350,6 +350,7 @@ export class Board3D {
     this.resizeObs = new ResizeObserver(() => this.resize());
     this.resizeObs.observe(container);
     this.clock = new THREE.Clock();
+    this.now = () => performance.now(); // overridable time source (frame-by-frame recording)
     this.alive = true;
     const loop = () => {
       if (!this.alive) return;
@@ -446,7 +447,7 @@ export class Board3D {
       b.obj.position.y = b.y + Math.sin(t * 1.4 + b.ph) * 0.025;
       b.obj.rotation.z = Math.sin(t * 1.1 + b.ph) * 0.05;
     }
-    const now = performance.now();
+    const now = this.now();
     this.spawns = this.spawns.filter(sp => {
       const k = Math.min(1, (now - sp.t0) / 450);
       const e = 1 - Math.pow(1 - k, 3);
@@ -706,7 +707,7 @@ export class Board3D {
     const bd = st.board;
     const cx = (bd.bounds.minX + bd.bounds.maxX) / 2, cz = (bd.bounds.minY + bd.bounds.maxY) / 2;
     const geo = new THREE.CylinderGeometry(0.98, 0.98, 0.06, 6);
-    const now = performance.now();
+    const now = this.now();
     for (const t of bd.tiles) {
       const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: '#8a6443', roughness: 0.8, transparent: true }));
       m.position.set(t.x, 1.6, t.y);
@@ -773,7 +774,7 @@ export class Board3D {
     const add = (obj, key, s) => {
       this.dynGroup.add(obj);
       pieces.add(key);
-      if (this.prevPieces.size && !this.prevPieces.has(key)) this.spawns.push({ obj, y: obj.position.y, base: obj.scale.clone(), t0: performance.now() });
+      if (this.prevPieces.size && !this.prevPieces.has(key)) this.spawns.push({ obj, y: obj.position.y, base: obj.scale.clone(), t0: this.now() });
     };
     const ghostify = o => o.traverse(m => {
       if (m.isMesh) {
