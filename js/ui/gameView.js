@@ -1,5 +1,5 @@
 import { App } from '../app.js';
-import { h, clear, rich, toast } from './dom.js';
+import { h, clear, rich, toast, storage } from './dom.js';
 import { BoardView } from './boardView.js';
 import { RES, TILE_INFO, COSTS, DEV_INFO, EVENTS } from '../engine/constants.js';
 import * as G from '../engine/game.js';
@@ -41,7 +41,8 @@ export function gameScreen(root) {
     h('div', { class: 'zoom-ctrl' },
       h('button', { class: 'btn', title: 'Acercar', onclick: () => ui.board.setZoom(ui.board.zoom * 1.25) }, '+'),
       h('button', { class: 'btn', title: 'Alejar', onclick: () => ui.board.setZoom(ui.board.zoom / 1.25) }, '−'),
-      h('button', { class: 'btn', title: 'Centrar', onclick: () => ui.board.resetView() }, '⤢')));
+      h('button', { class: 'btn', title: 'Centrar', onclick: () => ui.board.resetView() }, '⤢'),
+      h('button', { class: 'btn', id: 'viewToggle', title: 'Cambiar vista 2D / 3D', style: { fontSize: '13px', fontWeight: 900 }, onclick: () => setView3D(!ui.is3D) }, '3D')));
   root.append(h('div', { class: 'game screen' },
     topbar,
     h('main', { class: 'game-main' }, boardWrap, h('aside', { class: 'side' }, els.players, els.bank, els.log)),
@@ -50,9 +51,11 @@ export function gameScreen(root) {
     els, pick: null, modal: null, draft: null, unlockedFor: null, rolledAt: 0, rolled: null,
     pulseTiles: new Set(), pulseAt: 0, lastCurrent: null, gains: [], lastWinnerShown: false,
   };
-  ui.board = new BoardView(boardWrap);
-  boardWrap.addEventListener('click', () => {
-    if (ui.pick) {
+  ui.board2d = ui.board = new BoardView(boardWrap);
+  ui.boardWrap = boardWrap;
+  if (storage('kchudites.view3d')) setView3D(true);
+  boardWrap.addEventListener('click', e => {
+    if (ui.pick && e.target.tagName !== 'CANVAS') {
       ui.pick = null;
       render(App.state);
     }
@@ -69,6 +72,45 @@ export function gameScreen(root) {
     handleFx(st);
     render(st);
   }];
+  App.onLeave = () => {
+    App.listeners = [];
+    disposeGameView();
+  };
+}
+
+// ---------------- 2D / 3D ----------------
+async function setView3D(on) {
+  const u = ui;
+  storage('kchudites.view3d', on);
+  if (on && !u.is3D) {
+    try {
+      const { Board3D } = await import('./board3d.js');
+      if (ui !== u) return;
+      u.board3d = u.board3d || new Board3D(u.boardWrap);
+      u.board2d.svg.style.display = 'none';
+      u.board3d.canvas.style.display = '';
+      u.board = u.board3d;
+      u.is3D = true;
+    } catch (e) {
+      console.error(e);
+      toast('No se pudo cargar la vista 3D (¿sin conexión o WebGL?)', 'error');
+      storage('kchudites.view3d', false);
+      return;
+    }
+  } else if (!on && u.is3D) {
+    u.board3d.canvas.style.display = 'none';
+    u.board2d.svg.style.display = '';
+    u.board = u.board2d;
+    u.is3D = false;
+  }
+  const b = document.getElementById('viewToggle');
+  if (b) b.textContent = u.is3D ? '2D' : '3D';
+  if (App.state) render(App.state);
+}
+
+export function disposeGameView() {
+  if (ui && ui.board3d) ui.board3d.dispose();
+  ui = null;
 }
 
 // ---------------- viewer & privacy ----------------
@@ -671,7 +713,7 @@ function openMenu() {
   openModal(() => h('div', null,
     h('h2', null, '☰ Menú'),
     h('div', { style: { display: 'grid', gap: '10px' } },
-      App.open3D ? h('button', { class: 'btn', onclick: () => { closeModal(); App.open3D(); } }, '🧊 Vista 3D') : null,
+      h('button', { class: 'btn', onclick: () => { closeModal(); setView3D(!ui.is3D); } }, ui.is3D ? '🗺️ Vista 2D' : '🧊 Vista 3D'),
       h('button', { class: 'btn', onclick: () => { closeModal(); showHelp(); } }, '📖 Cómo se juega'),
       h('button', { class: 'btn', onclick: () => { const on = App.toggleSound(); toast(on ? '🔊 Sonido activado' : '🔇 Sonido desactivado'); } }, '🔊 Sonido on/off'),
       h('div', null, h('div', { class: 'section-label' }, 'Velocidad de los bots'), speedControl()),

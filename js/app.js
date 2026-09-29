@@ -20,6 +20,8 @@ export const App = {
   listeners: [],
 
   go(name, arg) {
+    if (this.onLeave) this.onLeave();
+    this.onLeave = null;
     this.screen = name;
     const root = document.getElementById('app');
     root.innerHTML = '';

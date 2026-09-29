@@ -241,7 +241,7 @@ export class BoardView {
     svg.append(gB);
 
     // robber
-    if (bd.robber >= 0 && !st.config.rules.noRobber) {
+    if (bd.robber >= 0 && !st.config.rules.noRobber && bd.tiles[bd.robber].revealed) {
       const t = bd.tiles[bd.robber];
       const g = S('g', { class: 'robber', transform: `translate(${t.x * U - 40},${t.y * U + 6})` });
       g.append(S('ellipse', { cx: 0, cy: 22, rx: 15, ry: 5, fill: 'rgba(0,0,0,.35)' }));
