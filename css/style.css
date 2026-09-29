@@ -189,9 +189,16 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
   .side { border-left: 0; }
   .log { max-height: 180px; }
   .players { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-  .actionbar { position: sticky; bottom: 0; }
-  .actions { margin-left: 0; }
-  .brand { font-size: 16px; }
+  .actionbar { position: sticky; bottom: 0; background: #0a1222; padding: 8px 10px; gap: 8px; }
+  .actions { margin-left: 0; gap: 6px; }
+  .actions .btn { padding: 8px 10px; font-size: 13px; }
+  .brand { font-size: 15px; }
+  .topbar { gap: 6px 10px; padding: 6px 10px; }
+  .turn-info { min-width: 0; font-size: 14px; }
+  .phase-tag { display: none; }
+  .top-actions { margin-left: auto; }
+  .rcard, .dcard { width: 40px; height: 54px; font-size: 19px; }
+  .banner { font-size: 13px; top: 8px; padding: 7px 14px; }
 }
 
 /* ---------- board svg ---------- */
