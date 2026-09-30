@@ -32,12 +32,11 @@ export function gameScreen(root) {
     offer: h('div'),
     overlay: h('div'),
     pass: h('div'),
-    emoteBtn: h('button', { class: 'btn sm emote-toggle', title: 'Reacciones: emojis y mensajes', onclick: e => { e.stopPropagation(); toggleEmotes(); } }, '😀'),
   };
   const topbar = h('header', { class: 'topbar' },
     h('div', { class: 'brand' }, 'Catan ', h('i', null, 'x'), ' Kchudites'),
     els.turn, els.event, els.dice,
-    h('div', { class: 'top-actions' }, els.emoteBtn,
+    h('div', { class: 'top-actions' },
       h('button', { class: 'btn sm', title: 'Ayuda', onclick: () => showHelp() }, '❔'),
       h('button', { class: 'btn sm', title: 'Menú', onclick: () => openMenu() }, '☰')));
   boardWrap.append(els.banner, els.offer,
@@ -62,12 +61,12 @@ export function gameScreen(root) {
     }
   });
   document.onpointerdown = e => {
-    if (ui && ui.emoteBox && !ui.emoteBox.contains(e.target) && e.target !== ui.els.emoteBtn && !ui.els.emoteBtn.contains(e.target)) toggleEmotes(false);
+    if (ui && ui.emoteBox && !ui.emoteBox.contains(e.target) && !e.target.closest('.emote-toggle')) toggleEmotes(null, false);
   };
   document.onkeydown = e => {
     if (App.screen !== 'game') return;
     if (e.key === 'Escape') {
-      if (ui.emoteBox) return toggleEmotes(false);
+      if (ui.emoteBox) return toggleEmotes(null, false);
       ui.pick = null;
       closeModal();
       render(App.state);
@@ -187,7 +186,7 @@ function handleFx(st) {
       case 'steal':
         if (f.from === v) toast(h('span', null, rich(`🫳 @${f.to} te robó `, st.players), TILE_INFO[f.res].icon), 'error');
         else if (f.to === v) toast(h('span', null, rich(`🫳 Le robaste a @${f.from}: `, st.players), TILE_INFO[f.res].icon), 'good');
-        if (host && st.players[f.from].kind === 'bot' && Math.random() < 0.45) botEmote(f.from, ['😡', '😤', '💀', '😭', 'Me la pagarás']);
+        if (host && st.players[f.from].kind === 'bot' && Math.random() < 0.45) botEmote(f.from, ['😡', '😤', '💀', '😭']);
         break;
       case 'robber':
         play.robber();
@@ -221,7 +220,7 @@ function handleFx(st) {
       case 'win':
         play.win();
         confetti();
-        if (host && st.players[f.pid] && st.players[f.pid].kind === 'bot') botEmote(f.pid, ['😎', '🏆', 'GG']);
+        if (host && st.players[f.pid] && st.players[f.pid].kind === 'bot') botEmote(f.pid, ['😎', '🏆', '🎉']);
         break;
       case 'flipAll':
         ui.flipAt = Date.now();
@@ -303,9 +302,8 @@ function flyOne(res, tile, pid, mine, first) {
   };
 }
 
-// ---------------- reactions: emojis and short messages that float up from your buildings ----------------
+// ---------------- reactions: emojis that float up from your buildings ----------------
 const EMOTES = ['😂', '🤣', '😎', '😡', '😭', '😱', '🤔', '🙏', '👏', '🔥', '💀', '😈', '👀', '❤️', '🤝', '🎉', '🐑', '🌾', '🧱', '🌲', '⛰️', '🎲', '🦹', '🏆'];
-const PHRASES = ['¿Alguien tiene 🐑?', '¡Cambio!', 'GG', 'Jajaja', 'Nooo el ladrón 😭', 'Te voy a robar 😈', 'Buena jugada 👏', 'Apúrate 🐢', 'Me la pagarás', '¡Suerte!'];
 const ONLY_EMOJI = /^(\p{Extended_Pictographic}|️|‍){1,4}$/u;
 
 function botEmote(pid, options) {
@@ -323,33 +321,20 @@ function sendEmote(e) {
   App.emote(v, e);
 }
 
-function toggleEmotes(force) {
+// the emoji picker opens above the 😀 button next to your hand; picking one sends it and closes it
+function toggleEmotes(anchor, force) {
   const open = force ?? !ui.emoteBox;
   if (ui.emoteBox) {
     ui.emoteBox.remove();
     ui.emoteBox = null;
   }
-  if (!open) return;
-  const input = h('input', { class: 'emote-input', maxlength: 40, placeholder: 'Escribe algo y Enter...' });
-  const say = () => {
-    const t = input.value.trim();
-    if (!t) return;
-    sendEmote(t);
-    input.value = '';
-  };
-  input.addEventListener('keydown', e => {
-    e.stopPropagation();
-    if (e.key === 'Enter') say();
-    if (e.key === 'Escape') toggleEmotes(false);
-  });
+  if (!open || !anchor) return;
   ui.emoteBox = h('div', { class: 'emote-pop', onclick: e => e.stopPropagation() },
-    h('div', { class: 'emote-grid' }, EMOTES.map(e => h('button', { class: 'emote-btn', title: e, onclick: () => sendEmote(e) }, e))),
-    h('div', { class: 'emote-phrases' }, PHRASES.map(t => h('button', { class: 'chip', onclick: () => { sendEmote(t); toggleEmotes(false); } }, t))),
-    h('div', { class: 'emote-say' }, input, h('button', { class: 'btn sm primary', onclick: say }, 'Decir')));
+    h('div', { class: 'emote-grid' }, EMOTES.map(e => h('button', { class: 'emote-btn', title: e, onclick: () => { sendEmote(e); toggleEmotes(null, false); } }, e))));
   document.body.append(ui.emoteBox);
-  const r = ui.els.emoteBtn.getBoundingClientRect();
-  ui.emoteBox.style.top = r.bottom + 10 + 'px';
-  ui.emoteBox.style.right = Math.max(8, innerWidth - r.right - 8) + 'px';
+  const r = anchor.getBoundingClientRect();
+  ui.emoteBox.style.bottom = innerHeight - r.top + 10 + 'px';
+  ui.emoteBox.style.left = Math.max(8, Math.min(r.left, innerWidth - ui.emoteBox.offsetWidth - 8)) + 'px';
 }
 
 function showEmote(seat, e) {
@@ -603,6 +588,7 @@ function fillActions(bar, st, v, locked) {
   const bump = ui.bumpRes || new Set();
   ui.bumpRes = null;
   bar.append(h('div', { class: 'hand' }, RES.map(r => resCard(r, p.res[r], bump.has(r)))));
+  bar.append(h('button', { class: 'btn emote-toggle', title: 'Reaccionar con un emoji', onclick: e => { e.stopPropagation(); toggleEmotes(e.currentTarget); } }, '😀'));
 
   const playable = new Set(st.current === v ? G.playableDev(st, v) : []);
   const groups = {};
