@@ -159,3 +159,33 @@ input[type=range] { accent-color: var(--sand); }
 .logo .t1, .logo .t2, .brand, .card h3, .modal h2, .announce .at { font-family: var(--display); font-weight: 700; }
 .logo .t1 { font-size: clamp(54px, 11vw, 124px); }
 .logo .t2 { font-size: clamp(34px, 7vw, 76px); }
+
+/* ---------- kingdom flag editor ---------- */
+.flag-modal { width: min(760px, 100%); }
+.flag-layout { display: grid; grid-template-columns: auto 1fr; gap: 20px; align-items: start; }
+@media (max-width: 700px) { .flag-layout { grid-template-columns: 1fr; } }
+.flag-grid { display: grid; grid-template-columns: repeat(12, 26px); grid-template-rows: repeat(12, 26px); box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--sand); width: max-content; touch-action: none; cursor: crosshair; margin: 8px 6px 14px; }
+@media (max-width: 480px) { .flag-grid { grid-template-columns: repeat(12, 22px); grid-template-rows: repeat(12, 22px); } }
+.flag-grid .fc { box-shadow: inset 0 0 0 1px rgba(0,0,0,.12); }
+.flag-grid .fc:hover { box-shadow: inset 0 0 0 2px #fff; }
+.flag-pal { display: grid; grid-template-columns: repeat(8, 30px); gap: 6px; margin: 6px 4px 10px; }
+.sw { width: 30px; height: 30px; border: 0; cursor: pointer; box-shadow: 0 0 0 2px var(--ink); padding: 0; }
+.sw.on { box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--sand); transform: translateY(-2px); }
+.sw.big { width: 28px; height: 28px; margin: 3px; }
+.castle-color { width: 44px !important; height: 34px; padding: 0 !important; margin: 3px; cursor: pointer; }
+.flag-preview { background: var(--ink); box-shadow: inset 0 0 0 3px var(--dusk); display: grid; place-items: center; padding: 14px; }
+img.flag-img { image-rendering: pixelated; box-shadow: 0 0 0 2px var(--ink); background: var(--ink); vertical-align: middle; }
+.flag-btn { padding: 0 !important; width: 40px; height: 36px; display: grid; place-items: center; }
+.pcard .avatar img.flag-img { width: 30px; height: 30px; box-shadow: none; }
+.players.compact .pcard { padding: 5px 8px; }
+.players.compact .pcard .stats { margin-top: 2px; gap: 7px; font-size: 11.5px; }
+.players.compact .pcard .avatar, .players.compact .pcard .avatar img.flag-img { width: 24px; height: 24px; }
+.players.compact .pcard .vp { font-size: 20px; }
+.pcard.retired { opacity: .45; filter: grayscale(.8); }
+.pcard .conn { font-size: 11px; font-weight: 700; margin-left: 4px; }
+.pcard .conn.off { color: var(--coral); animation: blink 1s steps(2) infinite; }
+.player-row { grid-template-columns: 36px 40px minmax(0, 1fr) 150px 36px; }
+
+.kingdom-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.board-wrap .labels-3d { z-index: 1; }
+.board-wrap .banner, .board-wrap .zoom-ctrl, .board-wrap .offer { z-index: 6; }

@@ -6,6 +6,7 @@ import { SHAPES, generateBoard } from '../engine/board.js';
 import { DEV_DECKS, TILE_INFO } from '../engine/constants.js';
 import { createGame } from '../engine/game.js';
 import { newSeed } from '../engine/rng.js';
+import { openFlagEditor, flagImg, patternFlag, validFlag, myKingdom, saveMyKingdom } from './flag.js';
 
 const CFG_KEY = 'kchudites.lastConfig';
 export const MAPS_KEY = 'kchudites.maps';
@@ -47,6 +48,10 @@ export function lobbyScreen(root, opts = {}) {
     cfg.players[0] = { ...cfg.players[0], kind: 'human' };
     cfg.players.forEach((p, i) => { if (i > 0 && p.kind === 'human') p.kind = 'remote'; });
   } else cfg.players.forEach(p => { if (p.kind === 'remote') p.kind = 'human'; });
+  // every kingdom has a banner; seat 0 uses the one this device remembers
+  const mine = myKingdom();
+  if (mine && cfg.players[0] && cfg.players[0].kind === 'human') Object.assign(cfg.players[0], { name: mine.name || cfg.players[0].name, color: mine.color || cfg.players[0].color, flag: mine.flag });
+  cfg.players.forEach((p, i) => { if (!validFlag(p.flag)) p.flag = patternFlag(p.color, i); });
 
   const left = h('div');
   const previewBox = h('div', { class: 'preview' });
@@ -104,7 +109,7 @@ export function lobbyScreen(root, opts = {}) {
       net.code ? h('div', { class: 'room-code' }, net.code) : h('p', null, 'Creando sala...'),
       h('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Tus amigos entran con "Unirse a sala" y este código. Asigna asientos "Amigo online" en la lista de jugadores.'),
       h('div', { class: 'section-label' }, `Conectados (${net.guests.length})`),
-      net.guests.length ? h('div', { class: 'chips' }, net.guests.map(g => h('span', { class: 'chip on' }, '🟢 ' + g.name))) : h('p', null, 'Nadie aún...')));
+      net.guests.length ? h('div', { class: 'chips' }, net.guests.map(g => h('span', { class: 'chip on' }, g.conn ? '🟢 ' : '🔌 ', flagImg(g.flag, 18), ' ' + g.name))) : h('p', null, 'Nadie aún...')));
   }
 
   function playerRows() {
@@ -128,7 +133,21 @@ export function lobbyScreen(root, opts = {}) {
             refresh();
           },
         }),
-        h('input', { type: 'text', value: p.name, maxlength: 16, onchange: e => { p.name = e.target.value.trim() || `Jugador ${i + 1}`; save(); } }),
+        p.kind === 'remote'
+          ? h('div', { class: 'btn sm flag-btn', title: 'Cada amigo pinta su propia bandera' }, '🌐')
+          : h('button', {
+            class: 'btn sm flag-btn', title: 'Bandera y color del castillo',
+            onclick: () => openFlagEditor({
+              flag: p.flag, color: p.color, name: p.name,
+              onSave: ({ flag, color }) => {
+                p.flag = flag;
+                p.color = color;
+                if (p.kind === 'human' && i === 0) saveMyKingdom({ name: p.name, flag, color });
+                refresh();
+              },
+            }),
+          }, flagImg(p.flag, 26)),
+        h('input', { type: 'text', value: p.name, maxlength: 16, onchange: e => { p.name = e.target.value.trim() || `Jugador ${i + 1}`; if (p.kind === 'human' && i === 0) saveMyKingdom({ name: p.name, flag: p.flag, color: p.color }); save(); } }),
         hostSeat ? h('div', { class: 'pill' }, '👑 Tú (anfitrión)') : h('select', {
           onchange: e => {
             const [k, l] = e.target.value.split(':');
@@ -147,15 +166,19 @@ export function lobbyScreen(root, opts = {}) {
     clear(left);
     // players
     left.append(h('div', { class: 'card' },
-      h('h3', null, '👥 Jugadores ', h('small', null, `${cfg.players.length}/6`)),
+      h('h3', null, '👥 Jugadores ', h('small', null, `${cfg.players.length}/8`)),
       playerRows(),
       h('button', {
-        class: 'btn sm', disabled: cfg.players.length >= 6,
+        class: 'btn sm', disabled: cfg.players.length >= 8,
         onclick: () => {
-          const color = PLAYER_COLORS.find(c => !cfg.players.some(p => p.color === c));
+          const color = PLAYER_COLORS.find(c => !cfg.players.some(p => p.color === c)) || PLAYER_COLORS[cfg.players.length % PLAYER_COLORS.length];
           const name = BOT_NAMES.find(n => !cfg.players.some(p => p.name === n)) || 'Bot';
-          cfg.players.push({ name, kind: 'bot', level: 'normal', color });
+          cfg.players.push({ name, kind: online ? 'remote' : 'bot', level: 'normal', color, flag: patternFlag(color, cfg.players.length) });
           if (cfg.players.length > 4 && ['classic', 'mini'].includes(cfg.map.shape)) cfg.map.shape = 'extended';
+          if (cfg.players.length > 6 && ['classic', 'mini', 'extended', 'ring', 'star'].includes(cfg.map.shape)) {
+            cfg.map.shape = 'big';
+            toast('🗺️ Con 7-8 jugadores cambio al mapa Grande');
+          }
           refresh();
         },
       }, '+ Añadir jugador')));

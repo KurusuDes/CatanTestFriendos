@@ -6,6 +6,7 @@ import * as G from '../engine/game.js';
 import { hint } from '../engine/bot.js';
 import { play } from './sfx.js';
 import { showHelp } from './help.js';
+import { flagImg } from './flag.js';
 
 let ui = null;
 
@@ -72,8 +73,11 @@ export function gameScreen(root) {
     handleFx(st);
     render(st);
   }];
+  // presence / votes / reconnection changes that don't come with a new state
+  App.onMeta = () => App.state && ui && render(App.state);
   App.onLeave = () => {
     App.listeners = [];
+    App.onMeta = null;
     disposeGameView();
   };
 }
@@ -390,18 +394,21 @@ function renderBoard(st, v, locked) {
 
 function renderPlayers(st, v) {
   const box = clear(ui.els.players);
+  box.classList.toggle('compact', st.players.length > 5);
   const acting = new Set(G.pendingActors(st));
+  const online = App.isOnline();
   const now = Date.now();
   ui.gains = ui.gains.filter(g => now - g.at < 1600);
   for (const p of st.players) {
     const pub = G.victoryPoints(st, p.id, false);
     const all = G.victoryPoints(st, p.id, true);
     const me = p.id === v;
-    const tag = p.kind === 'bot' ? `bot ${{ easy: 'fácil', normal: 'normal', hard: 'difícil' }[p.level] || ''}` : me ? 'tú' : '';
-    const card = h('div', { class: 'pcard' + (st.current === p.id ? ' current' : '') + (st.winner === p.id ? ' winner' : ''), style: { '--pc': p.color } },
+    const conn = online && p.kind === 'human' ? App.net.presence(p.id) : undefined;
+    const tag = p.retired ? 'retirado' : p.kind === 'bot' ? (p.remote ? 'bot sustituto' : `bot ${{ easy: 'fácil', normal: 'normal', hard: 'difícil' }[p.level] || ''}`) : me ? 'tú' : '';
+    const card = h('div', { class: 'pcard' + (st.current === p.id ? ' current' : '') + (st.winner === p.id ? ' winner' : '') + (p.retired ? ' retired' : ''), style: { '--pc': p.color } },
       h('div', { class: 'top' },
-        h('div', { class: 'avatar' }, p.kind === 'bot' ? '🤖' : p.name.slice(0, 1).toUpperCase()),
-        h('div', { class: 'name' }, p.name, tag && h('small', null, tag)),
+        h('div', { class: 'avatar' }, p.flag ? flagImg(p.flag, 30) : p.kind === 'bot' ? '🤖' : p.name.slice(0, 1).toUpperCase()),
+        h('div', { class: 'name' }, p.name, tag && h('small', null, tag), conn === false ? h('span', { class: 'conn off', title: 'Desconectado' }, ' 🔌') : null),
         acting.has(p.id) && st.phase !== 'gameOver' ? h('span', { class: 'acting-dot', title: 'Actuando' }) : null,
         h('div', { class: 'vp', title: 'Puntos de victoria' }, pub, (me || st.phase === 'gameOver') && all > pub ? h('small', null, ` +${all - pub}`) : null)),
       h('div', { class: 'stats' },
@@ -675,6 +682,29 @@ function closeModal() {
 function renderModal(st, v = App.viewer, locked = false) {
   const box = clear(ui.els.overlay);
   if (locked) return;
+  // online: reconnecting / table vote about a disconnected player
+  if (App.isOnline()) {
+    const net = App.net;
+    if (net.role === 'client' && net.reconnecting) {
+      box.append(h('div', { class: 'overlay' }, h('div', { class: 'modal', style: { textAlign: 'center' } },
+        h('h2', { class: 'jit' }, '📡 Reconectando...'),
+        h('p', null, 'Se perdió la señal con el anfitrión. Tu asiento te espera: sigo intentando volver a la sala.'),
+        h('div', { class: 'row', style: { justifyContent: 'center' } }, h('button', { class: 'btn ghost', onclick: () => App.leaveGame() }, 'Salir al menú')))));
+      return;
+    }
+    const vote = net.currentVote();
+    if (vote && vote.voters.includes(App.mySeat)) {
+      const mine = vote.votes[App.mySeat];
+      const count = k => Object.values(vote.votes).filter(x => x === k).length;
+      const opt = (k, label, cls) => h('button', { class: 'btn ' + cls + (mine === k ? ' active' : ''), disabled: !!mine, onclick: () => { net.sendVote(k); } }, `${label} (${count(k)})`);
+      box.append(h('div', { class: 'overlay' }, h('div', { class: 'modal', style: { textAlign: 'center' } },
+        h('h2', null, `🔌 ${vote.name} se desconectó`),
+        h('p', null, mine ? `Votaste. Esperando al resto (${Object.keys(vote.votes).length}/${vote.voters.length})... ${vote.left}s` : `¿Qué hacemos? Decide la mayoría. Si vuelve antes, recupera su asiento. ${vote.left}s`),
+        h('div', { class: 'row', style: { justifyContent: 'center' } },
+          opt('wait', '⏳ Esperar', ''), opt('bot', '🤖 Que juegue un bot', 'green'), opt('remove', '🚪 Retirarlo', 'pink')))));
+      return;
+    }
+  }
   // forced modals
   if (st.phase === 'discard' && st.pendingDiscards[v] && localHumans(st).includes(v)) {
     if (!ui.discard || ui.discard.pid !== v) ui.discard = { pid: v, res: G.zeroRes() };

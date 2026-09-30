@@ -12,10 +12,14 @@ const shapes = Object.keys(SHAPES).filter(k => k !== 'custom');
 function makeConfig(i) {
   const c = defaultConfig();
   c.seed = 1000 + i * 7919;
-  const np = 2 + (i % 5);
+  const np = 2 + (i % 7);
   c.players = Array.from({ length: np }, (_, k) => ({ name: 'B' + k, kind: 'bot', level: ['easy', 'normal', 'hard'][(i + k) % 3], color: PLAYER_COLORS[k] }));
   c.map.shape = shapes[i % shapes.length];
   if (np > 4 && ['classic', 'mini'].includes(c.map.shape)) c.map.shape = 'extended';
+  if (np > 6) {
+    c.map.shape = ['big', 'huge', 'kingdoms', 'pangea'][i % 4];
+    c.map.size = 40;
+  }
   c.map.size = 18 + (i % 20);
   c.map.gold = i % 4 === 0 ? 2 : 0;
   c.map.resources = i % 3 === 0 ? 'chaos' : 'balanced';
@@ -81,6 +85,18 @@ for (let i = 0; i < GAMES; i++) {
       if (++guard > 200000) throw new Error('bucle infinito');
       const actors = pendingActors(s);
       let acted = false;
+      // simulate disconnections: occasionally retire a player or hand a seat to a bot
+      if (i % 3 === 0 && s.actions > 0 && s.actions % 97 === 0 && !s.__admin?.[s.actions]) {
+        (s.__admin ||= {})[s.actions] = 1;
+        const alive = s.players.filter(p => !p.retired);
+        const target = alive[(s.actions / 97) % alive.length | 0];
+        const act = alive.length > 2 && (s.actions / 97) % 2 < 1 ? { type: 'retirePlayer', pid: target.id } : { type: 'setController', pid: target.id, kind: target.kind === 'bot' ? 'human' : 'bot' };
+        if (act.type === 'setController' && act.kind === 'human') act.kind = 'bot';
+        const r = applyAction(s, act);
+        if (!r.ok) throw new Error(`admin ${JSON.stringify(act)}: ${r.error}`);
+        check(s, act.type);
+        continue;
+      }
       for (const pid of actors) {
         const a = botAct(s, pid);
         if (!a) continue;

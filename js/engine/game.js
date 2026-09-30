@@ -22,14 +22,14 @@ function log(s, msg, pid = -1) {
 
 function buildDevDeck(config, n, rng) {
   const d = DEV_DECKS[config.rules.devDeck] || DEV_DECKS.normal;
-  const big = n > 4;
+  const extra = n > 6 ? 2 : n > 4 ? 1 : 0; // 5-6 and 7-8 player expansions
   const deck = [];
   const add = (type, k) => { for (let i = 0; i < k; i++) deck.push(type); };
-  add('knight', d.knight + (big && d.knight ? 6 : 0));
-  add('vp', d.vp);
-  add('roadBuilding', d.roadBuilding + (big && d.roadBuilding ? 1 : 0));
-  add('yearOfPlenty', d.yearOfPlenty + (big && d.yearOfPlenty ? 1 : 0));
-  add('monopoly', d.monopoly + (big && d.monopoly ? 1 : 0));
+  add('knight', d.knight + (d.knight ? 6 * extra : 0));
+  add('vp', d.vp + (d.vp && extra > 1 ? 1 : 0));
+  add('roadBuilding', d.roadBuilding + (d.roadBuilding ? extra : 0));
+  add('yearOfPlenty', d.yearOfPlenty + (d.yearOfPlenty ? extra : 0));
+  add('monopoly', d.monopoly + (d.monopoly ? extra : 0));
   return shuffle(rng, deck);
 }
 
@@ -39,14 +39,14 @@ export function createGame(configIn) {
   const rng = { s: (config.seed >>> 0) || 12345 };
   const n = config.players.length;
   const board = generateBoard(config, rng);
-  const bankEach = n > 4 ? 24 : 19;
+  const bankEach = n > 6 ? 30 : n > 4 ? 24 : 19;
   const s = {
     v: 1,
     config,
     rng,
     board,
     players: config.players.map((p, i) => ({
-      id: i, name: p.name, color: p.color, kind: p.kind, level: p.level || 'normal',
+      id: i, name: p.name, color: p.color, kind: p.kind, level: p.level || 'normal', flag: p.flag || null, retired: false,
       res: zeroRes(), dev: [], knights: 0, roadLen: 0,
       roadsLeft: R.maxRoads, settlementsLeft: R.maxSettlements, citiesLeft: R.maxCities,
       stats: { gained: 0, stolen: 0, lost: 0 },
@@ -315,9 +315,9 @@ export function playableDev(s, pid) {
 export function pendingActors(s) {
   if (s.phase === 'gameOver') return [];
   if (s.phase === 'setup') return [s.setup.queue[s.setup.idx].pid];
-  if (s.phase === 'discard') return Object.keys(s.pendingDiscards).map(Number);
+  if (s.phase === 'discard') return Object.keys(s.pendingDiscards).map(Number).filter(pid => !s.players[pid].retired);
   const out = [s.current];
-  if (s.trade) for (const pid of s.trade.to) if (s.trade.responses[pid] == null) out.push(pid);
+  if (s.trade) for (const pid of s.trade.to) if (s.trade.responses[pid] == null && !s.players[pid].retired) out.push(pid);
   return out;
 }
 
@@ -379,7 +379,7 @@ function roadLength(s, pid) {
 }
 
 function updateLongestRoad(s) {
-  const lens = s.players.map(p => (p.roadLen = roadLength(s, p.id)));
+  const lens = s.players.map(p => (p.roadLen = p.retired ? 0 : roadLength(s, p.id)));
   const cur = s.longestRoad.owner;
   const max = Math.max(...lens);
   let owner;
@@ -443,7 +443,7 @@ function produce(s, sum) {
     let produced = false;
     for (const v of t.verts) {
       const b = s.buildings[v];
-      if (!b) continue;
+      if (!b || s.players[b.owner].retired) continue;
       const amt = (b.type === 'city' ? 2 : 1) * mult;
       let r = t.res;
       if (r === 'gold') {
@@ -519,7 +519,8 @@ function startRound(s) {
   delete ev.desc;
   s.event = { id: ev.id, name: ev.name, icon: ev.icon };
   const E = s.event;
-  const leader = () => s.players.map(p => p.id).sort((a, b) => victoryPoints(s, b, false) - victoryPoints(s, a, false))[0];
+  const active = () => s.players.filter(p => !p.retired).map(p => p.id);
+  const leader = () => active().sort((a, b) => victoryPoints(s, b, false) - victoryPoints(s, a, false))[0];
   switch (E.id) {
     case 'drought':
     case 'blackMarket':
@@ -543,6 +544,7 @@ function startRound(s) {
       break;
     case 'gift':
       for (const p of s.players) {
+        if (p.retired) continue;
         const r = pick(s.rng, RES);
         giveFromBank(s, p.id, r, 1);
       }
@@ -569,7 +571,7 @@ function startRound(s) {
       break;
     }
     case 'rebellion': {
-      const last = s.players.map(p => p.id).sort((a, b) => victoryPoints(s, a, false) - victoryPoints(s, b, false))[0];
+      const last = active().sort((a, b) => victoryPoints(s, a, false) - victoryPoints(s, b, false))[0];
       for (let i = 0; i < 2; i++) giveFromBank(s, last, pick(s.rng, RES), 1);
       E.pid = last;
       break;
@@ -594,7 +596,7 @@ function beginTurns(s) {
     log(s, '🔄 ¡Se voltea el tablero! Ahora todos ven qué hay debajo.');
   }
   s.phase = 'roll';
-  s.current = s.first;
+  s.current = s.players[s.first].retired ? nextActive(s, s.first).pid : s.first;
   s.turn = 1;
   s.round = 1;
   s.setup.blindActive = false;
@@ -830,7 +832,7 @@ H.roll = (s, a) => {
   s.pendingDiscards = {};
   for (const p of s.players) {
     const n = handSize(p.res);
-    if (n > R.handLimit) s.pendingDiscards[p.id] = Math.floor(n / 2);
+    if (n > R.handLimit && !p.retired) s.pendingDiscards[p.id] = Math.floor(n / 2);
   }
   s.robberReturn = 'main';
   if (Object.keys(s.pendingDiscards).length) s.phase = 'discard';
@@ -1018,7 +1020,7 @@ H.proposeTrade = (s, a) => {
   if (!handSize(a.give) || !handSize(a.get)) fail('La oferta debe dar y pedir algo.');
   if (RES.some(r => (a.give[r] || 0) && (a.get[r] || 0))) fail('No puedes dar y pedir el mismo recurso.');
   if (!canAfford(s.players[a.pid].res, a.give)) fail('No tienes lo que ofreces.');
-  const to = (a.to && a.to.length ? a.to : s.players.map(p => p.id)).filter(i => i !== a.pid && s.players[i]);
+  const to = (a.to && a.to.length ? a.to : s.players.map(p => p.id)).filter(i => i !== a.pid && s.players[i] && !s.players[i].retired);
   if (!to.length) fail('Nadie a quien ofrecer.');
   const give = zeroRes(), get = zeroRes();
   for (const r of RES) {
@@ -1063,21 +1065,118 @@ H.cancelTrade = (s, a) => {
   s.trade = null;
 };
 
-H.endTurn = (s, a) => {
-  assertMain(s, a);
-  s.trade = null;
+// next seat still in the game; `wrapped` when we pass the first player (new round)
+export function nextActive(s, from) {
   const n = s.players.length;
-  s.current = (s.current + 1) % n;
+  const pos = p => (p - s.first + n) % n;
+  for (let k = 1; k <= n; k++) {
+    const c = (from + k) % n;
+    if (!s.players[c].retired) return { pid: c, wrapped: pos(c) <= pos(from) };
+  }
+  return { pid: from, wrapped: true };
+}
+
+function advanceTurn(s) {
+  s.trade = null;
+  const { pid, wrapped } = nextActive(s, s.current);
+  s.current = pid;
   s.turn++;
   s.devPlayed = false;
   s.freeRoads = 0;
   s.phase = 'roll';
-  if (s.current === s.first) {
+  if (wrapped) {
     s.round++;
     s.event = null;
     startRound(s);
   }
   log(s, `🎲 Turno de @${s.current}.`, s.current);
+}
+
+H.endTurn = (s, a) => {
+  assertMain(s, a);
+  advanceTurn(s);
+};
+
+// ---- seat management (host only: disconnections, votes) ----
+H.setController = (s, a) => {
+  const p = s.players[a.pid];
+  if (p.retired) fail('Ese jugador ya se retiró.');
+  if (a.kind !== 'bot' && a.kind !== 'human') fail('Control inválido.');
+  if (p.kind === a.kind) return;
+  p.kind = a.kind;
+  if (a.kind === 'bot') p.level = p.level || 'normal';
+  log(s, a.kind === 'bot' ? `🤖 Un bot toma el control de @${a.pid}.` : `👋 @${a.pid} vuelve a tomar el control.`, a.pid);
+  s.fx.push({ kind: 'controller', pid: a.pid, to: a.kind });
+};
+
+H.retirePlayer = (s, a) => {
+  const pid = a.pid;
+  const p = s.players[pid];
+  if (p.retired) fail('Ese jugador ya se retiró.');
+  if (s.players.filter(x => !x.retired).length <= 2) fail('Tienen que quedar al menos 2 jugadores.');
+  p.retired = true;
+  // hand back to the bank, development cards leave the game
+  for (const r of RES) {
+    s.bank[r] += p.res[r];
+    p.res[r] = 0;
+  }
+  p.dev = [];
+  // pending secret placements go back to the box
+  for (const b of s.blind.filter(x => x.pid === pid)) {
+    if (b.type === 'city') p.citiesLeft++;
+    else p.settlementsLeft++;
+    if (b.eid != null) p.roadsLeft++;
+  }
+  s.blind = s.blind.filter(x => x.pid !== pid);
+  // trades
+  if (s.trade) {
+    if (s.trade.from === pid) s.trade = null;
+    else if (s.trade.to.includes(pid)) {
+      s.trade.to = s.trade.to.filter(x => x !== pid);
+      delete s.trade.responses[pid];
+      if (!s.trade.to.length) s.trade = null;
+    }
+  }
+  // awards
+  if (s.largestArmy.owner === pid) {
+    const act = s.players.filter(x => !x.retired && x.knights >= 3);
+    const max = Math.max(0, ...act.map(x => x.knights));
+    const top = act.filter(x => x.knights === max);
+    s.largestArmy = top.length === 1 ? { owner: top[0].id, count: max } : { owner: -1, count: 0 };
+  }
+  updateLongestRoad(s);
+  log(s, `🚪 @${pid} se retira de la partida.`, pid);
+  s.fx.push({ kind: 'retired', pid });
+  // keep the game flowing
+  delete s.pendingDiscards[pid];
+  if (s.phase === 'setup') {
+    const st = s.setup;
+    const cur = st.queue[st.idx];
+    st.queue = st.queue.filter((e, i) => i <= st.idx || e.pid !== pid);
+    if (cur.pid === pid) {
+      st.queue.splice(st.idx, 1);
+      if (st.idx < st.queue.length) {
+        const nx = st.queue[st.idx];
+        s.current = nx.pid;
+        st.step = nx.roadOnly ? 'road' : 'settlement';
+        st.lastVid = nx.roadOnly ? nx.vid : null;
+      } else {
+        st.step = 'settlement';
+        st.lastVid = null;
+        if (!st.fixing && st.blindActive) {
+          resolveBlind(s);
+          if (s.phase === 'setup') return;
+        }
+        beginTurns(s);
+      }
+    }
+    return;
+  }
+  if (s.phase === 'discard' && !Object.keys(s.pendingDiscards).length) s.phase = s.config.rules.noRobber ? 'main' : 'robber';
+  if (s.current === pid && s.phase !== 'gameOver') {
+    s.pendingDiscards = {};
+    advanceTurn(s);
+  }
 };
 
 const TRADE_ACTIONS = new Set(['proposeTrade', 'respondTrade', 'confirmTrade', 'cancelTrade']);

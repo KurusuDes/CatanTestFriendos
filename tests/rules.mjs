@@ -310,5 +310,41 @@ t('niebla: solo ves lo tuyo; construir sobre alguien oculto te desvía al hueco 
   ok(G.viewFor(s, 1).buildings[v0], 'P1 descubrió la casa de P0');
 });
 
+t('retirarse en su turno: pasa al siguiente, devuelve su mano y pierde premios', () => {
+  const s = fresh();
+  give(s, 0, { wood: 3, ore: 2 });
+  s.largestArmy = { owner: 0, count: 3 };
+  s.players[0].knights = 3;
+  s.players[2].knights = 4;
+  const bankWood = s.bank.wood;
+  ok(act(s, { type: 'retirePlayer', pid: 0 }).ok);
+  ok(s.players[0].retired);
+  eq(s.current, 1, 'turno del siguiente');
+  eq(s.phase, 'roll');
+  eq(s.bank.wood, bankWood + 3, 'mano al banco');
+  eq(s.largestArmy.owner, 2, 'el ejército pasa al que más tiene');
+  // turn order skips the retired seat
+  s.phase = 'main';
+  s.current = 3;
+  ok(act(s, { type: 'endTurn', pid: 3 }).ok);
+  eq(s.current, 1, 'salta al retirado');
+  eq(s.round, 2, 'nueva ronda al dar la vuelta');
+});
+
+t('retirarse durante la colocación inicial y relevo por bot', () => {
+  const c = defaultConfig();
+  c.seed = 11;
+  c.rules.randomStart = false;
+  c.players = c.players.map(p => ({ ...p, kind: 'bot' }));
+  const s = G.createGame(c);
+  ok(act(s, { type: 'retirePlayer', pid: 0 }).ok, 'retira al que coloca');
+  eq(s.current, 1);
+  ok(s.setup.queue.every((e, i) => i < s.setup.idx || e.pid !== 0), 'sin turnos pendientes del retirado');
+  ok(act(s, { type: 'setController', pid: 1, kind: 'human' }).ok);
+  eq(s.players[1].kind, 'human');
+  ok(act(s, { type: 'retirePlayer', pid: 2 }).ok);
+  ok(!act(s, { type: 'retirePlayer', pid: 3 }).ok, 'deben quedar 2');
+});
+
 console.log(`\n${pass} ok, ${failN} fallos`);
 process.exit(failN ? 1 : 0);

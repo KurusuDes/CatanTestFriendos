@@ -109,7 +109,7 @@ export const App = {
 
   leaveGame() {
     clearTimeout(this.botTimer);
-    if (this.isOnline()) this.net.close();
+    if (this.net) this.net.close();
     this.net = null;
     this.mySeat = null;
     this.state = null;
