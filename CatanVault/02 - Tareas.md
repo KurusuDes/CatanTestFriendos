@@ -15,9 +15,16 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Ver con la pestaña visible los fuegos artificiales del ADHD explotando desde las casas y la animación completa de la moneda ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
 - [ ] Probar el ADHD online con otra persona: que la franja y los fuegos de la victoria lleguen a todos ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
 - [ ] Probar el ADHD en móvil (que la ventana quepa en el mapa y se pueda jugar con el dedo) y en hotseat con dos humanos (cada uno con su saldo) ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
+- [ ] Probar en el juego real las cartas voladoras que no se vieron: la carta que vuelve del banco a tu mano, el robo, el descarte, Año de abundancia y Monopolio ➕ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
+- [ ] Probar las cartas voladoras en móvil y en online con otra persona ➕ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
+- [ ] Enseñar los iconos nuevos de trigo y piedra a los amigos y confirmar que ahora se entienden ➕ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
+- [ ] Decidir si se pone el nombre del recurso debajo del icono en las cartas de la mano (hoy solo sale al pasar el ratón y en móvil no se ve) ➕ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
+- [ ] Decidir si el recurso «Mineral» pasa a llamarse «Piedra» en el juego ➕ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
+- [ ] Decidir un nombre nuevo sin «Catan» antes de compartir el proyecto en Reddit o LinkedIn (título, logo, README, página y repo) ➕ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
 
 ## Hechas
 - [x] Licencia MIT, `NOTICE.md` y petición de crédito ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [x] Botón de dados con carga, reacciones desde todas las construcciones y banderín 3D ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [x] Vault de Obsidian y comandos /abrir-sesion y /cerrar-sesion ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [x] Sección ADHD de minijuegos (Plinko, tragamonedas, moneda y cohete, con Auto y fuegos artificiales al ganar) ✅ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
+- [x] Iconos nuevos de trigo y piedra, y cartas que vuelan al intercambiar ✅ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]

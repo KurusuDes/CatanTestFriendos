@@ -367,6 +367,12 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
 .fly-res { position: fixed; left: 0; top: 0; z-index: 70; pointer-events: none; will-change: transform, opacity; filter: drop-shadow(3px 3px 0 var(--ink)); }
 .fly-res img.px { width: 34px; height: 34px; display: block; }
 .fly-res:not(.mine) img.px { width: 26px; height: 26px; }
+/* a stolen card that you're not part of: you only see its back */
+.fly-back { display: block; width: 22px; height: 30px; background: repeating-linear-gradient(45deg, var(--pc, #5d275d) 0 4px, #29366f 4px 8px); box-shadow: 0 0 0 2px var(--white), 0 0 0 4px var(--ink); }
+/* where the cards land: player cards and the bank counters give a little hop */
+.pcard.bump { animation: bumpSm .45s; }
+.bank-info span.bump { display: inline-block; animation: bump .45s; }
+@keyframes bumpSm { 40% { transform: translateY(-4px) scale(1.03) } }
 
 /* ---------- reactions ---------- */
 .emote-toggle { font-size: 16px; }

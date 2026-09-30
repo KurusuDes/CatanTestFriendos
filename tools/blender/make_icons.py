@@ -41,7 +41,7 @@ def ramp(base):
 # name: base colour (the ramp is derived from it)
 MATS = dict(
     leaf='#3aa845', leafdark='#227a3f', bark='#8a5232', brick='#d0603f', mortar='#e8d2b0', wool='#f2eee6',
-    face='#3b3140', straw='#f2c243', stem='#c68a2e', band='#d8363f', rock='#9aa0ab', crystal='#39b8ff',
+    face='#3b3140', straw='#f2c243', stem='#c68a2e', band='#d8363f', rock='#a3a7b0', stalk='#c7a23e',
     gold='#ffc93a', cactus='#4cae4f', sand='#f0d49a', flower='#ff5d8f',
 )
 MAT_OBJ = {}
@@ -112,23 +112,24 @@ def sheep():
 
 
 def wheat():
-    # a sheaf: stems tied in the middle, fanning out at both ends
-    n = 8
-    for i in range(n):
-        a = (i / n) * math.tau + 0.2
-        M = T(0, 0, 0.45) @ RZ(a) @ RX(0.5 + 0.1 * (i % 2))
-        obj('stem', cone(5, 0.022, 0.022, 0.62), 'stem', M @ T(0, 0, 0.2))
-        obj('ear', ico(1, 0.09), 'straw', M @ T(0, 0, 0.58) @ S(0.75, 0.75, 2.2), smooth=True)
-        obj('foot', cone(5, 0.022, 0.022, 0.5), 'stem', T(0, 0, 0.45) @ RZ(a) @ RX(math.pi - 0.22) @ T(0, 0, 0.22))
-    obj('band', cone(12, 0.12, 0.12, 0.1), 'band', T(0, 0, 0.45))
+    # three ears of wheat fanned out towards the camera, like the 🌾 emoji: thin stalks, fat golden ears
+    W = RZ(math.radians(-35))  # the fan's plane faces the 3/4 camera
+    for tilt in (-0.5, 0.0, 0.5):
+        M = W @ RY(tilt)
+        obj('stalk', cone(5, 0.03, 0.025, 0.42), 'stalk', M @ T(0, 0, 0.21))
+        # the ear: a core plus pairs of grains leaning outwards, and one on top
+        obj('core', ico(2, 0.08), 'straw', M @ T(0, 0, 0.66) @ S(1, 0.9, 3.0), smooth=True)
+        for j in range(5):
+            z = 0.46 + j * 0.085
+            for side in (-1, 1):
+                obj('grain', ico(1, 0.055), 'straw', M @ T(side * 0.045, -0.01, z) @ RY(side * 0.4) @ S(0.8, 0.8, 1.7), smooth=True)
+        obj('grain', ico(1, 0.05), 'straw', M @ T(0, 0, 0.9) @ S(0.8, 0.8, 1.8), smooth=True)
 
 
 def ore():
-    obj('rock', ico(2, 0.45), 'rock', T(0, 0, 0.28) @ S(1.15, 1.0, 0.7), displace=0.08, seed=3)
-    for x, y, z, a, b, h in [(0.0, -0.1, 0.45, 0.15, 0.05, 0.62), (0.22, -0.12, 0.42, 0.1, 0.55, 0.42), (-0.22, -0.1, 0.42, -0.05, -0.6, 0.4), (0.08, 0.15, 0.45, -0.5, 0.2, 0.36)]:
-        M = T(x, y, z) @ RX(a) @ RY(b)
-        obj('prism', cone(6, 0.11, 0.11, h), 'crystal', M @ T(0, 0, h / 2))
-        obj('tip', cone(6, 0.11, 0.0, 0.16), 'crystal', M @ T(0, 0, h + 0.08))
+    # a small pile of rough grey stones (plain rock, no crystals: it has to read as "piedra")
+    for i, (x, y, z, r, sx, sz) in enumerate([(-0.3, 0.05, 0.19, 0.3, 1.15, 0.8), (0.3, 0.0, 0.18, 0.28, 1.2, 0.78), (0.02, 0.08, 0.47, 0.27, 1.1, 0.9), (0.06, -0.3, 0.13, 0.19, 1.2, 0.8)]):
+        obj('stone', ico(1, r), 'rock', T(x, y, z) @ RZ(i * 0.9) @ S(sx, 1.0, sz), displace=0.05, seed=i * 7 + 3)
 
 
 def gold():

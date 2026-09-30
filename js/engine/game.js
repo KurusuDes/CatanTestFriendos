@@ -857,6 +857,7 @@ H.discard = (s, a) => {
     s.bank[r] += res[r] || 0;
   }
   p.stats.lost += need;
+  s.fx.push({ kind: 'discard', pid: a.pid, res: Object.fromEntries(RES.map(r => [r, res[r] || 0])) });
   delete s.pendingDiscards[a.pid];
   log(s, `🗑️ @${a.pid} descarta ${need} cartas.`, a.pid);
   if (!Object.keys(s.pendingDiscards).length) s.phase = s.config.rules.noRobber ? 'main' : 'robber';
@@ -985,16 +986,20 @@ H.playDev = (s, a) => {
       break;
     case 'yearOfPlenty':
       for (const r of a.res) giveFromBank(s, a.pid, r, 1);
+      s.fx.push({ kind: 'fromBank', pid: a.pid, res: a.res });
       break;
     case 'monopoly': {
       let got = 0;
+      const from = [];
       for (const o of s.players) {
         if (o.id === a.pid) continue;
+        if (o.res[a.res]) from.push([o.id, o.res[a.res]]);
         got += o.res[a.res];
         o.stats.lost += o.res[a.res];
         o.res[a.res] = 0;
       }
       p.res[a.res] += got;
+      s.fx.push({ kind: 'monopoly', pid: a.pid, res: a.res, from });
       log(s, `👑 @${a.pid} se lleva ${got} ${resName(a.res)}.`, a.pid);
       break;
     }
@@ -1012,6 +1017,7 @@ H.bankTrade = (s, a) => {
   s.bank[a.give] += ratio;
   p.res[a.get]++;
   s.bank[a.get]--;
+  s.fx.push({ kind: 'bankTrade', pid: a.pid, give: a.give, n: ratio, get: a.get });
   log(s, `🏦 @${a.pid} cambia ${ratio}${resName(a.give)} por 1${resName(a.get)}.`, a.pid);
 };
 
@@ -1060,7 +1066,7 @@ H.confirmTrade = (s, a) => {
     o.res[r] += t.give[r] - t.get[r];
   }
   s.trade = null;
-  s.fx.push({ kind: 'trade', a: a.pid, b: a.with });
+  s.fx.push({ kind: 'trade', a: a.pid, b: a.with, give: t.give, get: t.get });
   log(s, `🤝 @${a.pid} y @${a.with} intercambian.`, a.pid);
 };
 

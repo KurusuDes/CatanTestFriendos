@@ -190,6 +190,8 @@ function handleFx(st) {
         if (!f.hidden || f.pid === v) play.build();
         break;
       case 'steal':
+        // only the two involved see which card it was
+        flyCards([f.res], f.from, f.to, v, { hidden: f.from !== v && f.to !== v });
         if (f.from === v) toast(h('span', null, rich(`🫳 @${f.to} te robó `, st.players), TILE_INFO[f.res].icon), 'error');
         else if (f.to === v) toast(h('span', null, rich(`🫳 Le robaste a @${f.from}: `, st.players), TILE_INFO[f.res].icon), 'good');
         if (host && st.players[f.from].kind === 'bot' && Math.random() < 0.45) botEmote(f.from, ['😡', '😤', '💀', '😭']);
@@ -219,6 +221,23 @@ function handleFx(st) {
         break;
       case 'award':
         toast(rich(`${f.what === 'road' ? '🛣️ Camino más largo' : '⚔️ Ejército más grande'}: @${f.pid}`, st.players), 'good');
+        break;
+      case 'trade':
+        flyCards(spread(f.give), f.a, f.b, v);
+        flyCards(spread(f.get), f.b, f.a, v, { delay: 160 });
+        break;
+      case 'bankTrade':
+        flyCards(Array(f.n).fill(f.give), f.pid, 'bank', v);
+        flyCards([f.get], 'bank', f.pid, v, { delay: 420 + Math.min(f.n, 6) * 90 });
+        break;
+      case 'discard':
+        flyCards(spread(f.res), f.pid, 'bank', v);
+        break;
+      case 'fromBank':
+        flyCards(f.res, 'bank', f.pid, v);
+        break;
+      case 'monopoly':
+        f.from.forEach(([o, n], i) => flyCards(Array(n).fill(f.res), o, f.pid, v, { delay: i * 200 }));
         break;
       case 'devBought':
         if (f.pid === v) toast(`🃏 Compraste: ${DEV_INFO[f.type].icon} ${DEV_INFO[f.type].name}`, 'good');
@@ -281,21 +300,51 @@ function flyGain(st, f, v, delay) {
 function flyOne(res, tile, pid, mine, first) {
   const b = ui.board3d, pt = b && b.tilePoint(tile);
   const from = pt && b.toScreen(pt.x, pt.y, pt.z);
-  const target = () => (mine ? ui.els.actionbar.querySelectorAll('.hand .rcard')[RES.indexOf(res)] : ui.els.players.children[pid]);
-  const t = target();
-  if (!from || !t) return;
-  const r = t.getBoundingClientRect();
-  const to = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
-  const mid = { x: (from.x + to.x) / 2 + (Math.random() - 0.5) * 120, y: Math.min(from.y, to.y) - 70 - Math.random() * 50 };
+  if (from) flyCard(res, from, () => cardsOf(pid, res, mine), { mine, sound: mine && first });
+}
+
+// ---------------- cards flying between hands, players and the bank ----------------
+// {wood: 2, ore: 1} -> ['wood', 'wood', 'ore']
+const spread = o => RES.flatMap(r => Array(o[r] || 0).fill(r));
+
+// centre of an element on screen, null when it isn't laid out (hidden panel on a phone)
+function centre(el) {
+  const r = el && el.getBoundingClientRect();
+  return r && (r.width || r.height) ? { x: r.left + r.width / 2, y: r.top + r.height / 2 } : null;
+}
+
+// where a player's cards are drawn: the card of that resource in your own hand, or their card in the list
+function cardsOf(pid, res, mine) {
+  const hand = mine && ui.els.actionbar.querySelectorAll('.hand .rcard');
+  return hand && hand.length ? hand[RES.indexOf(res)] : ui.els.players.children[pid];
+}
+const bankOf = res => (centre(ui.els.bank) ? ui.els.bank.children[1 + RES.indexOf(res)] || ui.els.bank : document.querySelector('.board-wrap'));
+
+// cards travel one after another from `a` to `b` (a player id or 'bank'); `hidden` shows their backs
+function flyCards(list, a, b, v, o = {}) {
+  const u = ui, spot = (who, res) => (who === 'bank' ? bankOf(res) : cardsOf(who, res, who === v));
+  list.slice(0, 7).forEach((res, i) =>
+    setTimeout(() => {
+      if (ui !== u) return;
+      const from = centre(spot(a, res));
+      if (from) flyCard(res, from, () => spot(b, res), { mine: b === v, sound: b === v && i === 0, hidden: o.hidden, short: true });
+    }, (o.delay || 0) + i * 90));
+}
+
+function flyCard(res, from, target, o = {}) {
+  const t = target(), to = centre(t);
+  if (!to) return;
+  const lift = o.short ? 16 : 34;
+  const mid = { x: (from.x + to.x) / 2 + (Math.random() - 0.5) * (o.short ? 60 : 120), y: Math.min(from.y, to.y) - (o.short ? 40 : 70) - Math.random() * 40 };
   const at = (p, s) => `translate(${p.x}px, ${p.y}px) translate(-50%, -50%) scale(${s})`;
-  const el = h('div', { class: 'fly-res' + (mine ? ' mine' : '') }, pxIcon(TILE_INFO[res].icon.replace(/️/g, ''), 32));
+  const el = h('div', { class: 'fly-res' + (o.mine ? ' mine' : '') }, o.hidden ? h('i', { class: 'fly-back' }) : pxIcon(TILE_INFO[res].icon.replace(/️/g, ''), 32));
   document.body.append(el);
   const anim = el.animate([
     { transform: at(from, 0.3), opacity: 0 },
-    { transform: at({ x: from.x, y: from.y - 34 }, 1.35), opacity: 1, offset: 0.18 },
-    { transform: at(mid, 1.1), opacity: 1, offset: 0.58 },
-    { transform: at(to, mine ? 0.95 : 0.55), opacity: mine ? 1 : 0.4 },
-  ], { duration: 950, easing: 'cubic-bezier(.4,0,.6,1)' });
+    { transform: at({ x: from.x, y: from.y - lift }, o.short ? 1.1 : 1.35), opacity: 1, offset: 0.18 },
+    { transform: at(mid, 1.05), opacity: 1, offset: 0.58 },
+    { transform: at(to, o.mine ? 0.95 : 0.55), opacity: o.mine ? 1 : 0.4 },
+  ], { duration: o.short ? 800 : 950, easing: 'cubic-bezier(.4,0,.6,1)' });
   setTimeout(() => el.remove(), 2500); // hidden tabs may never finish the animation
   anim.onfinish = () => {
     el.remove();
@@ -304,7 +353,7 @@ function flyOne(res, tile, pid, mine, first) {
     c.classList.remove('bump');
     void c.offsetWidth;
     c.classList.add('bump');
-    if (mine && first) play.gain();
+    if (o.sound) play.gain();
   };
 }
 
