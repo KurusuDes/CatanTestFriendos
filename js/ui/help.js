@@ -21,7 +21,7 @@ export function showHelp() {
       h('ul', null,
         h('li', null, 'Poblado 1 · Ciudad 2 · Carta de punto 1 (oculta).'),
         h('li', null, '🛣️ Camino más largo (5+ tramos seguidos): 2 puntos. ⚔️ Ejército más grande (3+ caballeros): 2 puntos.')),
-      h('h3', null, 'Modos Kchudites'),
+      h('h3', null, 'Modos Amiguites'),
       h('ul', null, MODES.map(m => h('li', null, h('b', null, `${m.icon} ${m.name}: `), m.desc))),
       h('h3', null, 'Controles'),
       h('ul', null,

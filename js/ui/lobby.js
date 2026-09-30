@@ -140,7 +140,7 @@ export function lobbyScreen(root, opts = {}) {
       h('div', { class: 'chips room-share' },
         h('button', { class: 'btn sm', onclick: () => copy(link, '🔗 Enlace copiado: pásaselo a tus amigos') }, '🔗 Copiar enlace'),
         h('button', { class: 'btn sm', onclick: () => copy(net.code, '📋 Código copiado') }, '📋 Código'),
-        navigator.share ? h('button', { class: 'btn sm', onclick: () => navigator.share({ title: 'Catan x Kchudites', text: '¡Únete a mi sala de Catan x Kchudites!', url: link }).catch(() => {}) }, '📤 Compartir') : null),
+        navigator.share ? h('button', { class: 'btn sm', onclick: () => navigator.share({ title: 'Katan x Amiguites', text: '¡Únete a mi sala de Katan x Amiguites!', url: link }).catch(() => {}) }, '📤 Compartir') : null),
       h('div', { class: 'section-label' }, 'Tamaño de la sala'),
       h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (cfg.players.length === n ? ' on' : ''), title: `${n} jugadores`, onclick: () => setCapacity(n) }, n))),
       h('div', { class: 'gfx-row room-toggles' },

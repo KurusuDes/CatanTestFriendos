@@ -2,9 +2,9 @@
 tags: [index]
 ---
 
-# Catan x Kchudites — Índice
+# Katan x Amiguites — Índice
 
-Catan en el navegador (sitio estático, sin build) con mapas personalizables, modos propios, bots, online P2P y mapa 3D de maqueta con UI pixel art.
+Juego de colonos inspirado en Catan, en el navegador (sitio estático, sin build) con mapas personalizables, modos propios, bots, online P2P y mapa 3D de maqueta con UI pixel art.
 
 - **Jugar:** https://kurusudes.github.io/CatanTestFriendos/ (GitHub Pages desde `main`: cada push publica)
 - **Repo:** https://github.com/KurusuDes/CatanTestFriendos
@@ -29,7 +29,7 @@ Catan en el navegador (sitio estático, sin build) con mapas personalizables, mo
 | Estilos | `css/style.css`, `css/pixel.css` | Tema pixel (paleta Sweetie-16) |
 | Recursos | `assets/`, `tools/blender/*.py` | Texturas, `kit.glb` e iconos generados con los scripts de Blender |
 | Tests | `tests/rules.mjs`, `tests/sim.mjs` | `npm test`: reglas + 300 partidas bot contra bot con invariantes |
-| Showcase | `showcase/` | Página y video promocional |
+| Showcase y tráiler | `showcase/` | Showcase (`index.html`, `showcase.js`) y tráiler satírico ES/EN (`trailer.html`, `trailer.js`, `?lang=en`), con utilidades compartidas en `motion.js`; los MP4 se graban fotograma a fotograma |
 | Flujo de trabajo | `.claude/commands/`, `.claude/hooks/session-start.mjs`, `.claude/settings.json` | `/abrir-sesion`, `/cerrar-sesion` y el hook que inyecta el Active Context y las tareas abiertas al empezar |
 
 ## Cómo trabajamos

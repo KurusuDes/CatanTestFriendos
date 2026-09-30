@@ -35,7 +35,7 @@ export function gameScreen(root) {
     pass: h('div'),
   };
   const topbar = h('header', { class: 'topbar' },
-    h('div', { class: 'brand' }, 'Catan ', h('i', null, 'x'), ' Kchudites'),
+    h('div', { class: 'brand' }, 'Katan ', h('i', null, 'x'), ' Amiguites'),
     els.turn, els.event, els.dice,
     h('div', { class: 'top-actions' },
       h('button', { class: 'btn sm', title: 'Ayuda', onclick: () => showHelp() }, '❔'),

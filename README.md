@@ -1,10 +1,10 @@
-# Catan x Kchudites
+# Katan x Amiguites
 
-Catan en el navegador con mapas personalizables y modos que no existen en la caja.
+Un juego de colonos inspirado en Catan, en el navegador, con mapas personalizables y modos que no existen en la caja.
 
-**Jugar:** https://kurusudes.github.io/CatanTestFriendos/ · **Showcase:** https://kurusudes.github.io/CatanTestFriendos/showcase/ · **Video:** [catan-x-kchudites.mp4](showcase/catan-x-kchudites.mp4)
+**Jugar:** https://kurusudes.github.io/CatanTestFriendos/ · **Tráiler:** https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html ([MP4](showcase/katan-x-amiguites-trailer.mp4)) · **Trailer (English):** https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en ([MP4](showcase/katan-x-amiguites-trailer-en.mp4)) · **Showcase:** https://kurusudes.github.io/CatanTestFriendos/showcase/ ([MP4](showcase/katan-x-amiguites.mp4))
 
-![Catan x Kchudites](showcase/poster.jpg)
+![Katan x Amiguites](showcase/poster.jpg)
 
 ## Qué trae
 - **10 formas de mapa** (clásico, mini, extendido 5-6, grande, gigante, anillo del lago, estrella, dos reinos, archipiélago, pangea aleatoria) + **editor de mapas** con códigos para compartir.
@@ -13,6 +13,7 @@ Catan en el navegador con mapas personalizables y modos que no existen en la caj
 - **Reglas ajustables:** puntos para ganar, límite de mano, rondas de colocación, bonus inicial, piezas por jugador, mazos de desarrollo, oro, puertos, desiertos.
 - **Hasta 8 jugadores** (banco, mazo y mapas escalados). Cada reino pinta su **bandera** (editor pixel 12×12) y elige el **color de su castillo**; la bandera ondea en el mapa 3D.
 - **Online robusto:** reconexión automática si se cae la señal (recuperas tu asiento), **votación** cuando alguien se desconecta (esperar / que lo sustituya un bot / retirarlo) y el anfitrión puede **reabrir la sala** con el mismo código si se le cae.
+- **ADHD:** minijuegos para la espera (Plinko, tragamonedas, moneda y cohete) con dinero falso, que se minimizan solos cuando te toca.
 - **Bots** en 3 niveles, **hotseat** con pantalla de pase, **online** P2P (WebRTC/PeerJS, sin servidor) y **mapa 3D de maqueta realista** (three.js: terreno continuo con 8 texturas PBR mezcladas, cielo físico con IBL, agua con espuma según profundidad, hierba y trigo al viento, sombras de nubes, GTAO, tilt-shift; modelos texturizados con AO horneado hechos en Blender en `tools/blender/`) con **UI pixel art**.
 - Reglas completas: ladrón, descartes, puertos 3:1 y 2:1, comercio entre jugadores, cartas de desarrollo, camino más largo y ejército más grande.
 

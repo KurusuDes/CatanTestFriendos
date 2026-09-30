@@ -1,31 +1,16 @@
-// "Catan x Kchudites" motion graphics. Every frame is a pure function of the clock T
+// "Katan x Amiguites" motion graphics. Every frame is a pure function of the clock T
 // (the 3D view included), so the video can be recorded frame by frame (?rec) or played live.
 import { h, s as S } from '../js/ui/dom.js';
-import { createGame, applyAction, pendingActors, victoryPoints, viewFor } from '../js/engine/game.js';
-import { botAct } from '../js/engine/bot.js';
-import { defaultConfig, PLAYER_COLORS, BOT_NAMES } from '../js/engine/config.js';
+import { createGame, victoryPoints, viewFor } from '../js/engine/game.js';
 import { SHAPES, hexagon, hexCenter } from '../js/engine/board.js';
 import { TILE_INFO } from '../js/engine/constants.js';
 import { pixelize, pxIcon } from '../js/ui/pixel.js';
+import { clamp, P, eOut, eIn, eInOut, eBack, lerp, step, tf, botConfig, step1, clone, makeTitle, clearLabels } from './motion.js';
 
 const stage = document.getElementById('stage');
 const REC = new URLSearchParams(location.search).has('rec');
 if (REC) document.body.classList.add('rec');
 const URL_TEXT = 'kurusudes.github.io/CatanTestFriendos';
-
-// ---------- easing ----------
-const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
-const P = (t, s, d) => clamp((t - s) / d);
-const eOut = x => 1 - Math.pow(1 - x, 3);
-const eIn = x => x * x * x;
-const eInOut = x => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
-const eBack = x => { const c1 = 1.9, c3 = c1 + 1; return x <= 0 ? 0 : x >= 1 ? 1 : 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
-const lerp = (a, b, x) => a + (b - a) * x;
-const step = (x, n) => Math.round(x * n) / n; // chunky, pixel-like motion
-const tf = (el, x = 0, y = 0, s = 1, r = 0, o) => {
-  el.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px) scale(${s}) rotate(${r}deg)`;
-  if (o !== undefined) el.style.opacity = o;
-};
 
 function fit() {
   const k = REC ? 1 : Math.min(innerWidth / 1280, innerHeight / 720);
@@ -34,46 +19,10 @@ function fit() {
 addEventListener('resize', fit);
 fit();
 
-function botConfig(shape, seed, extra) {
-  const c = defaultConfig();
-  c.seed = seed;
-  c.rules.randomStart = false;
-  c.players = [0, 1, 2, 3].map(i => ({ name: BOT_NAMES[i], kind: 'bot', level: ['hard', 'normal', 'normal', 'easy'][i], color: PLAYER_COLORS[i] }));
-  c.map.shape = shape;
-  c.map.size = 26;
-  if (extra) extra(c);
-  return c;
-}
-const step1 = st => {
-  const a = pendingActors(st).map(p => botAct(st, p)).find(Boolean);
-  if (a) applyAction(st, a);
-  return a;
-};
-const clone = st => JSON.parse(JSON.stringify(st));
-
-function makeTitle(root, kicker, text, sub) {
-  const k = h('div', { class: 'sc-kicker' }, kicker);
-  const t = h('div', { class: 'sc-title' }, [...text].map(ch => h('span', null, ch === ' ' ? ' ' : ch)));
-  const sb = sub ? h('div', { class: 'sc-sub' }, sub) : null;
-  root.append(k, t, sb || '');
-  return (lt, dur) => {
-    const out = eIn(P(lt, dur - 420, 380));
-    [...t.children].forEach((sp, i) => {
-      const p = eBack(P(lt, 60 + i * 24, 420));
-      const j = Math.floor(lt / 120 + i * 3) % 4; // pixel "boil"
-      const jx = [0, 1, -1, 0][j], jy = [0, -1, 0, 1][j];
-      sp.style.transform = `translate(${jx}px,${Math.round((1 - p) * 70 - out * 40) + jy}px)`;
-      sp.style.opacity = P(lt, 60 + i * 24, 120) * (1 - out);
-    });
-    k.style.opacity = P(lt, 0, 250) * (1 - out);
-    tf(k, (1 - eOut(P(lt, 0, 400))) * -50);
-    if (sb) tf(sb, 0, (1 - eOut(P(lt, 400, 450))) * 20, 1, 0, P(lt, 400, 350) * (1 - out));
-  };
-}
-
 // ---------- persistent 3D layer ----------
 let B = null;
-const layer3d = h('div', { class: 'layer', style: { opacity: 0 } });
+// its own stacking context: the map's number labels (z-index 1) must never cover the titles on top
+const layer3d = h('div', { class: 'layer', style: { opacity: 0, zIndex: 0 } });
 const shade = h('div', { class: 'layer shade' });
 stage.append(layer3d, shade);
 let T3 = 0;
@@ -100,9 +49,9 @@ scene('intro', 5000, {
     sc.st = sc.st || createGame(botConfig('pangea', 4242, c => ((c.map.size = 32), (c.map.gold = 1))));
     show3d(sc.st, {});
     B.labels.domElement.style.visibility = 'hidden';
-    sc.t1 = h('div', { class: 'logo-t1' }, 'CATAN');
+    sc.t1 = h('div', { class: 'logo-t1' }, 'KATAN');
     sc.x = h('div', { class: 'logo-x' }, 'x');
-    sc.t2 = h('div', { class: 'logo-t2' }, 'KCHUDITES');
+    sc.t2 = h('div', { class: 'logo-t2' }, 'AMIGUITES');
     sc.sub = h('div', { class: 'logo-sub' }, 'Colonos, caos y modos que no existen en la caja');
     root.append(sc.t1, sc.x, sc.t2, sc.sub);
   },
@@ -383,9 +332,9 @@ scene('outro', 6200, {
     sc.st = createGame(botConfig('star', 99, c => (c.map.gold = 2)));
     show3d(sc.st, {});
     B.labels.domElement.style.visibility = 'hidden';
-    sc.t1 = h('div', { class: 'logo-t1', style: { top: '60px', fontSize: '130px' } }, 'CATAN');
+    sc.t1 = h('div', { class: 'logo-t1', style: { top: '60px', fontSize: '130px' } }, 'KATAN');
     sc.x = h('div', { class: 'logo-x', style: { top: '200px', fontSize: '54px' } }, 'x');
-    sc.t2 = h('div', { class: 'logo-t2', style: { top: '262px', fontSize: '96px' } }, 'KCHUDITES');
+    sc.t2 = h('div', { class: 'logo-t2', style: { top: '262px', fontSize: '96px' } }, 'AMIGUITES');
     sc.cta = h('div', { class: 'logo-sub', style: { top: '410px', fontSize: '30px' } }, '¡Arma tu mapa, elige tu caos y juega!');
     sc.feats = FEATURES.map(f => h('span', null, f));
     sc.grid = h('div', { class: 'feature-grid' }, sc.feats);
@@ -402,7 +351,7 @@ scene('outro', 6200, {
     tf(sc.x, 0, 0, eBack(P(lt, 450, 400)), 0, P(lt, 450, 100) * (1 - out));
     tf(sc.t2, (1 - eOut(P(lt, 650, 500))) * -800 + boil(2), boil(3), 1, 0, P(lt, 650, 200) * (1 - out));
     tf(sc.cta, 0, (1 - eOut(P(lt, 1200, 450))) * 20, 1, 0, P(lt, 1200, 350) * (1 - out));
-    sc.feats.forEach((f, i) => tf(f, 0, 0, step(eBack(P(lt, 1600 + i * 80, 320)), 6), 0, P(lt, 1600 + i * 80, 80) * (1 - out)));
+    sc.feats.forEach((f, i) => tf(f, 0, 0, step(eOut(P(lt, 1600 + i * 80, 320)), 6), 0, P(lt, 1600 + i * 80, 80) * (1 - out)));
     tf(sc.url, 0, 0, 1, 0, P(lt, 2900, 350) * (1 - out));
   },
   exit() {
@@ -450,12 +399,8 @@ function frame(T) {
     B.clock = { getElapsedTime: () => T / 1000 };
     B.now = () => T;
     B.tick();
-    // keep the left text column clean
-    for (const el of B.labels.domElement.children) {
-      const m = /translate\((-?[\d.]+)px/.exec(el.style.transform.split('translate(-50%,-50%)').pop() || '');
-      const x = m ? parseFloat(m[1]) : 9999;
-      el.style.visibility = x < 600 ? 'hidden' : '';
-    }
+    // the video always wins: labels hide under titles, stamps and cards, and in the left column
+    if (B.labels.domElement.style.visibility !== 'hidden') clearLabels(B.labels.domElement, scenes.filter(sc => sc.root).map(sc => sc.root));
   }
   document.getElementById('barFill').style.width = (T / TOTAL) * 100 + '%';
 }

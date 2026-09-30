@@ -1,5 +1,5 @@
 ---
-description: Abre sesión de trabajo en Catan x Kchudites (estado, pendientes y plan del día)
+description: Abre sesión de trabajo en Katan x Amiguites (estado, pendientes y plan del día)
 argument-hint: "[tarea opcional]"
 ---
 

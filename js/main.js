@@ -100,9 +100,9 @@ function menuScreen(root) {
   const dio = h('div', { class: 'menu-bg3d' });
   root.append(h('div', { class: 'menu screen' }, bg, dio,
     h('div', { class: 'logo' },
-      h('div', { class: 't1 jit' }, 'CATAN'),
+      h('div', { class: 't1 jit' }, 'KATAN'),
       h('span', { class: 'x jit' }, 'x'),
-      h('div', { class: 't2 jit' }, 'KCHUDITES'),
+      h('div', { class: 't2 jit' }, 'AMIGUITES'),
       h('div', { class: 'sub' }, 'Colonos, caos y modos que no existen en la caja.')),
     kingdomPanel(),
     h('div', { class: 'menu-buttons' },
@@ -116,8 +116,10 @@ function menuScreen(root) {
       h('button', { class: 'btn', onclick: () => App.go('editor') }, '✏️ Editor de mapas'),
       h('button', { class: 'btn', onclick: () => quickBots() }, '👀 Ver una partida de bots'),
       h('button', { class: 'btn', onclick: () => showHelp() }, '📖 Cómo se juega'),
-      h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none' } }, '🎬 Showcase')),
-    h('div', { class: 'menu-foot' }, 'Hecho para los Kchudites · funciona en PC y móvil · sin instalar nada')));
+      h('div', { style: { display: 'flex', gap: '6px' } },
+        h('a', { class: 'btn', href: 'showcase/trailer.html', style: { textDecoration: 'none', flex: 1 } }, '🎞️ Tráiler'),
+        h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none', flex: 1 } }, '🎬 Showcase'))),
+    h('div', { class: 'menu-foot' }, 'Hecho para los Amiguites · funciona en PC y móvil · sin instalar nada')));
   menuDiorama(dio);
 }
 
