@@ -7,6 +7,7 @@ import { hint } from '../engine/bot.js';
 import { play } from './sfx.js';
 import { showHelp } from './help.js';
 import { flagImg } from './flag.js';
+import { iconSet, setIconSet, ICON_SETS } from './pixel.js';
 
 let ui = null;
 
@@ -762,7 +763,10 @@ function openMenu() {
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_TILT() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ tiltShift: !ui.board3d.constructor.SETTINGS_TILT() }); renderModal(App.state); } }, '📷 Tilt-shift'),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ pixel: ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? 1 : 3 }); renderModal(App.state); } }, '👾 Filtro pixel'),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_AO() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ ao: !ui.board3d.constructor.SETTINGS_AO() }); renderModal(App.state); } }, '🌑 Oclusión ambiental'),
-        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_Q() === 'high' ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ quality: ui.board3d.constructor.SETTINGS_Q() === 'high' ? 'low' : 'high' }); toast('Calidad cambiada: se aplica al recargar el mapa'); renderModal(App.state); } }, '✨ Alta calidad'))) : null,
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_Q() === 'high' ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ quality: ui.board3d.constructor.SETTINGS_Q() === 'high' ? 'low' : 'high' }); toast('Calidad cambiada: se aplica al recargar el mapa'); renderModal(App.state); } }, '✨ Alta calidad'),
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_OUTLINE() ? ' on' : ''), title: 'Contorno fino del color de cada jugador, visible a través de montañas y árboles', onclick: () => { ui.board3d.setGraphics({ outline: !ui.board3d.constructor.SETTINGS_OUTLINE() }); renderModal(App.state); } }, '🔲 Contorno de piezas'))) : null,
+      h('div', null, h('div', { class: 'section-label' }, 'Iconos de recursos'), h('div', { class: 'gfx-row' },
+        ICON_SETS.map(k => [k, { render: '🧊 3D (Blender)', pico: '🆕 Pixel PICO', classic: '🕹️ Clásicos' }[k]]).map(([k, l]) => h('button', { class: 'chip' + (iconSet() === k ? ' on' : ''), onclick: () => { setIconSet(k); if (ui.board3d) ui.board3d.staticKey = ''; render(App.state); } }, l)))),
       h('button', { class: 'btn', onclick: () => { closeModal(); showHelp(); } }, '📖 Cómo se juega'),
       h('button', { class: 'btn', onclick: () => { const on = App.toggleSound(); toast(on ? '🔊 Sonido activado' : '🔇 Sonido desactivado'); } }, '🔊 Sonido on/off'),
       h('div', null, h('div', { class: 'section-label' }, 'Velocidad de los bots'), speedControl()),

@@ -143,11 +143,13 @@ input[type=range] { accent-color: var(--sand); }
 
 /* ---------- 3D pixel labels ---------- */
 .labels-3d { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.tok3d { font-family: var(--num); background: #f7ecd0; color: var(--ink); min-width: 30px; height: 31px; opacity: .95; display: grid; place-items: center; align-content: center; gap: 3px; line-height: .9;
-  box-shadow: 0 0 0 3px var(--ink), inset -3px -3px 0 #d7c49b, 4px 5px 0 1px rgba(0,0,0,.35); font-weight: 700; font-size: 14px; padding: 3px 3px 2px; text-align: center; }
-/* probability bar: fills from the centre, thicker and darker (then red) the likelier the number */
-.tok3d .pbar { display: flex; justify-content: center; align-items: center; width: 24px; height: 6px; }
-.tok3d .pbar b { display: block; box-shadow: 0 0 0 1px rgba(26,28,44,.55); }
+/* even, fixed size + 16px Silkscreen (its native grid) + whole-pixel positions = crisp digits */
+.tok3d { font-family: var(--num); background: #f7ecd0; color: var(--ink); width: 40px; height: 40px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  box-shadow: 0 0 0 3px var(--ink), inset -3px -3px 0 #d7c49b, 4px 5px 0 1px rgba(0,0,0,.35); font-weight: 400; font-size: 16px; line-height: 16px; padding-top: 2px; text-align: center; -webkit-font-smoothing: none; }
+.tok3d span { display: block; height: 16px; }
+/* probability bar: one segment per classic Catan pip, centred, thicker and darker (then red) the likelier the number */
+.tok3d .pbar { display: flex; justify-content: center; align-items: center; gap: 2px; height: 6px; }
+.tok3d .pbar b { display: block; width: 4px; box-shadow: 0 0 0 1px rgba(26,28,44,.6); }
 .tok3d.red { color: var(--wine); }
 /* winning number: soft green blink for ~2.6s. Only background/box-shadow/translate are animated:
    `transform` belongs to CSS2DRenderer (animating it made the tokens jump around the screen). */

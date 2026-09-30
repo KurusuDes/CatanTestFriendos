@@ -16,8 +16,6 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
-import { HorizontalTiltShiftShader } from 'three/addons/shaders/HorizontalTiltShiftShader.js';
-import { VerticalTiltShiftShader } from 'three/addons/shaders/VerticalTiltShiftShader.js';
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { probLook } from '../engine/constants.js';
@@ -25,7 +23,7 @@ import { pixelToHex, hk } from '../engine/board.js';
 import { pxIcon } from './pixel.js';
 import { flagCanvas } from './flag.js';
 
-export const SETTINGS = { pixel: 1, tiltShift: true, quality: 'high', ao: true };
+export const SETTINGS = { pixel: 1, tiltShift: true, quality: 'high', ao: true, outline: true };
 // phones and small screens start on the light preset
 if (typeof matchMedia === 'function' && (matchMedia('(pointer: coarse)').matches || innerWidth < 900)) Object.assign(SETTINGS, { quality: 'low', ao: false });
 try {
@@ -57,6 +55,85 @@ const smooth = (a, b, x) => {
 function prng(seed) {
   let s = (Math.abs(seed | 0) % 233280) + 1;
   return () => (s = (s * 9301 + 49297) % 233280) / 233280;
+}
+
+// ---------- player pieces: sharp through the tilt-shift + a thin x-ray outline ----------
+// Every frame two small masks are drawn: `vis` = the pieces you can actually see (depth-tested
+// against the landscape) and `all` = every piece ignoring occlusion, both in the owner's colour.
+// Layers: 0 landscape, 1 player pieces, 2 grass (left out of the depth pre-pass).
+const LAYER_PIECES = 1, LAYER_GRASS = 2;
+const PASS_VS = 'varying vec2 vUv;\nvoid main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+// tilt-shift that leaves the pieces crisp and never smears their colour onto the blurred land
+function tiltShader(dir) {
+  return {
+    uniforms: { tDiffuse: { value: null }, tMask: { value: null }, h: { value: 1 / 512 }, r: { value: 0.55 } },
+    vertexShader: PASS_VS,
+    fragmentShader: `uniform sampler2D tDiffuse; uniform sampler2D tMask; uniform float h; uniform float r; varying vec2 vUv;
+      const float W[9] = float[9](0.051, 0.0918, 0.12245, 0.1531, 0.1633, 0.1531, 0.12245, 0.0918, 0.051);
+      void main() {
+        float m = texture2D(tMask, vUv).a;
+        if (m > 0.5) { gl_FragColor = texture2D(tDiffuse, vUv); return; }
+        float hh = h * abs(r - vUv.y);
+        vec4 sum = vec4(0.0); float ws = 0.0;
+        for (int i = 0; i < 9; i++) {
+          vec2 uv = vUv + vec2(${dir}) * float(i - 4) * hh;
+          float w = W[i] * (1.0 - texture2D(tMask, uv).a);
+          sum += texture2D(tDiffuse, uv) * w; ws += w;
+        }
+        gl_FragColor = sum / max(ws, 1e-4);
+      }`,
+  };
+}
+const OutlineShader = {
+  uniforms: { tDiffuse: { value: null }, tVis: { value: null }, tAll: { value: null }, uTexel: { value: new THREE.Vector2() } },
+  vertexShader: PASS_VS,
+  fragmentShader: `uniform sampler2D tDiffuse; uniform sampler2D tVis; uniform sampler2D tAll; uniform vec2 uTexel; varying vec2 vUv;
+    void main() {
+      vec4 base = texture2D(tDiffuse, vUv);
+      vec4 a = texture2D(tAll, vUv);
+      vec3 col = base.rgb;
+      if (a.a > 0.5) {
+        // inside a piece that something hides: a faint glimpse of its colour
+        if (texture2D(tVis, vUv).a < 0.5) col = mix(col, a.rgb, 0.22);
+      } else {
+        vec4 n = vec4(0.0); float nv = 0.0;
+        for (int k = 0; k < 16; k++) {
+          float ang = float(k) * 0.7853982;
+          vec2 off = vec2(cos(ang), sin(ang)) * uTexel * (k < 8 ? 1.0 : 2.0);
+          vec4 s = texture2D(tAll, vUv + off);
+          if (s.a > 0.5) { n = s; nv = max(nv, texture2D(tVis, vUv + off).a); }
+        }
+        // visible edge: dark ink of the owner's colour; hidden edge: bright colour shining through
+        if (n.a > 0.5) col = nv > 0.5 ? mix(col, n.rgb * 0.42, 0.85) : mix(col, n.rgb, 0.8);
+      }
+      gl_FragColor = vec4(col, base.a);
+    }`,
+};
+// the visible mask pulls pieces a little towards the camera, so a base sunk a few mm into the
+// terrain still counts as visible (only real occluders like hills and trees hide a piece)
+const MASK_VS = `uniform float uPull;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  mv.xyz -= normalize(mv.xyz) * uPull;
+  gl_Position = projectionMatrix * mv;
+}`;
+const pieceColorMat = xray => {
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color() }, uPull: { value: xray ? 0 : 0.14 } },
+    vertexShader: MASK_VS,
+    fragmentShader: 'uniform vec3 uColor;\nvoid main() { gl_FragColor = vec4(uColor, 1.0); }',
+    depthTest: !xray,
+    depthWrite: !xray,
+    side: THREE.DoubleSide,
+  });
+  m.userData.pieceMask = true;
+  return m;
+};
+// set per mesh while rendering the masks (the override material is shared)
+function pieceHook(r, s, c, g, mat) {
+  if (!mat.userData.pieceMask) return;
+  mat.uniforms.uColor.value.copy(this.userData.pc);
+  mat.uniformsNeedUpdate = true;
 }
 
 // ---------- shared shader uniforms ----------
@@ -199,7 +276,9 @@ function tinted(src, colors) {
 }
 
 // ---------- kingdom banners waving on every building ----------
-const FLAG_GEO = new THREE.PlaneGeometry(0.17, 0.12, 10, 1).translate(0.085, 0, 0);
+const JOINT_CYL = new THREE.CylinderGeometry(1, 1, 1, 20);
+const JOINT_BOX = new THREE.BoxGeometry(1, 1, 1);
+const FLAG_GEO =new THREE.PlaneGeometry(0.17, 0.12, 10, 1).translate(0.085, 0, 0);
 const POLE_MAT = new THREE.MeshStandardMaterial({ color: '#5b3e2b', roughness: 0.8 });
 const flagMats = new Map();
 function flagMaterial(flag) {
@@ -499,6 +578,7 @@ export class Board3D {
   static SETTINGS_PIXEL() { return SETTINGS.pixel; }
   static SETTINGS_Q() { return SETTINGS.quality; }
   static SETTINGS_AO() { return SETTINGS.ao; }
+  static SETTINGS_OUTLINE() { return SETTINGS.outline; }
 
   static async create(container) {
     const [kit, tex] = await Promise.all([loadKit(), loadTextures()]);
@@ -549,6 +629,15 @@ export class Board3D {
     scene.fog = new THREE.Fog('#bfd3db', 34, 95);
 
     this.camera = new THREE.PerspectiveCamera(32, 1, 0.3, 600);
+    this.camera.layers.enable(LAYER_PIECES);
+    this.camera.layers.enable(LAYER_GRASS);
+    const rtOpts = { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter };
+    this.maskVis = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, depthBuffer: true });
+    this.maskAll = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, depthBuffer: false });
+    this.depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
+    this.visMat = pieceColorMat(false);
+    this.allMat = pieceColorMat(true);
+    this.hasPieces = false;
     scene.add(new THREE.HemisphereLight('#e9f2ff', '#5b5243', 0.35));
     const sun = (this.sun = new THREE.DirectionalLight('#fff0d8', 3.4));
     sun.castShadow = true;
@@ -615,12 +704,20 @@ export class Board3D {
     }
     this.hts = this.vts = null;
     if (SETTINGS.tiltShift) {
-      this.hts = new ShaderPass(HorizontalTiltShiftShader);
-      this.vts = new ShaderPass(VerticalTiltShiftShader);
+      this.hts = new ShaderPass(tiltShader('1.0, 0.0'));
+      this.vts = new ShaderPass(tiltShader('0.0, 1.0'));
+      this.hts.uniforms.tMask.value = this.vts.uniforms.tMask.value = this.maskVis.texture;
       c.addPass(this.hts);
       c.addPass(this.vts);
     }
     c.addPass(new OutputPass());
+    this.outlinePass = null;
+    if (SETTINGS.outline) {
+      this.outlinePass = new ShaderPass(OutlineShader);
+      this.outlinePass.uniforms.tVis.value = this.maskVis.texture;
+      this.outlinePass.uniforms.tAll.value = this.maskAll.texture;
+      c.addPass(this.outlinePass);
+    }
     const vig = new ShaderPass(VignetteShader);
     vig.uniforms.offset.value = 0.95;
     vig.uniforms.darkness.value = 1.05;
@@ -644,11 +741,51 @@ export class Board3D {
     this.labels.setSize(w, h);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    const pr = this.renderer.getPixelRatio();
+    const mw = Math.round(w * pr), mh = Math.round(h * pr);
+    this.maskVis.setSize(mw, mh);
+    this.maskAll.setSize(mw, mh);
+    if (this.outlinePass) this.outlinePass.uniforms.uTexel.value.set(pr / mw, pr / mh); // ~1-2 css px
     if (this.hts) {
       this.hts.uniforms.h.value = 3.0 / w;
-      this.vts.uniforms.v.value = 3.0 / h;
+      this.vts.uniforms.h.value = 3.0 / h;
       this.hts.uniforms.r.value = this.vts.uniforms.r.value = 0.55;
     }
+  }
+
+  // masks of the player pieces (see OutlineShader / tiltShader)
+  renderMasks() {
+    const r = this.renderer, cam = this.camera, sc = this.scene;
+    const need = this.hasPieces && (this.hts || this.outlinePass);
+    if (!need && !this.masksDirty) return;
+    const prevAuto = r.autoClear, prevShadow = r.shadowMap.autoUpdate, prevMask = cam.layers.mask;
+    const prevClear = r.getClearColor(new THREE.Color()), prevAlpha = r.getClearAlpha();
+    r.autoClear = false;
+    r.shadowMap.autoUpdate = false;
+    r.setClearColor(0x000000, 0);
+    r.setRenderTarget(this.maskVis);
+    r.clear();
+    if (need) {
+      cam.layers.set(0); // landscape depth only, so hidden pieces fail the depth test
+      sc.overrideMaterial = this.depthOnly;
+      r.render(sc, cam);
+      cam.layers.set(LAYER_PIECES);
+      sc.overrideMaterial = this.visMat;
+      r.render(sc, cam);
+    }
+    r.setRenderTarget(this.maskAll);
+    r.clear();
+    if (need && this.outlinePass) {
+      sc.overrideMaterial = this.allMat;
+      r.render(sc, cam);
+    }
+    sc.overrideMaterial = null;
+    cam.layers.mask = prevMask;
+    r.setRenderTarget(null);
+    r.setClearColor(prevClear, prevAlpha);
+    r.autoClear = prevAuto;
+    r.shadowMap.autoUpdate = prevShadow;
+    this.masksDirty = need;
   }
 
   dispose() {
@@ -657,6 +794,8 @@ export class Board3D {
     this.resizeObs.disconnect();
     this.controls.dispose();
     this.composer.dispose();
+    this.maskVis.dispose();
+    this.maskAll.dispose();
     this.envRT.dispose();
     this.renderer.dispose();
     this.canvas.remove();
@@ -720,8 +859,14 @@ export class Board3D {
       return true;
     });
     this.controls.update();
+    this.renderMasks();
     this.composer.render();
     this.labels.render(this.scene, this.camera);
+    // snap the pixel labels to whole pixels: sub-pixel positions blur the pixel font
+    for (const el of this.labels.domElement.children) {
+      const t = el.style.transform;
+      if (t && t.indexOf('.') >= 0) el.style.transform = t.replace(/(-?\d+\.\d+)px/g, (m, n) => Math.round(+n) + 'px');
+    }
   }
 
   // ---------- build ----------
@@ -878,7 +1023,7 @@ export class Board3D {
       if (t.res === 'desert') continue;
       const red = t.numRevealed && (t.num === 6 || t.num === 8);
       const pl = probLook(t.num);
-      const tok = css2d('tok3d' + (red ? ' red' : ''), t.numRevealed ? `<span>${t.num}</span><i class="pbar"><b style="width:${pl.w * 100}%;height:${pl.h}px;background:${pl.c}"></b></i>` : '<span>?</span>');
+      const tok = css2d('tok3d' + (red ? ' red' : ''), t.numRevealed ? `<span>${t.num}</span><i class="pbar">${`<b style="height:${pl.h}px;background:${pl.c}"></b>`.repeat(pl.p)}</i>` : '<span>?</span>');
       tok.position.set(t.x, Math.max(h, 0.3) + 0.12, t.y);
       tok.userData.num = t.numRevealed ? t.num : null;
       this.tokens.push(tok);
@@ -1009,6 +1154,7 @@ export class Board3D {
       if (!list.length) continue;
       const mat = patch(new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9 }), { wind: k === 'wheat' ? 0.5 : 0.45, key: 'tuft' + k });
       const im = new THREE.InstancedMesh(defs[k], mat, list.length);
+      im.layers.set(LAYER_GRASS);
       im.receiveShadow = true;
       im.castShadow = k === 'wheat';
       list.forEach(([x, y, z, s, ry], i) => {
@@ -1036,6 +1182,29 @@ export class Board3D {
 
   // the winning numbers blink green for a few seconds (the CSS animation ends by itself).
   // Never animate `transform` on these labels: CSS2DRenderer positions them with it.
+  // the road model's own materials (textured bed + tinted planks) for the joints
+  jointMats(color) {
+    this.jm = this.jm || new Map();
+    if (!this.jm.has(color)) {
+      const mats = {};
+      tinted(this.kit.road, { Player: color, Banner: color, PlayerWood: color }).traverse(m => {
+        if (!m.isMesh) return;
+        for (const mt of [].concat(m.material)) {
+          const k = mt.name === 'PlayerWood' ? 'top' : 'bed';
+          if (mats[k]) continue;
+          // the kit bakes AO into vertex colours, which the plain joint geometry doesn't have
+          const n = mt.clone();
+          n.vertexColors = false;
+          n.color.multiplyScalar(0.85);
+          n.userData.patched = false;
+          mats[k] = patch(n, { key: 'joint' });
+        }
+      });
+      this.jm.set(color, mats);
+    }
+    return this.jm.get(color);
+  }
+
   markRolled(num, at) {
     const fresh = at && at !== this.rolledAt;
     if (fresh) this.rolledAt = at;
@@ -1096,8 +1265,21 @@ export class Board3D {
       c.traverse(o => o.isCSS2DObject && o.element.remove());
     }
     const pieces = new Set();
+    this.hasPieces = false;
     const vy = v => Math.max(this.heightAt(bd.vertices[v].x, bd.vertices[v].y), 0.05);
-    const add = (obj, key) => {
+    // player pieces go on their own layer so they stay sharp and get the x-ray outline
+    const own = (obj, color) => {
+      const pc = new THREE.Color().setStyle(color, THREE.LinearSRGBColorSpace); // raw sRGB values for the masks
+      obj.traverse(m => {
+        if (!m.isMesh) return;
+        m.layers.set(LAYER_PIECES);
+        m.userData.pc = pc;
+        m.onBeforeRender = pieceHook;
+      });
+      this.hasPieces = true;
+    };
+    const add = (obj, key, color) => {
+      if (color) own(obj, color);
       this.dynGroup.add(obj);
       pieces.add(key);
       if (this.prevPieces.size && !this.prevPieces.has(key)) this.spawns.push({ obj, y: obj.position.y, base: obj.scale.clone(), t0: this.now() });
@@ -1121,10 +1303,50 @@ export class Board3D {
       o.rotation.z = Math.atan2(yb - ya, len);
       if (ghost) ghostify(o);
       o.scale.set(1.08, 2.2, 2.1);
-      add(o, 'r' + eid + (ghost ? 'g' : ''));
+      add(o, 'r' + eid + (ghost ? 'g' : ''), color);
     };
     for (const k in st.roads) road(+k, st.players[st.roads[k]].color);
     for (const b of view.blindOwn || []) if (b.eid != null) road(b.eid, st.players[b.pid].color, true);
+    // road joints: the plank model stops short of the corners, so every road end gets an arm
+    // that reaches its vertex plus a round cap there: bends connect and dead ends get a round tip
+    const ends = new Map(); // "vid:owner" -> other vertex of each of that owner's roads there
+    for (const k in st.roads) {
+      const E = bd.edges[+k], owner = st.roads[k];
+      for (const [v, o] of [[E.a, E.b], [E.b, E.a]]) {
+        const key = v + ':' + owner;
+        if (!ends.has(key)) ends.set(key, []);
+        ends.get(key).push(o);
+      }
+    }
+    for (const [key, others] of ends) {
+      const [vid, owner] = key.split(':').map(Number);
+      const color = st.players[owner].color;
+      const m = this.jointMats(color);
+      const V = bd.vertices[vid], y0 = vy(vid);
+      const g = new THREE.Group();
+      g.position.set(V.x, y0 + 0.01 + owner * 0.002, V.y);
+      const part = (parent, geo, sx, sy, sz, x, y, mat) => {
+        const p = new THREE.Mesh(geo, mat);
+        p.scale.set(sx, sy, sz);
+        p.position.set(x, y, 0);
+        p.castShadow = p.receiveShadow = true;
+        parent.add(p);
+      };
+      part(g, JOINT_CYL, 0.085, 0.057, 0.085, 0, 0.0285, m.bed);
+      part(g, JOINT_CYL, 0.1, 0.024, 0.1, 0, 0.078, m.top);
+      for (const o of others) {
+        const O = bd.vertices[o];
+        const dx = O.x - V.x, dz = O.y - V.y, len = Math.hypot(dx, dz);
+        const arm = new THREE.Group();
+        arm.rotation.order = 'YZX';
+        arm.rotation.y = -Math.atan2(dz, dx);
+        arm.rotation.z = Math.atan2(vy(o) - y0, len);
+        part(arm, JOINT_BOX, 0.33, 0.057, 0.17, 0.165, 0.0285, m.bed);
+        part(arm, JOINT_BOX, 0.33, 0.024, 0.2, 0.165, 0.078, m.top);
+        g.add(arm);
+      }
+      add(g, 'j' + key, color);
+    }
     const building = (vid, owner, type, ghost) => {
       const V = bd.vertices[vid];
       const o = tinted(type === 'city' ? kit.city : kit.house, colors(st.players[owner].color));
@@ -1138,7 +1360,7 @@ export class Board3D {
       }
       if (ghost) ghostify(o);
       o.scale.setScalar(type === 'city' ? 1.25 : 1.45);
-      add(o, 'b' + vid + type + (ghost ? 'g' : ''));
+      add(o, 'b' + vid + type + (ghost ? 'g' : ''), pl.color);
     };
     for (const k in st.buildings) building(+k, st.buildings[k].owner, st.buildings[k].type);
     for (const b of view.blindOwn || []) building(b.vid, b.pid, b.type, true);

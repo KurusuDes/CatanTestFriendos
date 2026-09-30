@@ -174,8 +174,8 @@ export class BoardView {
           if (t.numRevealed) {
             tk.append(S('text', { x: cx, y: cy + 24, class: 'token-num' }, t.num));
             const pl = probLook(t.num);
-            const bw = 30 * pl.w;
-            tk.append(S('rect', { x: cx - bw / 2, y: cy + 35 - pl.h / 2, width: bw, height: pl.h, fill: pl.c, stroke: 'rgba(26,28,44,.55)', 'stroke-width': 1, class: 'pbar' }));
+            for (let i = 0; i < pl.p; i++)
+              tk.append(S('rect', { x: cx + (i - (pl.p - 1) / 2) * 7 - 2.5, y: cy + 35 - pl.h / 2, width: 5, height: pl.h, fill: pl.c, stroke: 'rgba(26,28,44,.6)', 'stroke-width': 1, class: 'pbar' }));
           } else tk.append(S('text', { x: cx, y: cy + 27, class: 'token-num q' }, '?'));
           g.append(tk);
         }
