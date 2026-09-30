@@ -23,6 +23,7 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Probar en móvil que el mapa con las variantes sigue fluido ➕ 2026-09-30 [[S04 - 2026-09-30 - Casillas 3D con variantes]]
 - [ ] Ver el tráiler en vivo (`showcase/trailer.html` y `?lang=en`) en un navegador normal y en móvil, con sonido ➕ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
 - [ ] Decidir si se renombra el repositorio y la URL de GitHub Pages (`CatanTestFriendos`) al nombre nuevo ➕ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
+- [ ] Jugar una partida con los testers y apuntar su feedback como tareas ➕ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
 
 ## Hechas
 - [x] Licencia MIT, `NOTICE.md` y petición de crédito ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
