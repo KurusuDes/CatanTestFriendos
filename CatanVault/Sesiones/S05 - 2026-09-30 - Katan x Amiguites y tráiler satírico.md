@@ -1,7 +1,7 @@
 ---
 tags: [sesion]
 fecha: 2026-09-30
-commits: un solo commit, el de cierre «S05: Katan x Amiguites y tráiler satírico en español e inglés»
+commits: «S05: Katan x Amiguites y tráiler satírico en español e inglés» (5ad8e56) y «S05: README detallado en inglés»
 ---
 
 # S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico
@@ -40,6 +40,11 @@ El proyecto pasó a llamarse **Katan x Amiguites** y se hizo un tráiler satíri
 - El póster del README ahora es el cierre del tráiler.
 - Las utilidades de animación compartidas (easing, títulos animados, partidas de bots) se movieron a `showcase/motion.js`, que usan el showcase y el tráiler.
 - Botón «🎞️ Tráiler» en el menú del juego, junto a «🎬 Showcase». El README enlaza a los dos tráileres.
+
+### README en inglés (después del cierre)
+- A petición del usuario, el `README.md` pasó a estar en inglés y mucho más detallado: enlaces a jugar y a los tráileres, GIF del casino del tráiler, fotogramas, capturas del menú y de una partida, todas las funciones explicadas, la tecnología con la tabla de archivos, cómo ejecutarlo y la licencia.
+- El README en español se conserva como `README.es.md`, con un enlace entre los dos.
+- Las imágenes están en `showcase/readme/`.
 
 ## Decisiones del usuario
 - Nombre: «Dejémoslo en Katan x Amiguites». Claude había advertido que «Katan» suena igual que Catan; el usuario lo asumió porque no espera que lo vea «alguien importante».
