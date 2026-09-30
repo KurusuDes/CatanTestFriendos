@@ -55,7 +55,8 @@ const STATIC_KEYS = ['vertices', 'edges', 'sea', 'ports', 'bounds'];
 function slim(st) {
   const board = {};
   for (const k in st.board) if (!STATIC_KEYS.includes(k)) board[k] = st.board[k];
-  return { ...st, board, log: st.log.slice(-40) };
+  // painted flags are images: they travel once in 'init', not with every move
+  return { ...st, board, log: st.log.slice(-40), players: st.players.map(({ flag, ...p }) => (void flag, p)) };
 }
 function hashStr(str) {
   let h = 5381;
@@ -370,7 +371,7 @@ export class Net {
     for (const g of this.guests) {
       if (!g.conn || !g.conn.open) continue;
       if (!g.sentStatic) {
-        g.conn.send({ type: 'init', board: staticBoard(st), config: st.config });
+        g.conn.send({ type: 'init', board: staticBoard(st), config: st.config, flags: st.players.map(p => p.flag || null) });
         g.sentStatic = true;
         g.tilesHash = null;
       }
@@ -506,6 +507,7 @@ export class Net {
     else if (msg.type === 'init') {
       this.static = msg.board;
       this.config = msg.config;
+      this.flags = msg.flags || [];
       this.tiles = null;
     }
     else if (msg.type === 'meta') {
@@ -518,6 +520,7 @@ export class Net {
       else if (this.tiles) st.board.tiles = this.tiles;
       else return;
       st.config = this.config;
+      st.players.forEach((p, i) => (p.flag = (this.flags || [])[i] || null));
       st.board = { ...this.static, ...st.board };
       this.meta = msg.meta || this.meta;
       App.mySeat = msg.seat;

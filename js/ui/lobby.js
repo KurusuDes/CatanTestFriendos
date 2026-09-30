@@ -142,6 +142,8 @@ export function lobbyScreen(root, opts = {}) {
               onSave: ({ flag, color }) => {
                 p.flag = flag;
                 p.color = color;
+                const twin = cfg.players.find(o => o !== p && o.color.toLowerCase() === color.toLowerCase());
+                if (twin) toast(`⚠️ ${twin.name} ya usa ese color de castillo: cambia uno para distinguirlos`, 'error', 4000);
                 if (p.kind === 'human' && i === 0) saveMyKingdom({ name: p.name, flag, color });
                 refresh();
               },

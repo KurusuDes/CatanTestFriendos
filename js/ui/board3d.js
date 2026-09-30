@@ -205,10 +205,12 @@ const flagMats = new Map();
 function flagMaterial(flag) {
   const key = flag || '-';
   if (flagMats.has(key)) return flagMats.get(key);
-  const tex = new THREE.CanvasTexture(flagCanvas(flag, 1));
-  tex.magFilter = THREE.NearestFilter;
-  tex.minFilter = THREE.NearestFilter;
+  const cv = flagCanvas(flag, 1);
+  const tex = new THREE.CanvasTexture(cv);
+  if (cv.pixel) tex.magFilter = tex.minFilter = THREE.NearestFilter;
+  else tex.anisotropy = 4;
   tex.colorSpace = THREE.SRGBColorSpace;
+  cv.ready.then(() => (tex.needsUpdate = true));
   const m = new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.9 });
   m.onBeforeCompile = sh => {
     sh.vertexShader = sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
@@ -218,8 +220,10 @@ function flagMaterial(flag) {
   flagMats.set(key, m);
   return m;
 }
-function banner(flag, x, z, height) {
+function banner(flag, x, z, height, size = 1) {
   const g = new THREE.Group();
+  g.scale.setScalar(size);
+  height /= size;
   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.006, height, 6).translate(0, height / 2, 0), patch(POLE_MAT, { key: 'pole' }));
   const cloth = new THREE.Mesh(FLAG_GEO, flagMaterial(flag));
   cloth.position.set(0.004, height - 0.065, 0);
@@ -1115,7 +1119,11 @@ export class Board3D {
       o.position.set(V.x, vy(vid) - 0.01, V.y);
       o.rotation.y = ((vid * 2.39996) % 6.28) * 0.4;
       const pl = st.players[owner];
-      if (pl.flag) o.add(type === 'city' ? banner(pl.flag, 0.18, 0.13, 0.46) : banner(pl.flag, 0.1, 0.07, 0.36));
+      if (pl.flag) {
+        // the painted kingdom flag replaces the model's plain pennant
+        o.traverse(m => m.isMesh && m.material && m.material.name === 'Banner' && (m.visible = false));
+        o.add(type === 'city' ? banner(pl.flag, -0.06, 0.03, 0.78, 1.7) : banner(pl.flag, 0.1, 0.07, 0.36));
+      }
       if (ghost) ghostify(o);
       o.scale.setScalar(type === 'city' ? 1.25 : 1.45);
       add(o, 'b' + vid + type + (ghost ? 'g' : ''));

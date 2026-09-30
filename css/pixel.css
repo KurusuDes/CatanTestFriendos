@@ -189,3 +189,38 @@ img.flag-img { image-rendering: pixelated; box-shadow: 0 0 0 2px var(--ink); bac
 .kingdom-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
 .board-wrap .labels-3d { z-index: 1; }
 .board-wrap .banner, .board-wrap .zoom-ctrl, .board-wrap .offer { z-index: 6; }
+
+/* ---------- Gartic-like paint editor ---------- */
+.flag-modal { width: min(820px, 100%); }
+.paint { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start; margin-top: 6px; }
+.paint-tools { display: grid; gap: 6px; }
+.ptool { width: 46px; height: 46px; border: 0; background: var(--dusk); font-size: 22px; cursor: pointer; box-shadow: 0 0 0 3px var(--ink), inset -3px -3px 0 rgba(0,0,0,.3); }
+.ptool.on { background: var(--sand); box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--coral); }
+.ptool:disabled { opacity: .35; cursor: default; }
+.psep { height: 6px; width: 6px; }
+.paint-stage { position: relative; aspect-ratio: 3 / 2; width: 100%; max-width: 480px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--sand), 8px 10px 0 5px rgba(0,0,0,.35); background: #fff; justify-self: center; }
+.paint-canvas, .paint-ghost { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; }
+.paint-ghost { pointer-events: none; }
+.paint-pal { display: grid; gap: 8px; justify-items: center; }
+.pcur { width: 46px; height: 46px; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px #fff; }
+.pgrid { display: grid; grid-template-columns: repeat(2, 24px); gap: 5px; }
+.pcol { width: 24px; height: 24px; border: 0; cursor: pointer; box-shadow: 0 0 0 2px var(--ink); padding: 0; }
+.pcol.on { box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px #fff; transform: scale(1.12); }
+.paint-custom { width: 46px !important; height: 30px; padding: 0 !important; cursor: pointer; }
+.paint-sizes { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 16px 0 6px; flex-wrap: wrap; }
+.psize { width: 44px; height: 44px; border: 0; background: var(--dusk); display: grid; place-items: center; cursor: pointer; box-shadow: 0 0 0 3px var(--ink); }
+.psize.on { background: #4a5680; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--sand); }
+.psize i { display: block; border-radius: 50% !important; box-shadow: 0 0 0 1px rgba(0,0,0,.5); }
+.flag-bottom { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; margin-top: 8px; }
+@media (max-width: 700px) {
+  .paint { grid-template-columns: 1fr; }
+  .paint-tools { grid-auto-flow: column; justify-content: center; }
+  .pgrid { grid-template-columns: repeat(10, 24px); }
+  .paint-pal { grid-auto-flow: column; }
+  .flag-bottom { grid-template-columns: 1fr; }
+}
+img.flag-img.pixel { image-rendering: pixelated; }
+img.flag-img:not(.pixel) { image-rendering: auto; }
+.pcard .avatar { width: auto !important; min-width: 30px; }
+.pcard .avatar img.flag-img { width: 36px; height: 24px; }
+.players.compact .pcard .avatar img.flag-img { width: 30px; height: 20px; }
