@@ -81,6 +81,59 @@ export class Net {
     this.conn = null;
     this.onChange = () => {};
     this.timers = new Map();
+    // room settings (host) / what the waiting room shows (guest)
+    this.capacity = 4;
+    this.open = true;
+    this.hostInfo = { name: 'Anfitrión', flag: null, color: '#e53935' };
+    this.lobby = null;
+  }
+
+  // ---------- room management (host) ----------
+  setRoom({ capacity, open, hostInfo } = {}) {
+    if (capacity) this.capacity = Math.max(2, Math.min(8, capacity));
+    if (open != null) this.open = open;
+    if (hostInfo) this.hostInfo = hostInfo;
+    this.pushLobby();
+    this.onChange();
+  }
+
+  lobbyInfo() {
+    return {
+      code: this.code, capacity: this.capacity, open: this.open, host: this.hostInfo,
+      players: this.guests.filter(g => g.connected).map(g => ({ name: g.name, flag: g.flag, color: g.color })),
+    };
+  }
+
+  pushLobby() {
+    if (this.role !== 'host' || (App.state && App.state.phase !== 'gameOver')) return;
+    const info = this.lobbyInfo();
+    for (const g of this.guests) if (g.conn && g.conn.open) g.conn.send({ type: 'lobby', lobby: info });
+  }
+
+  kick(token) {
+    const g = this.guests.find(x => x.token === token);
+    if (!g) return;
+    try {
+      g.conn && g.conn.send({ type: 'kicked' });
+    } catch {}
+    setTimeout(() => {
+      try {
+        g.conn && g.conn.close();
+      } catch {}
+    }, 150);
+    this.guests = this.guests.filter(x => x !== g);
+    toast(`👢 ${g.name} fue expulsado de la sala`);
+    this.pushLobby();
+    this.onChange();
+  }
+
+  closeRoom() {
+    for (const g of this.guests)
+      try {
+        g.conn && g.conn.open && g.conn.send({ type: 'closed' });
+      } catch {}
+    storage(HOST_SESSION, null);
+    this.close();
   }
 
   // ================= HOST =================
@@ -210,8 +263,12 @@ export class Net {
         conn.send({ type: 'error', msg: 'La partida ya empezó.' });
         return;
       }
-      if (this.guests.length >= 7) {
-        conn.send({ type: 'error', msg: 'La sala está llena (8 jugadores).' });
+      if (!this.open) {
+        conn.send({ type: 'refused', msg: '🔒 La sala está cerrada: el anfitrión no acepta más jugadores.' });
+        return;
+      }
+      if (this.guests.filter(x => x.connected).length >= this.capacity - 1) {
+        conn.send({ type: 'refused', msg: `La sala está llena (${this.capacity} jugadores).` });
         return;
       }
       g = { token, name, flag: msg.flag || null, color: msg.color || null, conn, seat: null, connected: true, lastPong: Date.now() };
@@ -220,7 +277,10 @@ export class Net {
     }
     conn.send({ type: 'welcome', code: this.code });
     if (App.state && g.seat != null) App.changed();
-    else this.pushMeta();
+    else {
+      this.pushMeta();
+      this.pushLobby();
+    }
     this.onChange();
   }
 
@@ -233,6 +293,7 @@ export class Net {
     if (!inGame) {
       if (g.seat == null) this.guests = this.guests.filter(x => x !== g);
       toast(`🔌 ${g.name} salió de la sala`, 'error');
+      this.pushLobby();
     } else {
       toast(`🔌 ${g.name} se desconectó`, 'error');
       const p = App.state.players[g.seat];
@@ -354,6 +415,13 @@ export class Net {
       if (used.has(color)) color = palette.find(c => !used.has(c)) || color;
       used.add(color);
       p.color = color;
+    });
+    // a friend left right before the start: a bot takes the empty online seat
+    config.players.forEach(p => {
+      if (p.kind === 'remote') {
+        p.kind = 'bot';
+        p.level = 'normal';
+      }
     });
     this.guests = this.guests.filter(g => g.seat != null);
     App.mySeat = 0;
@@ -503,7 +571,18 @@ export class Net {
       return;
     }
     if (msg.type === 'welcome') this.onStatus('waiting');
-    else if (msg.type === 'error') toast(msg.msg, 'error', 5000);
+    else if (msg.type === 'lobby') {
+      this.lobby = msg.lobby;
+      if (App.onLobby) App.onLobby();
+    } else if (msg.type === 'refused' || msg.type === 'kicked' || msg.type === 'closed') {
+      const text = msg.type === 'refused' ? msg.msg : msg.type === 'kicked' ? '👢 El anfitrión te sacó de la sala.' : '🚪 El anfitrión cerró la sala.';
+      toast(text, 'error', 6000);
+      storage(GUEST_SESSION, null);
+      this.close();
+      if (App.net === this) App.net = null;
+      if (App.screen === 'game') App.leaveGame();
+      else App.go('online');
+    } else if (msg.type === 'error') toast(msg.msg, 'error', 5000);
     else if (msg.type === 'init') {
       this.static = msg.board;
       this.config = msg.config;

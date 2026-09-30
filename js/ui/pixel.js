@@ -233,16 +233,24 @@ function jitterize(root) {
     let i = 0;
     for (const t of texts) {
       const frag = document.createDocumentFragment();
+      // letters are grouped per word so line breaks never split a word
+      let word = null;
       for (const ch of t.nodeValue) {
         if (ch === ' ') {
           frag.append(' ');
+          word = null;
           continue;
+        }
+        if (!word) {
+          word = document.createElement('span');
+          word.className = 'jw';
+          frag.append(word);
         }
         const s = document.createElement('span');
         s.className = 'jl';
         s.style.animationDelay = `-${((i++ * 137) % 600) / 1000}s`;
         s.textContent = ch;
-        frag.append(s);
+        word.append(s);
       }
       t.parentNode.replaceChild(frag, t);
     }

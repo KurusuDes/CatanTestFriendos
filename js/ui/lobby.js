@@ -61,7 +61,7 @@ export function lobbyScreen(root, opts = {}) {
 
   root.append(h('div', { class: 'lobby screen' },
     h('div', { class: 'lobby-head' },
-      h('button', { class: 'btn', onclick: () => { if (online && App.net) App.net.close(); App.net = null; App.go('menu'); } }, '← Menú'),
+      h('button', { class: 'btn', onclick: () => { if (online && App.net) { if (App.net.guests.some(g => g.connected) && !confirm('¿Salir? La sala se cerrará para tus amigos.')) return; App.net.closeRoom(); } App.net = null; App.go('menu'); } }, '← Menú'),
       h('h2', null, online ? '🌐 Sala online' : '🎮 Nueva partida'),
       h('button', { class: 'btn sm', onclick: () => { cfg = defaultConfig(); if (online) cfg.players.forEach((p, i) => { if (i && p.kind === 'human') p.kind = 'remote'; }); refresh(); } }, '↺ Restablecer')),
     h('div', { class: 'lobby-grid' }, left,
@@ -100,21 +100,70 @@ export function lobbyScreen(root, opts = {}) {
       h('button', { class: 'btn sm', onclick: () => { cfg.seed = newSeed(); renderPreview(); } }, '🎲 Otro mapa'));
   }
 
+  // ---------- the online room (host) ----------
+  let fillBots = true;
+  const connectedGuests = () => (App.net ? App.net.guests.filter(g => g.connected) : []);
+  function setCapacity(n) {
+    n = Math.max(2, Math.min(8, n));
+    while (cfg.players.length < n) {
+      const k = cfg.players.length;
+      const color = PLAYER_COLORS.find(c => !cfg.players.some(p => p.color === c)) || PLAYER_COLORS[k % PLAYER_COLORS.length];
+      cfg.players.push({ name: `Amigo ${k}`, kind: 'remote', level: 'normal', color, flag: patternFlag(color, k) });
+    }
+    while (cfg.players.length > n) cfg.players.pop();
+    if (n > 4 && ['classic', 'mini'].includes(cfg.map.shape)) cfg.map.shape = 'extended';
+    if (n > 6 && ['classic', 'mini', 'extended', 'ring', 'star'].includes(cfg.map.shape)) cfg.map.shape = 'big';
+    refresh();
+  }
+  async function copy(text, msg) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(msg, 'good');
+    } catch {
+      prompt('Cópialo desde aquí:', text);
+    }
+  }
   function renderOnline() {
     clear(onlineBox);
     if (!online || !App.net) return;
     const net = App.net;
-    onlineBox.append(h('div', { class: 'card' },
-      h('h3', null, '🌐 Código de la sala'),
+    // keep what the guests' waiting room shows in sync with this lobby
+    net.capacity = cfg.players.length;
+    net.hostInfo = { name: cfg.players[0].name, flag: cfg.players[0].flag, color: cfg.players[0].color };
+    net.pushLobby();
+    const guests = connectedGuests();
+    const remoteSeats = cfg.players.filter(p => p.kind === 'remote').length;
+    const link = location.origin + location.pathname + '?sala=' + net.code;
+    onlineBox.append(h('div', { class: 'card room-card' },
+      h('h3', null, '🌐 Tu sala ', h('span', { class: 'room-state ' + (net.open ? 'on' : 'off') }, net.open ? 'abierta' : 'cerrada')),
       net.code ? h('div', { class: 'room-code' }, net.code) : h('p', null, 'Creando sala...'),
-      h('p', { style: { color: 'var(--muted)', fontSize: '13px' } }, 'Tus amigos entran con "Unirse a sala" y este código. Asigna asientos "Amigo online" en la lista de jugadores.'),
-      h('div', { class: 'section-label' }, `Conectados (${net.guests.length})`),
-      net.guests.length ? h('div', { class: 'chips' }, net.guests.map(g => h('span', { class: 'chip on' }, g.conn ? '🟢 ' : '🔌 ', flagImg(g.flag, 18), ' ' + g.name))) : h('p', null, 'Nadie aún...')));
+      h('div', { class: 'chips room-share' },
+        h('button', { class: 'btn sm', onclick: () => copy(link, '🔗 Enlace copiado: pásaselo a tus amigos') }, '🔗 Copiar enlace'),
+        h('button', { class: 'btn sm', onclick: () => copy(net.code, '📋 Código copiado') }, '📋 Código'),
+        navigator.share ? h('button', { class: 'btn sm', onclick: () => navigator.share({ title: 'Catan x Kchudites', text: '¡Únete a mi sala de Catan x Kchudites!', url: link }).catch(() => {}) }, '📤 Compartir') : null),
+      h('div', { class: 'section-label' }, 'Tamaño de la sala'),
+      h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (cfg.players.length === n ? ' on' : ''), title: `${n} jugadores`, onclick: () => setCapacity(n) }, n))),
+      h('div', { class: 'gfx-row room-toggles' },
+        h('button', { class: 'chip' + (net.open ? ' on' : ''), onclick: () => { net.open = !net.open; renderOnline(); } }, net.open ? '🟢 Aceptando jugadores' : '🔒 No entra nadie más'),
+        h('button', { class: 'chip' + (fillBots ? ' on' : ''), onclick: () => { fillBots = !fillBots; renderOnline(); } }, '🤖 Huecos vacíos: bots')),
+      h('div', { class: 'section-label' }, `En la sala ${guests.length + 1} / ${cfg.players.length}`),
+      h('div', { class: 'guest-list' },
+        h('div', { class: 'guest host' }, flagImg(cfg.players[0].flag, 20), h('b', null, cfg.players[0].name), h('span', { class: 'tag ok' }, '👑 tú')),
+        guests.map(g => h('div', { class: 'guest' }, flagImg(g.flag, 20), h('b', null, g.name), h('span', { class: 'tag ok' }, 'conectado'),
+          h('button', { class: 'btn sm ghost kick', title: 'Expulsar', onclick: () => { if (confirm(`¿Expulsar a ${g.name} de la sala?`)) net.kick(g.token); } }, '👢'))),
+        Array.from({ length: Math.max(0, remoteSeats - guests.length) }, () => h('div', { class: 'guest empty' }, h('span', { class: 'dots' }, '⏳'), fillBots ? 'libre (si nadie entra, juega un bot)' : 'esperando a un amigo'))),
+      h('button', { class: 'btn pink sm close-room', onclick: () => { if (confirm('¿Cerrar la sala? Tus amigos saldrán.')) { net.closeRoom(); App.net = null; App.go('menu'); } } }, '✖ Cerrar sala')));
+  }
+
+  function guestFor(i) {
+    if (!online) return null;
+    const order = cfg.players.map((p, k) => (p.kind === 'remote' ? k : -1)).filter(k => k >= 0).indexOf(i);
+    return order >= 0 ? connectedGuests()[order] || null : null;
   }
 
   function playerRows() {
     const kinds = online
-      ? [['remote', '🌐 Amigo online'], ['bot:easy', '🤖 Bot fácil'], ['bot:normal', '🤖 Bot normal'], ['bot:hard', '🤖 Bot difícil']]
+      ? [['remote', '🌐 Amigo'], ['bot:easy', '🤖 Bot fácil'], ['bot:normal', '🤖 Bot normal'], ['bot:hard', '🤖 Bot difícil']]
       : [['human', '🧑 Humano'], ['bot:easy', '🤖 Bot fácil'], ['bot:normal', '🤖 Bot normal'], ['bot:hard', '🤖 Bot difícil']];
     return cfg.players.map((p, i) => {
       const val = p.kind === 'bot' ? `bot:${p.level || 'normal'}` : p.kind;
@@ -134,7 +183,7 @@ export function lobbyScreen(root, opts = {}) {
           },
         }),
         p.kind === 'remote'
-          ? h('div', { class: 'btn sm flag-btn', title: 'Cada amigo pinta su propia bandera' }, '🌐')
+          ? h('div', { class: 'btn sm flag-btn', title: 'Cada amigo pinta su propia bandera' }, guestFor(i) ? flagImg(guestFor(i).flag, 26) : '🌐')
           : h('button', {
             class: 'btn sm flag-btn', title: 'Bandera y color del castillo',
             onclick: () => openFlagEditor({
@@ -149,7 +198,7 @@ export function lobbyScreen(root, opts = {}) {
               },
             }),
           }, flagImg(p.flag, 26)),
-        h('input', { type: 'text', value: p.name, maxlength: 16, onchange: e => { p.name = e.target.value.trim() || `Jugador ${i + 1}`; if (p.kind === 'human' && i === 0) saveMyKingdom({ name: p.name, flag: p.flag, color: p.color }); save(); } }),
+        p.kind === 'remote' ? h('div', { class: 'seat-name' + (guestFor(i) ? ' taken' : '') }, guestFor(i) ? guestFor(i).name : 'Asiento libre para un amigo') : h('input', { type: 'text', value: p.name, maxlength: 16, onchange: e => { p.name = e.target.value.trim() || `Jugador ${i + 1}`; if (p.kind === 'human' && i === 0) saveMyKingdom({ name: p.name, flag: p.flag, color: p.color }); save(); } }),
         hostSeat ? h('div', { class: 'pill' }, '👑 Tú (anfitrión)') : h('select', {
           onchange: e => {
             const [k, l] = e.target.value.split(':');
@@ -270,14 +319,32 @@ export function lobbyScreen(root, opts = {}) {
     save();
     const game = JSON.parse(JSON.stringify(cfg));
     if (online) {
+      const guests = connectedGuests().length;
       const remotes = game.players.filter(p => p.kind === 'remote');
-      if (remotes.length > App.net.guests.length) return toast(`Faltan amigos: hay ${remotes.length} asientos online y ${App.net.guests.length} conectados`, 'error');
+      if (remotes.length > guests) {
+        if (!fillBots) return toast(`Faltan amigos: hay ${remotes.length} asientos online y ${guests} conectados`, 'error');
+        // empty online seats are taken by bots
+        remotes.slice(guests).forEach(p => {
+          p.kind = 'bot';
+          p.level = 'normal';
+          p.name = BOT_NAMES.find(n => !game.players.some(x => x.name === n)) || p.name;
+        });
+      }
       App.net.startGame(game);
       return;
     }
     App.startGame(game);
   }
 
-  if (online && App.net) App.net.onChange = () => renderOnline();
+  if (online && App.net) App.net.onChange = () => renderLeft() || renderOnline();
+  if (online && opts.capacity) {
+    // a fresh room: every seat but the host's is for a friend (the host can still switch some to bots)
+    cfg.players.forEach((p, i) => {
+      if (i === 0) return;
+      p.kind = 'remote';
+      if (BOT_NAMES.includes(p.name)) p.name = `Amigo ${i}`;
+    });
+    setCapacity(opts.capacity);
+  }
   refresh();
 }
