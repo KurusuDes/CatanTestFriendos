@@ -818,7 +818,9 @@ H.roll = (s, a) => {
   const sum = d[0] + d[1];
   s.dice = d;
   s.stats.rolls[sum]++;
-  s.fx.push({ kind: 'dice', dice: d });
+  // how hard the dice were thrown (hold the button to charge it): only changes the animation
+  const power = Math.round(Math.min(1, Math.max(0, +a.power || 0)) * 100) / 100;
+  s.fx.push({ kind: 'dice', dice: d, power });
   log(s, `🎲 @${a.pid} saca ${sum}.`, a.pid);
   if (sum !== 7) {
     produce(s, sum);

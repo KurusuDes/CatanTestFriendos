@@ -409,11 +409,12 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
 .hot3d.v.port { position: relative; }
 .hot3d.v.port::after { content: '⚓'; position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -3px); font-size: 12px; line-height: 1; padding: 1px 2px; background: var(--white); box-shadow: 0 0 0 2px var(--ink); pointer-events: none; }
 
-/* middle-click marker: an arrow bouncing over a pulsing ring, 1 s */
-.ping { z-index: 58; width: 44px; height: 44px; }
-.ping-arrow { position: absolute; left: 50%; top: 0; width: 22px; height: 16px; margin-left: -11px; background: var(--pc); clip-path: polygon(0 0, 100% 0, 50% 100%);
-  filter: drop-shadow(0 0 0 var(--ink)); animation: pingBounce .5s steps(4) infinite alternate; }
-.ping-ring { position: absolute; left: 50%; bottom: 0; width: 34px; height: 14px; margin: 0 0 -7px -17px; border: 3px solid var(--pc); box-shadow: 0 0 0 2px var(--ink), inset 0 0 0 2px var(--ink); animation: pingRing 1s steps(8) forwards; }
-.ping-ring.r2 { animation-delay: .25s; opacity: 0; }
-@keyframes pingBounce { to { transform: translateY(10px); } }
-@keyframes pingRing { 0% { transform: scale(.3); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
+/* the dice button: hold it and the bar fills with throwing power */
+.roll-btn { position: relative; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.roll-btn > span { position: relative; z-index: 1; }
+.roll-fill { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--charge, 0) * 100%); background: repeating-linear-gradient(90deg, #f08a3a 0 8px, #e86a2a 8px 16px); opacity: 0; }
+.roll-btn.charging .roll-fill { opacity: 1; }
+.roll-btn.charging { animation: rollShake .12s steps(2) infinite; }
+.roll-btn.full .roll-fill { background: repeating-linear-gradient(90deg, #e04040 0 8px, #b13e53 8px 16px); }
+.roll-btn.full { animation-duration: .06s; }
+@keyframes rollShake { 0% { transform: translate(-1px, 0); } 50% { transform: translate(1px, -1px); } 100% { transform: translate(-1px, 1px); } }

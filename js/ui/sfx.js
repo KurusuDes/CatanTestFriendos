@@ -45,7 +45,16 @@ function noise(dur = 0.2, vol = 0.12, when = 0) {
 }
 
 export const play = {
-  dice() { for (let i = 0; i < 4; i++) noise(0.05, 0.18, i * 0.07); },
+  // a charged throw also thumps the table when the dice land (in step with dice3d's drop)
+  dice(power = 0) {
+    for (let i = 0; i < 4; i++) noise(0.05, 0.18, i * 0.07);
+    if (power > 0.25) {
+      const land = (0.4 * (1250 + 450 * power)) / 1000;
+      tone(95, 0.22, 'sine', 0.12 + 0.18 * power, land, 0.5);
+      noise(0.08, 0.1 + 0.1 * power, land);
+    }
+  },
+  rattle(power = 0) { noise(0.03, 0.05 + 0.1 * power); },
   build() { tone(520, 0.08, 'triangle', 0.18); tone(780, 0.1, 'triangle', 0.14, 0.07); },
   gain() { tone(880, 0.07, 'sine', 0.08); tone(1320, 0.08, 'sine', 0.06, 0.05); },
   bad() { tone(220, 0.25, 'sawtooth', 0.08, 0, 0.6); },

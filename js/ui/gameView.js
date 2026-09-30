@@ -165,8 +165,9 @@ function handleFx(st) {
         ui.rolled = f.dice[0] + f.dice[1];
         ui.rolledAt = Date.now();
         ui.diceAnim = true;
-        if (ui.board3d) ui.board3d.rollDice(f.dice, ui.rolledAt);
-        play.dice();
+        // the cards take off from the tiles once the dice have settled (later for a hard throw)
+        ui.diceLand = (ui.board3d ? ui.board3d.rollDice(f.dice, ui.rolledAt, f.power) : 1250) - 100;
+        play.dice(f.power);
         if (ui.rolled === 7) setTimeout(() => play.robber(), 350);
         const cur = st.players[st.current];
         if (host && ui.rolled === 7 && cur && cur.kind === 'bot' && Math.random() < 0.3) botEmote(st.current, ['😈', '🦹', '😏']);
@@ -174,7 +175,7 @@ function handleFx(st) {
       }
       case 'gain':
         ui.gains.push({ pid: f.pid, text: `+${f.n}${TILE_INFO[f.res].icon}`, at: Date.now() });
-        if (!flyGain(st, f, v, rolledNow ? 1150 : 0) && f.pid === v) {
+        if (!flyGain(st, f, v, rolledNow ? ui.diceLand ?? 1150 : 0) && f.pid === v) {
           ui.bumpRes = ui.bumpRes || new Set();
           ui.bumpRes.add(f.res);
           play.gain();
@@ -349,15 +350,75 @@ function showEmote(seat, e) {
   renderPlayers(st, App.viewer);
   const u = ui;
   setTimeout(() => ui === u && App.state && renderPlayers(App.state, App.viewer), 3100);
-  // and as a balloon rising from one of their buildings
+  // and as balloons rising from all their buildings at once (a little staggered, so it ripples)
   const b = ui.board3d;
   const pts = b ? b.playerPoints(seat) : [];
-  if (!pts.length) return;
-  const el = h('div', { class: 'balloon ' + (short ? 'emoji' : 'talk'), style: { '--pc': p.color } },
-    h('div', { class: 'balloon-body' }, h('span', null, e)),
-    h('i', { class: 'balloon-knot' }), h('i', { class: 'balloon-string' }));
-  b.float(el, pts[Math.floor(Math.random() * pts.length)], short ? { rise: 120, life: 3300 } : { rise: 70, life: 4600, wobble: 3 });
-  pixelize(el);
+  pts.forEach((pt, i) => setTimeout(() => {
+    if (ui !== u || !b.alive) return;
+    const el = h('div', { class: 'balloon ' + (short ? 'emoji' : 'talk'), style: { '--pc': p.color } },
+      h('div', { class: 'balloon-body' }, h('span', null, e)),
+      h('i', { class: 'balloon-knot' }), h('i', { class: 'balloon-string' }));
+    b.float(el, pt, short ? { rise: 110 + Math.random() * 30, life: 3300 } : { rise: 70, life: 4600, wobble: 3 });
+    pixelize(el);
+  }, i && 60 + Math.random() * 260));
+}
+
+// ---------------- the dice button: tap to throw, hold to charge a harder throw ----------------
+const CHARGE_DEAD = 180, CHARGE_FULL = 1100; // ms: a tap throws at once; full power after holding this long
+
+function rollButton(v) {
+  return h('button', {
+    class: 'btn primary big roll-btn',
+    title: 'Toca para tirar · mantén pulsado para cargar fuerza',
+    onpointerdown: e => startCharge(e, v),
+    onclick: e => e.detail === 0 && throwDice(v, 0), // keyboard (Enter / Space)
+    oncontextmenu: e => e.preventDefault(), // long press on a phone
+  }, h('i', { class: 'roll-fill' }), h('span', null, '🎲 Tirar dados'));
+}
+
+function chargePower(c, now = performance.now()) {
+  return Math.max(0, Math.min(1, (now - c.t0 - CHARGE_DEAD) / CHARGE_FULL));
+}
+
+function startCharge(e, v) {
+  if (e.button !== 0 || ui.charge) return;
+  e.preventDefault();
+  const u = ui;
+  const c = (ui.charge = { v, t0: performance.now(), tick: 0 });
+  const release = () => {
+    removeEventListener('pointerup', release);
+    removeEventListener('pointercancel', release);
+    if (u.charge !== c) return;
+    u.charge = null;
+    const btn = u.els.actionbar.querySelector('.roll-btn');
+    if (btn) btn.classList.remove('charging', 'full');
+    if (ui === u) throwDice(v, chargePower(c));
+  };
+  addEventListener('pointerup', release);
+  addEventListener('pointercancel', release);
+  const frame = now => {
+    if (u.charge !== c) return;
+    const btn = u.els.actionbar.querySelector('.roll-btn'); // the bar may have been redrawn meanwhile
+    const pw = chargePower(c, now);
+    if (btn) {
+      btn.style.setProperty('--charge', pw.toFixed(3));
+      btn.classList.toggle('charging', now - c.t0 > CHARGE_DEAD);
+      btn.classList.toggle('full', pw >= 1);
+    }
+    // the dice rattle in your hand, faster the harder you shake them
+    if (now - c.t0 > CHARGE_DEAD && now >= c.tick) {
+      play.rattle(pw);
+      c.tick = now + 150 - pw * 80;
+    }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+function throwDice(v, power) {
+  const st = App.state;
+  if (!st || st.phase !== 'roll' || st.current !== v) return;
+  App.dispatch({ type: 'roll', pid: v, power: Math.round(power * 100) / 100 });
 }
 
 function showPing(seat, x, z) {
@@ -621,7 +682,7 @@ function fillActions(bar, st, v, locked) {
     return;
   }
   if (st.phase === 'roll') {
-    acts.append(h('button', { class: 'btn primary big', onclick: () => App.dispatch({ type: 'roll', pid: v }) }, '🎲 Tirar dados'));
+    acts.append(rollButton(v));
     return;
   }
   if (st.phase === 'robber') {

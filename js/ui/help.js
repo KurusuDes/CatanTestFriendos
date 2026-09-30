@@ -26,6 +26,8 @@ export function showHelp() {
       h('h3', null, 'Controles'),
       h('ul', null,
         h('li', null, 'Rueda del ratón o pellizco: zoom. Arrastra: mover el mapa.'),
+        h('li', null, '🎲 Toca «Tirar dados» para tirar al momento, o mantenlo pulsado para cargar fuerza y suéltalo: los dados salen más fuerte.'),
+        h('li', null, '🖱️ Botón del medio: clava un banderín de tu color en el mapa que ven todos. 😀: reacciona con un emoji que sale de todas tus construcciones.'),
         h('li', null, 'Esc: cancelar la construcción. 💡: pedir una pista al bot difícil.')),
       h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: close }, '¡Entendido!'))));
   document.body.append(ov);

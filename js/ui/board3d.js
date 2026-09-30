@@ -22,7 +22,7 @@ import { probLook } from '../engine/constants.js';
 import { pixelToHex, hk } from '../engine/board.js';
 import { pxIcon } from './pixel.js';
 import { flagCanvas } from './flag.js';
-import { Dice3D } from './dice3d.js';
+import { Dice3D, diceFlyMs } from './dice3d.js';
 
 export const SETTINGS = { pixel: 1, tiltShift: true, quality: 'high', ao: true, outline: true };
 // phones and small screens start on the light preset
@@ -63,6 +63,7 @@ function prng(seed) {
 // against the landscape) and `all` = every piece ignoring occlusion, both in the owner's colour.
 // Layers: 0 landscape, 1 player pieces, 2 grass (left out of the depth pre-pass).
 const LAYER_PIECES = 1, LAYER_GRASS = 2;
+const PING_H = 0.42, PING_LIFE = 1700; // the middle-click marker: pole height, ms on the map
 const PASS_VS = 'varying vec2 vUv;\nvoid main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
 // tilt-shift that leaves the pieces crisp and never smears their colour onto the blurred land
 function tiltShader(dir) {
@@ -823,13 +824,16 @@ export class Board3D {
     this.canvas.remove();
     this.labels.domElement.remove();
     if (this.diceFx) this.diceFx.dispose();
+    for (const pg of this.pings || []) this.dropPing(pg);
+    if (this.pingGeo) for (const k in this.pingGeo) this.pingGeo[k].dispose();
     U.uRobber.value.set(0, 0, 0);
     for (const f of this.floaters) f.el.remove();
     this.floaters = [];
   }
 
   // ---------- effects that live on top of the map ----------
-  rollDice(values, at) {
+  // returns how long the dice fly before they settle
+  rollDice(values, at, power = 0) {
     if (!this.diceFx) {
       this.diceFx = new Dice3D(this);
       // pieces layer: stays sharp under the tilt-shift and gets the see-through outline
@@ -839,8 +843,17 @@ export class Board3D {
         m.onBeforeRender = pieceHook;
       }
     }
-    this.diceFx.roll(values, at);
+    this.diceFx.roll(values, at, power);
     this.hasPieces = true;
+    return diceFlyMs(power);
+  }
+
+  // a hard dice throw thumps the table
+  shake(px) {
+    this.canvas.animate(
+      [0, 1, 2, 3, 4, 5].map(i => ({ transform: i === 5 ? 'none' : `translate(${((i % 2 ? -1 : 1) * px * (1 - i / 5)).toFixed(1)}px, ${(px * 0.6 * (1 - i / 5)).toFixed(1)}px)` })),
+      { duration: 260, easing: 'steps(5)' },
+    );
   }
 
   // page coordinates -> point on the terrain (null outside the island's area)
@@ -860,13 +873,69 @@ export class Board3D {
     return new THREE.Vector3(hit.x, y, hit.z);
   }
 
-  // a player's marker: a pulsing ring with an arrow, glued to the map for a second
+  // a player's marker: a little pole with a pennant in their colour is planted on the map,
+  // sends a soft ring along the ground, then fades and sinks away
   ping(x, z, color) {
-    const el = document.createElement('div');
-    el.className = 'ping';
-    el.style.setProperty('--pc', color);
-    el.innerHTML = '<b class="ping-arrow"></b><i class="ping-ring"></i><i class="ping-ring r2"></i>';
-    this.float(el, new THREE.Vector3(x, Math.max(this.heightAt(x, z), 0.02), z), { rise: 0, life: 1000, wobble: 0 });
+    if (!this.pingGeo) {
+      const pen = new THREE.Shape();
+      pen.moveTo(0, 0);
+      pen.lineTo(0.17, -0.045);
+      pen.lineTo(0, -0.09);
+      this.pingGeo = {
+        pole: new THREE.CylinderGeometry(0.013, 0.013, PING_H, 6).translate(0, PING_H / 2, 0),
+        knob: new THREE.SphereGeometry(0.028, 10, 8).translate(0, PING_H + 0.01, 0),
+        pennant: new THREE.ShapeGeometry(pen).translate(0.012, PING_H - 0.02, 0),
+        ring: new THREE.RingGeometry(0.07, 0.095, 32).rotateX(-Math.PI / 2),
+      };
+      this.pings = [];
+    }
+    const g = this.pingGeo, c = new THREE.Color(color);
+    const mat = (col, extra) => new THREE.MeshStandardMaterial({ color: col, roughness: 0.6, transparent: true, ...extra });
+    const mats = [
+      mat('#3a2c24'),
+      mat(c, { emissive: c.clone().multiplyScalar(0.3) }),
+      mat(c, { emissive: c.clone().multiplyScalar(0.3), side: THREE.DoubleSide }),
+    ];
+    const stake = new THREE.Group();
+    const parts = [new THREE.Mesh(g.pole, mats[0]), new THREE.Mesh(g.knob, mats[1]), new THREE.Mesh(g.pennant, mats[2])];
+    for (const m of parts) m.castShadow = true;
+    stake.add(...parts);
+    // the pennant points to the right of the screen, so it reads from any angle
+    const cam = this.camera.position;
+    stake.rotation.y = Math.atan2(cam.x - x, cam.z - z);
+    const ring = new THREE.Mesh(g.ring, new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0, depthWrite: false }));
+    const y = Math.max(this.heightAt(x, z), 0.02);
+    ring.position.set(x, y + 0.03, z);
+    stake.position.set(x, y, z);
+    this.scene.add(stake, ring);
+    this.pings.push({ stake, ring, pennant: parts[2], mats: [...mats, ring.material], y, t0: this.now() });
+  }
+
+  updatePings(now) {
+    if (!this.pings || !this.pings.length) return;
+    this.pings = this.pings.filter(pg => {
+      const t = now - pg.t0;
+      if (t >= PING_LIFE) {
+        this.dropPing(pg);
+        return false;
+      }
+      // planted from a little above, with a short wobble when it hits the ground
+      const plant = Math.min(1, t / 200);
+      const fade = Math.max(0, (t - PING_LIFE + 550) / 550);
+      pg.stake.position.y = pg.y + (1 - plant) ** 2 * 0.5 - fade * 0.12;
+      pg.stake.rotation.z = plant < 1 ? 0 : Math.sin(t / 45) * 0.14 * Math.exp(-(t - 200) / 260);
+      pg.pennant.rotation.y = Math.sin(t / 110) * 0.35;
+      for (let i = 0; i < 3; i++) pg.mats[i].opacity = 1 - fade;
+      const u = Math.max(0, Math.min(1, (t - 180) / 900));
+      pg.ring.scale.setScalar(1 + u * 2.4);
+      pg.ring.material.opacity = t < 180 ? 0 : 0.65 * (1 - u);
+      return true;
+    });
+  }
+
+  dropPing(pg) {
+    this.scene.remove(pg.stake, pg.ring);
+    for (const m of pg.mats) m.dispose();
   }
 
   // world point -> page coordinates (null when it is behind the camera)
@@ -988,6 +1057,7 @@ export class Board3D {
       return true;
     });
     if (this.diceFx) this.diceFx.update(now);
+    this.updatePings(now);
     // the robber's red stain fades in on its new tile
     const rt = this.robberTile, ru = U.uRobber.value;
     if (rt && (rt.x !== ru.x || rt.y !== ru.y)) ru.set(rt.x, rt.y, 0);
