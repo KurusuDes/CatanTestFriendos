@@ -436,6 +436,7 @@ function produce(s, sum) {
   const bd = s.board;
   const mult = (s.config.rules.productionMult || 1) * (s.event && s.event.id === 'bonanza' ? 2 : 1);
   const gains = s.players.map(() => zeroRes());
+  const from = s.players.map(() => ({})); // tiles each gain came from (the UI flies the cards from there)
   for (const t of bd.tiles) {
     if (t.num !== sum || t.id === bd.robber) continue;
     if (s.event && s.event.id === 'drought' && s.event.res === t.res) continue;
@@ -452,6 +453,7 @@ function produce(s, sum) {
         r = RES.reduce((best, x) => (p.res[x] + gains[b.owner][x] < p.res[best] + gains[b.owner][best] ? x : best), RES[0]);
       }
       gains[b.owner][r] += amt;
+      (from[b.owner][r] ||= []).push(t.id);
       produced = true;
     }
     if (produced && t.revealed && !t.numRevealed) {
@@ -469,7 +471,7 @@ function produce(s, sum) {
     }
     for (const i of receivers) {
       const g = giveFromBank(s, i, r, gains[i][r]);
-      if (g) s.fx.push({ kind: 'gain', pid: i, res: r, n: g });
+      if (g) s.fx.push({ kind: 'gain', pid: i, res: r, n: g, tiles: from[i][r] });
     }
   }
   const summary = gains

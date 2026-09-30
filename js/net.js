@@ -22,6 +22,30 @@ const WAIT_MS = 60000; // a "wait" result gives this much extra time
 const ADMIN = new Set(['retirePlayer', 'setController']);
 let peerLib = null;
 
+// TURN relay for friends whose network blocks direct P2P (CGNAT, mobile data, campus wifi).
+// PeerJS's bundled TURN hosts no longer resolve, so without our own relay those players can't join.
+// Free key: dashboard.metered.ca → TURN Server → create app → API key.
+const METERED_APP = ''; // "<app>" in <app>.metered.live
+const METERED_KEY = '';
+const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
+let iceList = null;
+function peerOptions() {
+  iceList ||= (async () => {
+    if (!METERED_APP || !METERED_KEY) return STUN;
+    try {
+      const r = await fetch(`https://${METERED_APP}.metered.live/api/v1/turn/credentials?apiKey=${METERED_KEY}`);
+      const turn = await r.json();
+      if (!r.ok || !Array.isArray(turn)) throw new Error('TURN ' + r.status);
+      return [...STUN, ...turn];
+    } catch (e) {
+      console.warn('Sin TURN, solo P2P directo:', e);
+      iceList = null;
+      return STUN;
+    }
+  })();
+  return iceList.then(iceServers => ({ config: { iceServers } }));
+}
+
 export function myToken() {
   let t = storage(TOKEN_KEY);
   if (!t) {
@@ -139,6 +163,7 @@ export class Net {
   // ================= HOST =================
   async host(code) {
     const Peer = await loadPeer();
+    const opts = await peerOptions();
     this.role = 'host';
     this.active = true;
     const reopening = !!code;
@@ -146,7 +171,7 @@ export class Net {
       const c = code || makeCode();
       try {
         await new Promise((res, rej) => {
-          const p = new Peer(PREFIX + c);
+          const p = new Peer(PREFIX + c, opts);
           p.on('open', () => {
             this.peer = p;
             this.code = c;
@@ -219,6 +244,21 @@ export class Net {
       const r = applyAction(st, a);
       if (!r.ok) conn.send({ type: 'error', msg: r.error });
       else App.changed();
+    } else if (msg.type === 'emote') {
+      if (g.seat == null || !App.state) return;
+      // a friend can't flood the table: at most 5 reactions every 4 seconds
+      const now = Date.now();
+      g.emotes = (g.emotes || []).filter(t => now - t < 4000);
+      if (g.emotes.length >= 5) return;
+      g.emotes.push(now);
+      App.emote(g.seat, msg.e);
+    } else if (msg.type === 'mark') {
+      if (g.seat == null || !App.state) return;
+      const now = Date.now();
+      g.pings = (g.pings || []).filter(t => now - t < 3000);
+      if (g.pings.length >= 6) return;
+      g.pings.push(now);
+      App.ping(g.seat, +msg.x, +msg.z);
     } else if (msg.type === 'vote') this.castVote(g.seat, msg.choice, msg.voteId);
     else if (msg.type === 'bye') {
       g.leaving = true;
@@ -259,18 +299,15 @@ export class Net {
         }
       }
     } else {
-      if (inGame) {
-        conn.send({ type: 'error', msg: 'La partida ya empezó.' });
-        return;
-      }
-      if (!this.open) {
-        conn.send({ type: 'refused', msg: '🔒 La sala está cerrada: el anfitrión no acepta más jugadores.' });
-        return;
-      }
-      if (this.guests.filter(x => x.connected).length >= this.capacity - 1) {
-        conn.send({ type: 'refused', msg: `La sala está llena (${this.capacity} jugadores).` });
-        return;
-      }
+      // someone new was turned away: tell the guest why, and tell the host so they can make room
+      const refuse = (why, text) => {
+        conn.send({ type: 'refused', msg: text });
+        if (this.onRefused) this.onRefused(why, name);
+        else toast(`🚪 ${name} intentó entrar: ${text}`, 'error', 6000);
+      };
+      if (inGame) return refuse('started', 'La partida ya empezó.');
+      if (!this.open) return refuse('closed', '🔒 La sala está cerrada: el anfitrión no acepta más jugadores.');
+      if (this.guests.filter(x => x.connected).length >= this.capacity - 1) return refuse('full', `La sala está llena (${this.capacity} jugadores).`);
       g = { token, name, flag: msg.flag || null, color: msg.color || null, conn, seat: null, connected: true, lastPong: Date.now() };
       this.guests.push(g);
       toast(`🟢 ${name} entró a la sala`, 'good');
@@ -490,9 +527,10 @@ export class Net {
 
   async connect(first) {
     const Peer = await loadPeer();
+    const opts = await peerOptions();
     if (!this.peer || this.peer.destroyed) {
       await new Promise((res, rej) => {
-        const p = new Peer();
+        const p = new Peer(opts);
         this.peer = p;
         p.on('open', res);
         p.on('error', e => {
@@ -506,7 +544,7 @@ export class Net {
     return new Promise((res, rej) => {
       const c = this.peer.connect(PREFIX + this.code, { reliable: true });
       const timer = setTimeout(() => {
-        if (first && !this.everConnected) rej(new Error('No se encontró la sala'));
+        if (first && !this.everConnected) rej(new Error('La sala existe pero no se pudo conectar: tu red bloquea la conexión directa. Prueba con otra wifi o con datos móviles.'));
         else {
           try {
             c.close();
@@ -589,7 +627,11 @@ export class Net {
       this.flags = msg.flags || [];
       this.tiles = null;
     }
-    else if (msg.type === 'meta') {
+    else if (msg.type === 'mark') {
+      if (App.onPing && Number.isFinite(msg.x) && Number.isFinite(msg.z)) App.onPing(msg.seat, msg.x, msg.z);
+    } else if (msg.type === 'emote') {
+      if (App.onEmote && typeof msg.e === 'string') App.onEmote(msg.seat, msg.e.slice(0, 40));
+    } else if (msg.type === 'meta') {
       this.meta = msg.meta;
       if (App.onMeta) App.onMeta();
     } else if (msg.type === 'state') {
@@ -608,6 +650,22 @@ export class Net {
       if (App.screen !== 'game') App.go('game');
       App.changed();
     }
+  }
+
+  sendEmote(e) {
+    if (this.conn && this.conn.open) this.conn.send({ type: 'emote', e });
+  }
+
+  relayEmote(seat, e) {
+    for (const g of this.guests) if (g.conn && g.conn.open) g.conn.send({ type: 'emote', seat, e });
+  }
+
+  sendPing(x, z) {
+    if (this.conn && this.conn.open) this.conn.send({ type: 'mark', x, z });
+  }
+
+  relayPing(seat, x, z) {
+    for (const g of this.guests) if (g.conn && g.conn.open) g.conn.send({ type: 'mark', seat, x, z });
   }
 
   sendAction(a) {

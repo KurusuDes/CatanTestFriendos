@@ -1,5 +1,5 @@
 import { App } from '../app.js';
-import { h, clear, rich, toast } from './dom.js';
+import { h, clear, rich, toast, sync } from './dom.js';
 import { BoardView } from './boardView.js';
 import { RES, TILE_INFO, COSTS, DEV_INFO, EVENTS } from '../engine/constants.js';
 import * as G from '../engine/game.js';
@@ -7,7 +7,7 @@ import { hint } from '../engine/bot.js';
 import { play } from './sfx.js';
 import { showHelp } from './help.js';
 import { flagImg } from './flag.js';
-import { iconSet, setIconSet, ICON_SETS } from './pixel.js';
+import { iconSet, setIconSet, ICON_SETS, pxIcon, pixelize } from './pixel.js';
 
 let ui = null;
 
@@ -32,11 +32,12 @@ export function gameScreen(root) {
     offer: h('div'),
     overlay: h('div'),
     pass: h('div'),
+    emoteBtn: h('button', { class: 'btn sm emote-toggle', title: 'Reacciones: emojis y mensajes', onclick: e => { e.stopPropagation(); toggleEmotes(); } }, '😀'),
   };
   const topbar = h('header', { class: 'topbar' },
     h('div', { class: 'brand' }, 'Catan ', h('i', null, 'x'), ' Kchudites'),
     els.turn, els.event, els.dice,
-    h('div', { class: 'top-actions' },
+    h('div', { class: 'top-actions' }, els.emoteBtn,
       h('button', { class: 'btn sm', title: 'Ayuda', onclick: () => showHelp() }, '❔'),
       h('button', { class: 'btn sm', title: 'Menú', onclick: () => openMenu() }, '☰')));
   boardWrap.append(els.banner, els.offer,
@@ -60,9 +61,13 @@ export function gameScreen(root) {
       render(App.state);
     }
   });
+  document.onpointerdown = e => {
+    if (ui && ui.emoteBox && !ui.emoteBox.contains(e.target) && e.target !== ui.els.emoteBtn && !ui.els.emoteBtn.contains(e.target)) toggleEmotes(false);
+  };
   document.onkeydown = e => {
     if (App.screen !== 'game') return;
     if (e.key === 'Escape') {
+      if (ui.emoteBox) return toggleEmotes(false);
       ui.pick = null;
       closeModal();
       render(App.state);
@@ -74,9 +79,15 @@ export function gameScreen(root) {
   }];
   // presence / votes / reconnection changes that don't come with a new state
   App.onMeta = () => App.state && ui && render(App.state);
+  App.onEmote = (seat, e) => showEmote(seat, e);
+  App.onPing = (seat, x, z) => showPing(seat, x, z);
   App.onLeave = () => {
     App.listeners = [];
     App.onMeta = null;
+    App.onEmote = null;
+    App.onPing = null;
+    document.onpointerdown = null;
+    if (ui && ui.emoteBox) ui.emoteBox.remove();
     disposeGameView();
   };
 }
@@ -91,6 +102,15 @@ async function mountBoard(u) {
     const b = await Board3D.create(u.boardWrap);
     if (ui !== u) return b.dispose();
     u.board3d = u.board = b;
+    b.onPing = (x, z) => {
+      const now = Date.now();
+      u.pinged = (u.pinged || []).filter(t => now - t < 3000);
+      if (u.pinged.length >= 6) return;
+      u.pinged.push(now);
+      const v = App.viewer;
+      if (v == null || v < 0) return showPing(-1, x, z); // spectator: only on this screen
+      App.ping(v, x, z);
+    };
   } catch (e) {
     console.error(e);
     if (ui !== u) return;
@@ -137,19 +157,25 @@ function privacyOn(st) {
 // ---------------- fx ----------------
 function handleFx(st) {
   const v = computeViewer(st);
+  // the cards wait for the 3D dice to land before flying off the tiles
+  const rolledNow = (st.fx || []).some(f => f.kind === 'dice');
+  const host = !App.isClient();
   for (const f of st.fx || []) {
     switch (f.kind) {
       case 'dice': {
         ui.rolled = f.dice[0] + f.dice[1];
         ui.rolledAt = Date.now();
         ui.diceAnim = true;
+        if (ui.board3d) ui.board3d.rollDice(f.dice, ui.rolledAt);
         play.dice();
         if (ui.rolled === 7) setTimeout(() => play.robber(), 350);
+        const cur = st.players[st.current];
+        if (host && ui.rolled === 7 && cur && cur.kind === 'bot' && Math.random() < 0.3) botEmote(st.current, ['😈', '🦹', '😏']);
         break;
       }
       case 'gain':
         ui.gains.push({ pid: f.pid, text: `+${f.n}${TILE_INFO[f.res].icon}`, at: Date.now() });
-        if (f.pid === v) {
+        if (!flyGain(st, f, v, rolledNow ? 1150 : 0) && f.pid === v) {
           ui.bumpRes = ui.bumpRes || new Set();
           ui.bumpRes.add(f.res);
           play.gain();
@@ -161,6 +187,7 @@ function handleFx(st) {
       case 'steal':
         if (f.from === v) toast(h('span', null, rich(`🫳 @${f.to} te robó `, st.players), TILE_INFO[f.res].icon), 'error');
         else if (f.to === v) toast(h('span', null, rich(`🫳 Le robaste a @${f.from}: `, st.players), TILE_INFO[f.res].icon), 'good');
+        if (host && st.players[f.from].kind === 'bot' && Math.random() < 0.45) botEmote(f.from, ['😡', '😤', '💀', '😭', 'Me la pagarás']);
         break;
       case 'robber':
         play.robber();
@@ -194,6 +221,7 @@ function handleFx(st) {
       case 'win':
         play.win();
         confetti();
+        if (host && st.players[f.pid] && st.players[f.pid].kind === 'bot') botEmote(f.pid, ['😎', '🏆', 'GG']);
         break;
       case 'flipAll':
         ui.flipAt = Date.now();
@@ -229,6 +257,129 @@ function confetti() {
     document.body.append(c);
     setTimeout(() => c.remove(), 5500);
   }
+}
+
+// ---------------- resources flying from the tiles to the hands ----------------
+// returns false when there is nothing to fly (no 3D map), so the caller bumps the card right away
+function flyGain(st, f, v, delay) {
+  const b = ui.board3d;
+  if (!b || !f.tiles || !f.tiles.length) return false;
+  if (st.config.modes.fog && f.pid !== v) return true; // don't reveal where the others produce
+  const u = ui, mine = f.pid === v;
+  setTimeout(() => {
+    for (let i = 0; i < Math.min(f.n, 5); i++)
+      setTimeout(() => ui === u && flyOne(f.res, f.tiles[i % f.tiles.length], f.pid, mine, i === 0), i * 120);
+  }, delay);
+  return true;
+}
+
+function flyOne(res, tile, pid, mine, first) {
+  const b = ui.board3d, pt = b && b.tilePoint(tile);
+  const from = pt && b.toScreen(pt.x, pt.y, pt.z);
+  const target = () => (mine ? ui.els.actionbar.querySelectorAll('.hand .rcard')[RES.indexOf(res)] : ui.els.players.children[pid]);
+  const t = target();
+  if (!from || !t) return;
+  const r = t.getBoundingClientRect();
+  const to = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  const mid = { x: (from.x + to.x) / 2 + (Math.random() - 0.5) * 120, y: Math.min(from.y, to.y) - 70 - Math.random() * 50 };
+  const at = (p, s) => `translate(${p.x}px, ${p.y}px) translate(-50%, -50%) scale(${s})`;
+  const el = h('div', { class: 'fly-res' + (mine ? ' mine' : '') }, pxIcon(TILE_INFO[res].icon.replace(/️/g, ''), 32));
+  document.body.append(el);
+  const anim = el.animate([
+    { transform: at(from, 0.3), opacity: 0 },
+    { transform: at({ x: from.x, y: from.y - 34 }, 1.35), opacity: 1, offset: 0.18 },
+    { transform: at(mid, 1.1), opacity: 1, offset: 0.58 },
+    { transform: at(to, mine ? 0.95 : 0.55), opacity: mine ? 1 : 0.4 },
+  ], { duration: 950, easing: 'cubic-bezier(.4,0,.6,1)' });
+  setTimeout(() => el.remove(), 2500); // hidden tabs may never finish the animation
+  anim.onfinish = () => {
+    el.remove();
+    const c = ui && target();
+    if (!c) return;
+    c.classList.remove('bump');
+    void c.offsetWidth;
+    c.classList.add('bump');
+    if (mine && first) play.gain();
+  };
+}
+
+// ---------------- reactions: emojis and short messages that float up from your buildings ----------------
+const EMOTES = ['😂', '🤣', '😎', '😡', '😭', '😱', '🤔', '🙏', '👏', '🔥', '💀', '😈', '👀', '❤️', '🤝', '🎉', '🐑', '🌾', '🧱', '🌲', '⛰️', '🎲', '🦹', '🏆'];
+const PHRASES = ['¿Alguien tiene 🐑?', '¡Cambio!', 'GG', 'Jajaja', 'Nooo el ladrón 😭', 'Te voy a robar 😈', 'Buena jugada 👏', 'Apúrate 🐢', 'Me la pagarás', '¡Suerte!'];
+const ONLY_EMOJI = /^(\p{Extended_Pictographic}|️|‍){1,4}$/u;
+
+function botEmote(pid, options) {
+  const e = options[Math.floor(Math.random() * options.length)];
+  setTimeout(() => App.state && App.emote(pid, e), 500 + Math.random() * 900);
+}
+
+function sendEmote(e) {
+  const v = App.viewer;
+  if (v == null || v < 0) return toast('Solo los jugadores pueden reaccionar', 'error');
+  const now = Date.now();
+  ui.sent = (ui.sent || []).filter(t => now - t < 4000);
+  if (ui.sent.length >= 5) return toast('Más despacio 😅', 'error', 1500);
+  ui.sent.push(now);
+  App.emote(v, e);
+}
+
+function toggleEmotes(force) {
+  const open = force ?? !ui.emoteBox;
+  if (ui.emoteBox) {
+    ui.emoteBox.remove();
+    ui.emoteBox = null;
+  }
+  if (!open) return;
+  const input = h('input', { class: 'emote-input', maxlength: 40, placeholder: 'Escribe algo y Enter...' });
+  const say = () => {
+    const t = input.value.trim();
+    if (!t) return;
+    sendEmote(t);
+    input.value = '';
+  };
+  input.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Enter') say();
+    if (e.key === 'Escape') toggleEmotes(false);
+  });
+  ui.emoteBox = h('div', { class: 'emote-pop', onclick: e => e.stopPropagation() },
+    h('div', { class: 'emote-grid' }, EMOTES.map(e => h('button', { class: 'emote-btn', title: e, onclick: () => sendEmote(e) }, e))),
+    h('div', { class: 'emote-phrases' }, PHRASES.map(t => h('button', { class: 'chip', onclick: () => { sendEmote(t); toggleEmotes(false); } }, t))),
+    h('div', { class: 'emote-say' }, input, h('button', { class: 'btn sm primary', onclick: say }, 'Decir')));
+  document.body.append(ui.emoteBox);
+  const r = ui.els.emoteBtn.getBoundingClientRect();
+  ui.emoteBox.style.top = r.bottom + 10 + 'px';
+  ui.emoteBox.style.right = Math.max(8, innerWidth - r.right - 8) + 'px';
+}
+
+function showEmote(seat, e) {
+  const st = App.state;
+  if (!ui || !st || !st.players[seat]) return;
+  const p = st.players[seat];
+  const short = ONLY_EMOJI.test(e);
+  play.pop();
+  // on the player's card (always visible, even when their buildings are off screen)
+  ui.cardEmotes = (ui.cardEmotes || []).filter(x => x.pid !== seat);
+  ui.cardEmotes.push({ pid: seat, e, at: Date.now() });
+  renderPlayers(st, App.viewer);
+  const u = ui;
+  setTimeout(() => ui === u && App.state && renderPlayers(App.state, App.viewer), 3100);
+  // and as a balloon rising from one of their buildings
+  const b = ui.board3d;
+  const pts = b ? b.playerPoints(seat) : [];
+  if (!pts.length) return;
+  const el = h('div', { class: 'balloon ' + (short ? 'emoji' : 'talk'), style: { '--pc': p.color } },
+    h('div', { class: 'balloon-body' }, h('span', null, e)),
+    h('i', { class: 'balloon-knot' }), h('i', { class: 'balloon-string' }));
+  b.float(el, pts[Math.floor(Math.random() * pts.length)], short ? { rise: 120, life: 3300 } : { rise: 70, life: 4600, wobble: 3 });
+  pixelize(el);
+}
+
+function showPing(seat, x, z) {
+  if (!ui || !ui.board3d) return;
+  const p = App.state && App.state.players[seat];
+  ui.board3d.ping(x, z, p ? p.color : '#f4f4f4');
+  play.click();
 }
 
 // ---------------- render ----------------
@@ -411,6 +562,8 @@ function renderPlayers(st, v) {
         st.pendingDiscards[p.id] ? h('span', { style: { color: 'var(--red)' } }, `🗑️ ${st.pendingDiscards[p.id]}`) : null));
     const g = ui.gains.filter(x => x.pid === p.id);
     if (g.length) card.append(h('div', { class: 'gainfx' }, g.map(x => x.text).join(' ')));
+    const said = (ui.cardEmotes || []).find(x => x.pid === p.id && now - x.at < 3000);
+    if (said) card.append(h('div', { class: 'pc-emote' + (ONLY_EMOJI.test(said.e) ? ' big' : ''), style: { animationDelay: `-${now - said.at}ms` } }, said.e));
     box.append(card);
   }
   clear(ui.els.bank).append(h('span', null, '🏦'), ...RES.map(r => h('span', { title: TILE_INFO[r].name }, `${TILE_INFO[r].icon}${st.bank[r]}`)), h('span', { title: 'Cartas de desarrollo restantes' }, `🃏${st.devDeck.length}`),
@@ -432,7 +585,12 @@ function resCard(r, n, bump) {
 }
 
 function renderActions(st, v, locked) {
-  const bar = clear(ui.els.actionbar);
+  const bar = h('div');
+  fillActions(bar, st, v, locked);
+  sync(ui.els.actionbar, ...bar.childNodes);
+}
+
+function fillActions(bar, st, v, locked) {
   if (v < 0) {
     bar.append(h('div', { class: 'waiting' }, '👀 Modo espectador: los bots juegan solos.'), speedControl());
     return;
@@ -470,7 +628,10 @@ function renderActions(st, v, locked) {
   }
   if (st.phase === 'setup' || !myTurn) {
     if (st.phase === 'discard' && st.pendingDiscards[v]) acts.append(h('button', { class: 'btn pink', onclick: () => render(App.state) }, `🗑️ Descarta ${st.pendingDiscards[v]}`));
-    else acts.append(h('div', { class: 'waiting' }, st.phase === 'setup' && G.pendingActors(st)[0] === v ? '👆 Toca el tablero' : `⏳ Esperando a ${st.players[G.pendingActors(st)[0]].name}...`));
+    else {
+      acts.append(h('div', { class: 'waiting' }, st.phase === 'setup' && G.pendingActors(st)[0] === v ? '👆 Toca el tablero' : `⏳ Esperando a ${st.players[G.pendingActors(st)[0]].name}...`));
+      if (st.phase !== 'setup') acts.append(affordPreview(st, v));
+    }
     return;
   }
   if (st.phase === 'roll') {
@@ -505,6 +666,28 @@ function renderActions(st, v, locked) {
     h('button', { class: 'btn', disabled: !!st.trade, onclick: () => openTrade(v) }, '🤝 Comerciar'),
     h('button', { class: 'btn sm ghost', title: 'Pista', onclick: () => showHint(st, v) }, '💡'),
     h('button', { class: 'btn green', onclick: () => App.dispatch({ type: 'endTurn', pid: v }) }, '✅ Terminar'));
+}
+
+// out of turn: what your hand already pays for, so you can plan while the others play
+function affordPreview(real, v) {
+  const st = G.viewFor(real, v); // fog: only count spots you can actually see
+  const p = st.players[v];
+  const items = [
+    ['road', '🛤️', 'Camino', p.roadsLeft > 0 && G.legalRoads(st, v).length > 0],
+    ['settlement', '🏠', 'Poblado', p.settlementsLeft > 0 && G.legalSettlements(st, v).length > 0],
+    ['city', '🏰', 'Ciudad', p.citiesLeft > 0 && G.legalCities(st, v).length > 0],
+    ['dev', '🃏', 'Carta', st.devDeck.length > 0],
+  ];
+  return h('div', { class: 'afford' }, items.map(([what, icon, label, room]) => {
+    const ok = G.canAfford(p.res, COSTS[what]);
+    const tip = ok ? (room ? `Ya puedes pagar: ${label}. Constrúyelo en tu turno.` : `Puedes pagarlo, pero ahora no hay dónde: ${label}.`) : `${label}: te falta ${missing(p.res, COSTS[what])}`;
+    return h('div', { class: 'afford-item' + (ok && room ? ' ok' : ok ? ' half' : ''), title: tip },
+      icon, h('span', null, label, h('span', { class: 'cost' }, costIcons(COSTS[what]))), ok && room ? h('b', { class: 'tick' }, '✓') : null);
+  }));
+}
+
+function missing(res, cost) {
+  return Object.entries(cost).filter(([r, n]) => res[r] < n).map(([r, n]) => TILE_INFO[r].icon.repeat(n - res[r])).join('');
 }
 
 function speedControl() {
@@ -622,16 +805,32 @@ function tradeModal(st, v) {
       h('button', { class: 'btn primary', disabled: !valid, onclick: () => { closeModal(); App.dispatch({ type: 'proposeTrade', pid: v, give: d.give, get: d.get, to: d.to }); } }, 'Enviar oferta')));
 }
 
+// same trick as the modals: one frame per offer, so answers coming in don't replay its pop-in
 function renderOffer(st, v, locked) {
-  const box = clear(ui.els.offer);
+  const box = ui.els.offer;
+  const panel = offerPanel(st, v, locked);
+  let cur = box.firstElementChild;
+  if (!panel) {
+    if (cur) clear(box);
+    return;
+  }
+  if (!cur || cur.dataset.trade !== panel.dataset.trade) {
+    clear(box);
+    cur = h('div', { class: 'offer', 'data-trade': panel.dataset.trade });
+    box.append(cur);
+  }
+  sync(cur, ...panel.childNodes);
+}
+
+function offerPanel(st, v, locked) {
   const t = st.trade;
-  if (!t || locked || st.phase === 'gameOver') return;
+  if (!t || locked || st.phase === 'gameOver') return null;
   const from = st.players[t.from];
   const mine = localHumans(st);
   const iAmProposer = mine.includes(t.from);
   const pendingMe = t.to.filter(pid => mine.includes(pid) && t.responses[pid] == null);
-  if (!iAmProposer && !pendingMe.length && !(v >= 0 && t.to.includes(v))) return;
-  const panel = h('div', { class: 'offer' },
+  if (!iAmProposer && !pendingMe.length && !(v >= 0 && t.to.includes(v))) return null;
+  const panel = h('div', { class: 'offer', 'data-trade': t.id },
     h('div', { class: 'line' }, h('span', { class: 'turn-dot', style: { background: from.color } }), from.name, ' da ', h('span', { class: 'res-inline' }, resLine(t.give)), ' y pide ', h('span', { class: 'res-inline' }, resLine(t.get))));
   const resp = h('div', { class: 'resp' });
   for (const pid of t.to) {
@@ -655,61 +854,78 @@ function renderOffer(st, v, locked) {
   }
   if (iAmProposer) resp.append(h('button', { class: 'btn sm ghost', onclick: () => App.dispatch({ type: 'cancelTrade', pid: t.from }) }, 'Cancelar oferta'));
   panel.append(resp);
-  box.append(panel);
+  return panel;
 }
 
 // ---------------- modals ----------------
+let modalSeq = 0;
 function openModal(fn) {
   ui.modal = fn;
+  ui.modalId = ++modalSeq;
   renderModal(App.state);
 }
 function closeModal() {
   ui.modal = null;
   ui.draft = null;
-  clear(ui.els.overlay);
+  renderModal(App.state);
 }
 
+// The frame (dark backdrop + window) is kept while the same modal stays open and only its
+// content is refreshed: rebuilding the frame replays the pop-in animation on every click.
 function renderModal(st, v = App.viewer, locked = false) {
-  const box = clear(ui.els.overlay);
-  if (locked) return;
+  const box = ui.els.overlay;
+  const m = locked || !st ? null : modalContent(st, v);
+  let ov = box.firstElementChild;
+  if (!m) {
+    if (ov) clear(box);
+    return;
+  }
+  if (!ov || ov.dataset.kind !== m.kind) {
+    clear(box);
+    ov = h('div', { class: 'overlay', 'data-kind': m.kind, onclick: e => { if (m.closable && e.target === e.currentTarget) closeModal(); } },
+      h('div', { class: 'modal', style: m.center ? { textAlign: 'center' } : null }));
+    box.append(ov);
+  }
+  sync(ov.firstElementChild, m.body);
+}
+
+function modalContent(st, v) {
   // online: reconnecting / table vote about a disconnected player
   if (App.isOnline()) {
     const net = App.net;
-    if (net.role === 'client' && net.reconnecting) {
-      box.append(h('div', { class: 'overlay' }, h('div', { class: 'modal', style: { textAlign: 'center' } },
+    if (net.role === 'client' && net.reconnecting)
+      return { kind: 'reconnect', center: true, body: h('div', null,
         h('h2', { class: 'jit' }, '📡 Reconectando...'),
         h('p', null, 'Se perdió la señal con el anfitrión. Tu asiento te espera: sigo intentando volver a la sala.'),
-        h('div', { class: 'row', style: { justifyContent: 'center' } }, h('button', { class: 'btn ghost', onclick: () => App.leaveGame() }, 'Salir al menú')))));
-      return;
-    }
+        h('div', { class: 'row', style: { justifyContent: 'center' } }, h('button', { class: 'btn ghost', onclick: () => App.leaveGame() }, 'Salir al menú'))) };
     const vote = net.currentVote();
     if (vote && vote.voters.includes(App.mySeat)) {
       const mine = vote.votes[App.mySeat];
       const count = k => Object.values(vote.votes).filter(x => x === k).length;
       const opt = (k, label, cls) => h('button', { class: 'btn ' + cls + (mine === k ? ' active' : ''), disabled: !!mine, onclick: () => { net.sendVote(k); } }, `${label} (${count(k)})`);
-      box.append(h('div', { class: 'overlay' }, h('div', { class: 'modal', style: { textAlign: 'center' } },
+      return { kind: 'vote' + vote.id, center: true, body: h('div', null,
         h('h2', null, `🔌 ${vote.name} se desconectó`),
         h('p', null, mine ? `Votaste. Esperando al resto (${Object.keys(vote.votes).length}/${vote.voters.length})... ${vote.left}s` : `¿Qué hacemos? Decide la mayoría. Si vuelve antes, recupera su asiento. ${vote.left}s`),
         h('div', { class: 'row', style: { justifyContent: 'center' } },
-          opt('wait', '⏳ Esperar', ''), opt('bot', '🤖 Que juegue un bot', 'green'), opt('remove', '🚪 Retirarlo', 'pink')))));
-      return;
+          opt('wait', '⏳ Esperar', ''), opt('bot', '🤖 Que juegue un bot', 'green'), opt('remove', '🚪 Retirarlo', 'pink'))) };
     }
   }
   // forced modals
   if (st.phase === 'discard' && st.pendingDiscards[v] && localHumans(st).includes(v)) {
     if (!ui.discard || ui.discard.pid !== v) ui.discard = { pid: v, res: G.zeroRes() };
-    box.append(h('div', { class: 'overlay' }, h('div', { class: 'modal' }, discardModal(st, v))));
-    return;
+    return { kind: 'discard' + v, body: discardModal(st, v) };
   }
   ui.discard = null;
   if (st.phase === 'gameOver' && !ui.lastWinnerShown) {
     ui.lastWinnerShown = true;
-    setTimeout(() => openGameOver(App.state), 1200);
+    // a rematch may have started in the meantime: only show it for the game that ended
+    const u = ui;
+    setTimeout(() => ui === u && openGameOver(App.state), 1200);
   }
-  if (!ui.modal) return;
+  if (!ui.modal) return null;
   const content = ui.modal(st);
-  if (!content) return;
-  box.append(h('div', { class: 'overlay', onclick: e => { if (e.target === e.currentTarget) closeModal(); } }, h('div', { class: 'modal' }, content)));
+  if (!content) return null;
+  return { kind: 'm' + ui.modalId, closable: true, body: content };
 }
 
 function discardModal(st, v) {
@@ -727,6 +943,7 @@ function discardModal(st, v) {
 }
 
 export function openGameOver(st) {
+  if (!st || st.phase !== 'gameOver' || st.winner == null) return;
   const ranking = [...st.players].sort((a, b) => G.victoryPoints(st, b.id) - G.victoryPoints(st, a.id));
   const w = st.players[st.winner];
   const maxRoll = Math.max(1, ...st.stats.rolls);

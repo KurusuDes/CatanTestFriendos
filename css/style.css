@@ -289,6 +289,7 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 .toast.error { background: #5c2230; border-color: #ff7a8a; }
 .toast.good { background: #1d4d38; border-color: #56e59a; }
 .toast.out { opacity: 0; transform: translateY(-10px); }
+.toast button { pointer-events: auto; margin-left: 8px; }
 
 .winner-hero { text-align: center; }
 .winner-hero .trophy { font-size: 80px; animation: floaty 2.5s infinite; }

@@ -69,6 +69,26 @@ export const App = {
     return true;
   },
 
+  // a reaction (emoji or short message) from a seat: online it goes through the host,
+  // who relays it to everyone (bots emote from the host too)
+  emote(seat, e) {
+    e = String(e || '').trim().slice(0, 40);
+    if (!e || !this.state) return;
+    if (this.isClient()) return this.net.sendEmote(e);
+    if (this.isOnline()) this.net.relayEmote(seat, e);
+    if (this.onEmote) this.onEmote(seat, e);
+  },
+
+  // a 1 s marker a seat drops on the map (middle click), shared the same way
+  ping(seat, x, z) {
+    if (!this.state || !Number.isFinite(x) || !Number.isFinite(z)) return;
+    x = Math.round(x * 100) / 100;
+    z = Math.round(z * 100) / 100;
+    if (this.isClient()) return this.net.sendPing(x, z);
+    if (this.isOnline()) this.net.relayPing(seat, x, z);
+    if (this.onPing) this.onPing(seat, x, z);
+  },
+
   // called after every state change (local apply, or state received from host)
   changed() {
     const st = this.state;

@@ -91,7 +91,8 @@ function menuScreen(root) {
   const save = storage(SAVE_KEY);
   const fresh = (x, hours) => x && Date.now() - (x.at || 0) < hours * 3600e3;
   const hostSess = fresh(storage(HOST_SESSION), 24) ? storage(HOST_SESSION) : null;
-  const guestSess = !hostSess && fresh(storage(GUEST_SESSION), 6) ? storage(GUEST_SESSION) : null;
+  // both can exist (hosted yesterday, joined a friend today): offer both
+  const guestSess = fresh(storage(GUEST_SESSION), 6) ? storage(GUEST_SESSION) : null;
   const icons = ['🌲', '🧱', '🐑', '🌾', '⛰️', '🏠', '🏰', '🎲', '⚔️', '💰', '🛤️', '🙈'];
   const bg = h('div', { class: 'menu-bg' }, Array.from({ length: 26 }, (_, i) => h('div', {
     class: 'fhex', style: { left: ((i * 37) % 100) + '%', top: ((i * 53) % 100) + '%', animationDelay: -(i * 0.7) + 's', fontSize: 26 + ((i * 7) % 30) + 'px' },

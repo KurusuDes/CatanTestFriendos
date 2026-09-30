@@ -41,8 +41,9 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: 1px;
 .card h3, .modal h2 { color: var(--sand); text-shadow: 3px 3px 0 var(--ink); }
 .modal { padding: 22px; }
 .overlay { background: rgba(10,12,24,.72); backdrop-filter: none; }
-.pcard { background: var(--dusk); box-shadow: 0 0 0 3px var(--ink), inset 0 -4px 0 rgba(0,0,0,.25); margin: 3px; }
-.pcard.current { box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--pc), inset 0 -4px 0 rgba(0,0,0,.25); }
+/* each card casts a hard shadow in its player's colour, so card ↔ pieces on the board match at a glance */
+.pcard { background: var(--dusk); box-shadow: 0 0 0 3px var(--ink), 6px 6px 0 3px var(--pc), inset 5px 0 0 var(--pc), inset 0 -4px 0 rgba(0,0,0,.25); margin: 3px 10px 10px 3px; }
+.pcard.current { box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--pc), 6px 6px 0 6px var(--pc), 0 0 18px 6px color-mix(in srgb, var(--pc) 55%, transparent), inset 5px 0 0 var(--pc), inset 0 -4px 0 rgba(0,0,0,.25); }
 .pcard .avatar { box-shadow: 0 0 0 3px var(--ink); }
 .pcard .vp { font-size: 26px; color: var(--sand); text-shadow: 2px 2px 0 var(--ink); }
 .pill, .tag { background: var(--dusk); box-shadow: 0 0 0 2px var(--ink); }
@@ -351,3 +352,68 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
   .modal .btn { white-space: normal; text-align: center; line-height: 1.25; }
   .hub-head { flex-wrap: wrap; }
 }
+
+/* ---------- out of turn: what your hand already pays for ---------- */
+.afford { display: flex; gap: 6px; flex-wrap: wrap; }
+.afford-item { position: relative; display: flex; align-items: center; gap: 6px; padding: 6px 10px; background: var(--panel); color: var(--slate); box-shadow: 0 0 0 3px var(--ink); margin: 3px; font-weight: 600; font-size: 14px; opacity: .55; }
+.afford-item .cost { opacity: .8; }
+.afford-item.half { opacity: .8; color: var(--steel); }
+.afford-item.ok { opacity: 1; color: var(--white); background: #1f4a3a; box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--green); animation: affordGlow 1.6s steps(4) infinite; }
+.afford-item .tick { position: absolute; top: -9px; right: -7px; background: var(--green); color: var(--ink); font-size: 11px; padding: 0 4px; box-shadow: 0 0 0 2px var(--ink); }
+@keyframes affordGlow { 50% { box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--lime); } }
+@media (max-width: 720px) { .afford-item { padding: 5px 7px; font-size: 12px; } .afford-item .cost { display: none; } }
+
+/* ---------- resources flying from the tiles to the hands ---------- */
+.fly-res { position: fixed; left: 0; top: 0; z-index: 70; pointer-events: none; will-change: transform, opacity; filter: drop-shadow(3px 3px 0 var(--ink)); }
+.fly-res img.px { width: 34px; height: 34px; display: block; }
+.fly-res:not(.mine) img.px { width: 26px; height: 26px; }
+
+/* ---------- reactions ---------- */
+.emote-toggle { font-size: 16px; }
+.emote-pop { position: fixed; z-index: 90; width: min(340px, calc(100vw - 16px)); padding: 10px; background: var(--panel); box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--sand), 6px 6px 0 6px var(--ink); animation: popIn .12s steps(3); }
+.emote-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.emote-btn { background: var(--dusk); border: 0; padding: 5px 0; font-size: 22px; cursor: pointer; box-shadow: 0 0 0 2px var(--ink); color: var(--white); }
+.emote-btn:hover { background: var(--navy); transform: translateY(-2px); }
+.emote-btn img.px { width: 24px; height: 24px; }
+.emote-phrases { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 8px; }
+.emote-phrases .chip { font-size: 12px; padding: 4px 8px; }
+.emote-say { display: flex; gap: 6px; }
+.emote-input { flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 6px 8px; background: var(--ink); color: var(--white); border: 0; box-shadow: 0 0 0 2px var(--slate); }
+.emote-input:focus { outline: none; box-shadow: 0 0 0 2px var(--sand); }
+@keyframes popIn { from { transform: scale(.85); opacity: 0; } }
+
+/* a pixel balloon on a string, tied to one of your buildings */
+.balloon { z-index: 60; display: flex; flex-direction: column; align-items: center; will-change: transform, opacity; }
+.balloon-body { position: relative; display: grid; place-items: center; color: var(--ink); font-weight: 700; }
+.balloon.emoji .balloon-body { width: 58px; height: 64px; background: var(--pc); font-size: 32px;
+  clip-path: polygon(30% 0, 70% 0, 100% 25%, 100% 62%, 72% 100%, 28% 100%, 0 62%, 0 25%); }
+.balloon.emoji .balloon-body::before { content: ''; position: absolute; left: 22%; top: 16%; width: 9px; height: 12px; background: rgba(255,255,255,.55); }
+.balloon.emoji .balloon-body img.px { width: 34px; height: 34px; }
+.balloon.talk .balloon-body { max-width: 200px; padding: 7px 11px; background: var(--white); font-size: 15px; line-height: 1.2; text-align: center;
+  box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--pc), 4px 4px 0 6px var(--ink); margin-bottom: 4px; }
+.balloon.talk .balloon-body img.px { width: 18px; height: 18px; }
+.balloon-knot { width: 10px; height: 6px; background: var(--pc); box-shadow: 0 0 0 2px var(--ink); }
+.balloon.talk .balloon-knot { width: 12px; height: 8px; background: var(--white); clip-path: polygon(0 0, 100% 0, 50% 100%); box-shadow: none; }
+.balloon-string { width: 2px; height: 30px; background: var(--ink); opacity: .8; }
+.balloon.talk .balloon-string { display: none; }
+
+/* the same reaction on the player's card */
+.pc-emote { position: absolute; right: 46px; top: -12px; z-index: 3; max-width: 70%; padding: 2px 8px; background: var(--white); color: var(--ink); font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--pc); animation: pcEmote 3s steps(12) forwards; pointer-events: none; }
+.pc-emote.big { font-size: 20px; padding: 0 6px; }
+.pc-emote img.px { width: 16px; height: 16px; }
+.pc-emote.big img.px { width: 22px; height: 22px; }
+@keyframes pcEmote { 0% { transform: translateY(8px) scale(.6); opacity: 0; } 8% { transform: none; opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(-6px); opacity: 0; } }
+
+/* settlement spots on a port corner carry an anchor badge */
+.hot3d.v.port { position: relative; }
+.hot3d.v.port::after { content: '⚓'; position: absolute; left: 50%; bottom: 100%; transform: translate(-50%, -3px); font-size: 12px; line-height: 1; padding: 1px 2px; background: var(--white); box-shadow: 0 0 0 2px var(--ink); pointer-events: none; }
+
+/* middle-click marker: an arrow bouncing over a pulsing ring, 1 s */
+.ping { z-index: 58; width: 44px; height: 44px; }
+.ping-arrow { position: absolute; left: 50%; top: 0; width: 22px; height: 16px; margin-left: -11px; background: var(--pc); clip-path: polygon(0 0, 100% 0, 50% 100%);
+  filter: drop-shadow(0 0 0 var(--ink)); animation: pingBounce .5s steps(4) infinite alternate; }
+.ping-ring { position: absolute; left: 50%; bottom: 0; width: 34px; height: 14px; margin: 0 0 -7px -17px; border: 3px solid var(--pc); box-shadow: 0 0 0 2px var(--ink), inset 0 0 0 2px var(--ink); animation: pingRing 1s steps(8) forwards; }
+.ping-ring.r2 { animation-delay: .25s; opacity: 0; }
+@keyframes pingBounce { to { transform: translateY(10px); } }
+@keyframes pingRing { 0% { transform: scale(.3); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }

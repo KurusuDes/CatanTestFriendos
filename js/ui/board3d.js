@@ -22,6 +22,7 @@ import { probLook } from '../engine/constants.js';
 import { pixelToHex, hk } from '../engine/board.js';
 import { pxIcon } from './pixel.js';
 import { flagCanvas } from './flag.js';
+import { Dice3D } from './dice3d.js';
 
 export const SETTINGS = { pixel: 1, tiltShift: true, quality: 'high', ao: true, outline: true };
 // phones and small screens start on the light preset
@@ -144,6 +145,7 @@ const U = {
   uFogOn: { value: 0 },
   uFogColor: { value: new THREE.Color('#0a0e1a') },
   uClouds: { value: null },
+  uRobber: { value: new THREE.Vector3(0, 0, 0) }, // x, z of the robber's tile + tint strength
 };
 
 // Inject fog-of-war (+ optional wind / cloud shadows) into any built-in material.
@@ -170,12 +172,22 @@ function patch(mat, opts = {}) {
   #else
     vFogW = (modelMatrix * vec4(transformed, 1.0)).xyz;
   #endif`);
-    sh.fragmentShader = 'varying vec3 vFogW;\nuniform sampler2D uFogTex;\nuniform vec4 uFogRect;\nuniform float uFogOn;\nuniform vec3 uFogColor;\nuniform sampler2D uClouds;\nuniform float uTime;\n' +
+    sh.fragmentShader = 'varying vec3 vFogW;\nuniform sampler2D uFogTex;\nuniform vec4 uFogRect;\nuniform float uFogOn;\nuniform vec3 uFogColor;\nuniform sampler2D uClouds;\nuniform float uTime;\nuniform vec3 uRobber;\n' +
       sh.fragmentShader.replace('#include <dithering_fragment>', `
   ${clouds ? `{
     float cl = texture2D(uClouds, vFogW.xz * 0.045 + uTime * vec2(0.0045, 0.003)).r;
     gl_FragColor.rgb *= mix(1.0, 0.7, smoothstep(0.52, 0.72, cl));
   }` : ''}
+  if (uRobber.z > 0.001) {
+    // the robber's tile is stained red (pointy-top hex, inradius 0.866)
+    vec2 rd = vFogW.xz - uRobber.xy;
+    float hd = max(abs(rd.x), max(abs(dot(rd, vec2(0.5, 0.8660254))), abs(dot(rd, vec2(-0.5, 0.8660254)))));
+    float inside = 1.0 - smoothstep(0.8, 0.86, hd);
+    float rim = smoothstep(0.66, 0.8, hd) * inside;
+    float pulse = 0.82 + 0.18 * sin(uTime * 3.2);
+    vec3 stained = gl_FragColor.rgb * vec3(1.1, 0.36, 0.32) + vec3(0.2, 0.015, 0.0);
+    gl_FragColor.rgb = mix(gl_FragColor.rgb, stained, inside * uRobber.z * (0.55 + 0.45 * rim) * pulse);
+  }
   if (uFogOn > 0.5) {
     vec2 fuv = (vFogW.xz - uFogRect.xy) / uFogRect.zw;
     float vis = texture2D(uFogTex, vec2(fuv.x, 1.0 - fuv.y)).r;
@@ -661,9 +673,19 @@ export class Board3D {
     this.plates = [];
     this.bobbers = [];
     this.prevPieces = new Set();
+    this.floaters = [];
 
     this.controls = new OrbitControls(this.camera, this.canvas);
     Object.assign(this.controls, { enableDamping: true, dampingFactor: 0.08, maxPolarAngle: 1.15, minPolarAngle: 0.3, minDistance: 3, maxDistance: 50, screenSpacePanning: false });
+    // middle button = drop a 1 s marker there (zoom stays on the wheel)
+    this.controls.mouseButtons.MIDDLE = -1;
+    this.canvas.addEventListener('pointerdown', e => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      const p = this.pickGround(e.clientX, e.clientY);
+      if (p && this.onPing) this.onPing(p.x, p.z);
+    });
+    this.canvas.addEventListener('mousedown', e => e.button === 1 && e.preventDefault()); // no autoscroll
 
     this.composer = new EffectComposer(r);
     this.fogCanvas = document.createElement('canvas');
@@ -800,6 +822,113 @@ export class Board3D {
     this.renderer.dispose();
     this.canvas.remove();
     this.labels.domElement.remove();
+    if (this.diceFx) this.diceFx.dispose();
+    U.uRobber.value.set(0, 0, 0);
+    for (const f of this.floaters) f.el.remove();
+    this.floaters = [];
+  }
+
+  // ---------- effects that live on top of the map ----------
+  rollDice(values, at) {
+    if (!this.diceFx) {
+      this.diceFx = new Dice3D(this);
+      // pieces layer: stays sharp under the tilt-shift and gets the see-through outline
+      for (const m of this.diceFx.dice) {
+        m.layers.set(LAYER_PIECES);
+        m.userData.pc = new THREE.Color(m === this.diceFx.dice[0] ? '#f4f4f4' : '#b13e53');
+        m.onBeforeRender = pieceHook;
+      }
+    }
+    this.diceFx.roll(values, at);
+    this.hasPieces = true;
+  }
+
+  // page coordinates -> point on the terrain (null outside the island's area)
+  pickGround(cx, cy) {
+    const r = this.canvas.getBoundingClientRect();
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(new THREE.Vector2(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), this.camera);
+    const hit = new THREE.Vector3();
+    let y = 0.3;
+    // walk the ray onto the heightfield: intersect at a height, resample the terrain there, repeat
+    for (let i = 0; i < 4; i++) {
+      if (!ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -y), hit)) return null;
+      y = Math.max(this.heightAt(hit.x, hit.z), 0.02);
+    }
+    const b = this.bounds;
+    if (b && (hit.x < b.minX - 1.5 || hit.x > b.maxX + 1.5 || hit.z < b.minY - 1.5 || hit.z > b.maxY + 1.5)) return null;
+    return new THREE.Vector3(hit.x, y, hit.z);
+  }
+
+  // a player's marker: a pulsing ring with an arrow, glued to the map for a second
+  ping(x, z, color) {
+    const el = document.createElement('div');
+    el.className = 'ping';
+    el.style.setProperty('--pc', color);
+    el.innerHTML = '<b class="ping-arrow"></b><i class="ping-ring"></i><i class="ping-ring r2"></i>';
+    this.float(el, new THREE.Vector3(x, Math.max(this.heightAt(x, z), 0.02), z), { rise: 0, life: 1000, wobble: 0 });
+  }
+
+  // world point -> page coordinates (null when it is behind the camera)
+  toScreen(x, y, z) {
+    const v = new THREE.Vector3(x, y, z).project(this.camera);
+    if (v.z > 1) return null;
+    const r = this.canvas.getBoundingClientRect();
+    return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height };
+  }
+
+  tilePoint(id) {
+    const t = this.lastSt && this.lastSt.board.tiles[id];
+    return t ? new THREE.Vector3(t.x, Math.max(this.heightAt(t.x, t.y), 0.1) + 0.2, t.y) : null;
+  }
+
+  // where a player's balloons rise from: their cities and settlements (or their roads)
+  playerPoints(pid) {
+    const st = this.lastSt;
+    if (!st) return [];
+    const bd = st.board, pts = [];
+    for (const k in st.buildings) {
+      if (st.buildings[k].owner !== pid) continue;
+      const V = bd.vertices[+k];
+      pts.push(new THREE.Vector3(V.x, Math.max(this.heightAt(V.x, V.y), 0.05) + (st.buildings[k].type === 'city' ? 0.75 : 0.45), V.y));
+    }
+    if (!pts.length)
+      for (const k in st.roads) {
+        if (st.roads[k] !== pid) continue;
+        const E = bd.edges[+k], a = bd.vertices[E.a], b = bd.vertices[E.b];
+        pts.push(new THREE.Vector3((a.x + b.x) / 2, Math.max(this.heightAt((a.x + b.x) / 2, (a.y + b.y) / 2), 0.05) + 0.2, (a.y + b.y) / 2));
+      }
+    return pts;
+  }
+
+  // a DOM element glued to a point of the map (it follows pans/zooms) that rises and fades
+  float(el, point, { rise = 70, life = 3600, wobble = 6 } = {}) {
+    el.style.position = 'fixed';
+    el.style.left = el.style.top = '0';
+    el.style.pointerEvents = 'none';
+    document.body.append(el);
+    this.floaters.push({ el, point, rise, life, wobble, t0: this.now(), ph: Math.random() * 6 });
+  }
+
+  updateFloaters(now) {
+    this.floaters = this.floaters.filter(f => {
+      const k = (now - f.t0) / f.life;
+      if (k >= 1) {
+        f.el.remove();
+        return false;
+      }
+      const p = this.toScreen(f.point.x, f.point.y, f.point.z);
+      if (!p) {
+        f.el.style.opacity = '0';
+        return true;
+      }
+      const grow = Math.min(1, k * 8);
+      const x = p.x + Math.sin(now / 420 + f.ph) * f.wobble;
+      const y = p.y - f.rise * (1 - (1 - k) * (1 - k));
+      f.el.style.opacity = String(k > 0.8 ? (1 - k) / 0.2 : 1);
+      f.el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -100%) scale(${(0.4 + grow * 0.6).toFixed(3)})`;
+      return true;
+    });
   }
 
   setZoom(z) {
@@ -858,7 +987,13 @@ export class Board3D {
       }
       return true;
     });
+    if (this.diceFx) this.diceFx.update(now);
+    // the robber's red stain fades in on its new tile
+    const rt = this.robberTile, ru = U.uRobber.value;
+    if (rt && (rt.x !== ru.x || rt.y !== ru.y)) ru.set(rt.x, rt.y, 0);
+    ru.z += ((rt ? 1 : 0) - ru.z) * 0.06;
     this.controls.update();
+    this.updateFloaters(now);
     this.renderMasks();
     this.composer.render();
     this.labels.render(this.scene, this.camera);
@@ -871,6 +1006,7 @@ export class Board3D {
 
   // ---------- build ----------
   render(st, view = {}) {
+    this.lastSt = st;
     const bd = st.board;
     this.bounds = bd.bounds;
     const faceDown = !!view.faceDown;
@@ -1030,15 +1166,31 @@ export class Board3D {
       this.staticGroup.add(tok);
     }
 
-    // ---- ports: pier, boat and a pixel sign
+    // ---- ports: two walkways from the sign straight to the two corners that use it (like the
+    // classic board), a mooring post on each of those corners, a boat and a pixel sign
+    const PLANK = new THREE.MeshStandardMaterial({ color: '#8a5a36', roughness: 0.85 });
+    const POST = new THREE.MeshStandardMaterial({ color: '#5b3e2b', roughness: 0.8 });
+    const TIP = new THREE.MeshStandardMaterial({ color: '#ffcd75', roughness: 0.5, emissive: '#ffcd75', emissiveIntensity: 0.25 });
     for (const port of bd.ports) {
       const E = bd.edges[port.edge];
-      const a = bd.vertices[E.a], c = bd.vertices[E.b];
-      const mx = (a.x + c.x) / 2, mz = (a.y + c.y) / 2;
-      const dock = this.kit.dock.clone();
-      dock.position.set(mx + port.nx * 0.25, 0.08, mz + port.ny * 0.25);
-      dock.rotation.y = -Math.atan2(port.ny, port.nx);
-      dock.scale.setScalar(1.2);
+      const hub = new THREE.Vector3(port.x - port.nx * 0.12, 0.07, port.y - port.ny * 0.12);
+      for (const vid of [E.a, E.b]) {
+        const V = bd.vertices[vid];
+        const end = new THREE.Vector3(V.x, Math.max(this.heightAt(V.x, V.y), 0.05) + 0.03, V.y);
+        const d = end.clone().sub(hub), flat = Math.hypot(d.x, d.z);
+        const walk = new THREE.Mesh(new THREE.BoxGeometry(1, 0.035, 0.1), PLANK);
+        walk.scale.x = d.length();
+        walk.position.copy(hub).add(end).multiplyScalar(0.5);
+        walk.rotation.order = 'YZX';
+        walk.rotation.y = -Math.atan2(d.z, d.x);
+        walk.rotation.z = Math.atan2(d.y, flat);
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 0.26, 8), POST);
+        post.position.set(end.x - (d.x / flat) * 0.06, end.y + 0.11, end.z - (d.z / flat) * 0.06);
+        const tip = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), TIP);
+        tip.position.set(post.position.x, post.position.y + 0.14, post.position.z);
+        for (const m of [walk, post, tip]) m.castShadow = m.receiveShadow = true;
+        this.staticGroup.add(walk, post, tip);
+      }
       const boat = this.kit.boat.clone();
       boat.position.set(port.x + port.ny * 0.3, 0.0, port.y - port.nx * 0.3);
       boat.rotation.y = -Math.atan2(port.ny, port.nx) + Math.PI / 2;
@@ -1046,7 +1198,7 @@ export class Board3D {
       this.bobbers.push({ obj: boat, y: 0.0, ph: port.id * 1.7 });
       const sign = css2d('port3d', port.type === 'any' ? '<b>3:1</b>' : `${pxIcon(port.type, 16).outerHTML}<b>2:1</b>`);
       sign.position.set(port.x, 0.55, port.y);
-      this.staticGroup.add(dock, boat, sign);
+      this.staticGroup.add(boat, sign);
     }
   }
 
@@ -1260,6 +1412,16 @@ export class Board3D {
   buildDynamic(st, view) {
     const bd = st.board;
     const kit = this.kit;
+    // only rebuild when pieces or pick spots changed: recreating the hotspots on every state
+    // update swaps the button under the finger and the click gets lost
+    const inter = view.interaction;
+    this.inter = inter;
+    const robberOn = bd.robber >= 0 && !st.config.rules.noRobber && bd.tiles[bd.robber].revealed && !bd.robberHidden;
+    this.robberTile = robberOn && bd.tiles[bd.robber].res !== 'desert' ? bd.tiles[bd.robber] : null;
+    const key = JSON.stringify([st.roads, st.buildings, robberOn && bd.robber, view.blindOwn || [], st.players.map(p => p.color + (p.flag || '').length),
+      inter && [inter.kind, inter.color, [...inter.legal].sort((a, b) => a - b)], this.staticKey]);
+    if (key === this.dynKey) return;
+    this.dynKey = key;
     for (const c of [...this.dynGroup.children]) {
       this.dynGroup.remove(c);
       c.traverse(o => o.isCSS2DObject && o.element.remove());
@@ -1365,7 +1527,7 @@ export class Board3D {
     for (const k in st.buildings) building(+k, st.buildings[k].owner, st.buildings[k].type);
     for (const b of view.blindOwn || []) building(b.vid, b.pid, b.type, true);
 
-    if (bd.robber >= 0 && !st.config.rules.noRobber && bd.tiles[bd.robber].revealed && !bd.robberHidden) {
+    if (robberOn) {
       const t = bd.tiles[bd.robber];
       const o = kit.robber.clone();
       const x = t.x - 0.3, z = t.y + 0.22;
@@ -1374,7 +1536,6 @@ export class Board3D {
       add(o, 'robber' + t.id);
     }
 
-    const inter = view.interaction;
     if (inter) {
       const mk = (id, x, y, z, cls) => {
         const el = document.createElement('button');
@@ -1383,7 +1544,7 @@ export class Board3D {
         el.addEventListener('pointerdown', e => e.stopPropagation());
         el.addEventListener('click', e => {
           e.stopPropagation();
-          inter.onPick(id);
+          if (this.inter) this.inter.onPick(id);
         });
         const o = new CSS2DObject(el);
         o.position.set(x, y, z);
@@ -1392,7 +1553,8 @@ export class Board3D {
       if (inter.kind === 'settlement' || inter.kind === 'city')
         for (const v of inter.legal) {
           const V = bd.vertices[v];
-          mk(v, V.x, vy(v) + (inter.kind === 'city' ? 0.45 : 0.08), V.y, 'v');
+          // corners served by a port say so right on the spot
+          mk(v, V.x, vy(v) + (inter.kind === 'city' ? 0.45 : 0.08), V.y, 'v' + (inter.kind === 'settlement' && V.port != null ? ' port' : ''));
         }
       else if (inter.kind === 'road')
         for (const e of inter.legal) {

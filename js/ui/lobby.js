@@ -336,7 +336,20 @@ export function lobbyScreen(root, opts = {}) {
     App.startGame(game);
   }
 
-  if (online && App.net) App.net.onChange = () => renderLeft() || renderOnline();
+  if (online && App.net) {
+    App.net.onChange = () => renderLeft() || renderOnline();
+    // a friend could not get in: say who and why, with a one-tap fix
+    App.net.onRefused = (why, name) => {
+      const n = cfg.players.length;
+      if (why === 'full' && n < 8)
+        toast(h('span', null, `🚪 ${name} quiere entrar pero la sala está llena (${n}/${n}). `,
+          h('button', { class: 'btn sm', onclick: () => setCapacity(n + 1) }, `➕ Hacer sitio (${n + 1})`)), 'error', 10000);
+      else if (why === 'closed')
+        toast(h('span', null, `🔒 ${name} quiere entrar pero la sala está cerrada. `,
+          h('button', { class: 'btn sm', onclick: () => { App.net.open = true; renderOnline(); } }, '🟢 Abrir sala')), 'error', 10000);
+      else toast(`🚪 ${name} no pudo entrar: ${why === 'full' ? 'la sala ya tiene el máximo de 8' : 'la partida ya empezó'}.`, 'error', 6000);
+    };
+  }
   if (online && opts.capacity) {
     // a fresh room: every seat but the host's is for a friend (the host can still switch some to bots)
     cfg.players.forEach((p, i) => {

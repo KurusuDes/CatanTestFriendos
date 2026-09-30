@@ -20,7 +20,8 @@ function setProps(el, props) {
   for (const [k, v] of Object.entries(props)) {
     if (v == null || v === false) continue;
     if (k === 'class') el.setAttribute('class', v);
-    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    // custom properties (--pc...) only take effect through setProperty, not assignment
+    else if (k === 'style' && typeof v === 'object') for (const [p, x] of Object.entries(v)) p.startsWith('--') ? el.style.setProperty(p, x) : (el.style[p] = x);
     else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
     else if (k === 'html') el.innerHTML = v;
     else if (k === 'value') el.value = v;
@@ -41,6 +42,21 @@ export const $ = (sel, root = document) => root.querySelector(sel);
 export function clear(el) {
   while (el.firstChild) el.removeChild(el.firstChild);
   return el;
+}
+
+// Re-render `el` only when its markup really changed. Rebuilding identical DOM on every state
+// update (bots move several times a second) swaps the button under the finger between press and
+// release, so clicks get lost, and it resets scroll and hover. The signature is taken from the
+// fresh markup because the live one gets emojis swapped for pixel sprites afterwards.
+export function sync(el, ...children) {
+  const next = h('div', null, ...children);
+  const sig = next.innerHTML;
+  if (sig === el._sig && el.firstChild) return false;
+  const scrolls = [...el.querySelectorAll('[data-keep-scroll], .modal')].map(x => x.scrollTop);
+  el._sig = sig;
+  clear(el).append(...next.childNodes);
+  [...el.querySelectorAll('[data-keep-scroll], .modal')].forEach((x, i) => scrolls[i] && (x.scrollTop = scrolls[i]));
+  return true;
 }
 
 // "@2 roba :wood:" -> colored name + emoji
