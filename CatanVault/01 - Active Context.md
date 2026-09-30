@@ -4,11 +4,11 @@ tags: [contexto]
 
 # 01 - Active Context
 
-**Última sesión:** [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
-**Último commit documentado:** `c53e41e` (el trabajo de S03 va entero en su commit de cierre)
+**Última sesión:** [[S04 - 2026-09-30 - Casillas 3D con variantes]]
+**Último commit documentado:** `d26793e` (el trabajo de S04 va entero en su commit de cierre)
 
 ## Estado
-El juego está completo y publicado en GitHub Pages: reglas completas con modos propios (Blindfold, Niebla de guerra y otros combinables), hasta 8 jugadores, bots en 3 niveles, hotseat y online P2P, un mapa 3D de maqueta con UI pixel art y la sección ADHD de minijuegos. En S03, tras una partida real con amigos, se rehicieron los iconos que no se entendían: el mineral ahora es un montón de piedras y el trigo son tres espigas. También se añadieron cartas que vuelan al intercambiar con otro jugador o con el banco, al robar, al descartar y con Año de abundancia y Monopolio. La animación de las casillas a tu mano ya existía.
+El juego está completo y publicado en GitHub Pages: reglas completas con modos propios, hasta 8 jugadores, bots, hotseat y online P2P, mapa 3D de maqueta con UI pixel art y la sección ADHD. En S03 se rehicieron los iconos de trigo y piedra y se añadieron las cartas voladoras. En S04 el mapa 3D ganó variantes aprobadas por el usuario: 5 para bosque, pasto, arcilla y montaña, y 4 para trigo. Además, la arcilla es roja hasta el borde, la mina está al pie de la montaña, el desierto es más claro para no confundirse con el trigo y el icono de madera ya no tiene el tronco suelto.
 
 ## Siguiente paso
-Decidir el nombre nuevo del proyecto sin «Catan» antes de compartirlo en Reddit o LinkedIn. Después, probar en una partida real las cartas voladoras que no se vieron (vuelta del banco, robo, descarte, cartas de progreso), en móvil y online. Ver [[02 - Tareas]].
+Decidir el nombre nuevo del proyecto, sin nada que suene a «Catan», antes de compartirlo en Reddit o LinkedIn. Después, ver en una partida real (y en móvil) el mapa con las variantes y las cartas voladoras que faltan por probar. Ver [[02 - Tareas]].

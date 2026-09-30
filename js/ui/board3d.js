@@ -34,7 +34,7 @@ try {
 const INR = Math.sqrt(3) / 2; // hex inradius
 const NORMALS = [0, 1, 2].map(k => [Math.cos((k * Math.PI) / 3), Math.sin((k * Math.PI) / 3)]);
 const L = { grass: 0, forest: 1, dirt: 2, rock: 3, sand: 4, snow: 5, field: 6, meadow: 7 };
-const TINT = { desert: new THREE.Color('#e3d6c0'), back: new THREE.Color('#b99873'), unknown: new THREE.Color('#9aa39c'), gold: new THREE.Color('#f0d27a'), white: new THREE.Color('#ffffff') };
+const TINT = { brick: new THREE.Color('#ffa488'), desert: new THREE.Color('#f4ece2'), back: new THREE.Color('#b99873'), unknown: new THREE.Color('#9aa39c'), gold: new THREE.Color('#f0d27a'), white: new THREE.Color('#ffffff') };
 const ASSET = p => new URL('../../assets/' + p, import.meta.url).href;
 
 // ---------- noise ----------
@@ -202,6 +202,9 @@ function patch(mat, opts = {}) {
 
 // ---------- assets ----------
 let kitPromise = null, texPromise = null;
+// recoloured copies of kit props (`name#variant`), made once and shared by every board
+const VARIANT_TINT = { clay: new THREE.Color('#c86a4c') };
+const PROP_VARIANTS = {};
 const KIT_TINT = { Leaf2: '#d4e8b0', LeafDark: '#a4c094', Pine2: '#c6dac8', StoneDark: '#b3aa9c', RockDark: '#a39d93' };
 const WIND = { Leaf: 0.05, Leaf2: 0.05, LeafDark: 0.05, Pine: 0.035, Pine2: 0.035, Cloth: 0.08 };
 export function loadKit() {
@@ -332,52 +335,86 @@ function css2d(cls, html, tag = 'div') {
   return new CSS2DObject(el);
 }
 
+// ---------- tile looks: 5 variations per resource ----------
+// Which looks each resource may use. A tile's look comes from its id and position, so every player
+// sees the same map. LOOK_OVERRIDE forces one look for a resource (samples, debugging).
+export const TILE_LOOKS = { wood: [0, 1, 2, 3, 4], sheep: [0, 1, 2, 3, 4], wheat: [0, 1, 2, 4], brick: [0, 1, 2, 3, 4], ore: [0, 1, 2, 3, 4] };
+export const LOOK_OVERRIDE = {};
+function tileLook(res, seed) {
+  if (LOOK_OVERRIDE[res] != null) return LOOK_OVERRIDE[res];
+  const list = TILE_LOOKS[res];
+  return list && list.length ? list[(Math.imul(seed, 2654435761) >>> 0) % list.length] : 0;
+}
+
 // ---------- terrain field: height + splat weights + tint at any world point ----------
 function terrainOf(st, faceDown) {
   const tiles = st.board.tiles;
   const land = new Map(tiles.map(t => [hk(t.q, t.r), t]));
   const kindOf = t => (!t.revealed ? (faceDown ? 'back' : 'unknown') : t.res);
   const seedOf = t => t.id * 7 + (t.q * 131 + t.r * 71);
+  const lookOf = t => (t.revealed ? tileLook(t.res, seedOf(t)) : 0);
 
-  function featureH(kind, dx, dz, e, seed) {
+  function featureH(kind, dx, dz, e, seed, look = 0) {
     const fade = smooth(0.04, 0.32, e);
     const n = fbm(dx * 3 + seed, dz * 3 - seed);
     const bump = (cx, cz, r, h) => h * Math.exp(-((dx - cx) ** 2 + (dz - cz) ** 2) / (r * r));
     const rs = prng(seed);
+    const a = rs() * 6.28;
+    // the tile's own direction: looks line their hills and rows up along it
+    const ca = Math.cos(a), sa = Math.sin(a);
+    const along = dx * ca + dz * sa;
     switch (kind) {
       case 'ore': {
-        const a = rs() * 6.28;
-        const peaks = bump(Math.cos(a) * 0.42, Math.sin(a) * 0.42, 0.3, 1.05) + bump(Math.cos(a + 2.3) * 0.45, Math.sin(a + 2.3) * 0.45, 0.24, 0.7) + bump(Math.cos(a - 2.1) * 0.4, Math.sin(a - 2.1) * 0.4, 0.2, 0.5);
+        let peaks;
+        if (look === 1) peaks = bump(0, 0, 0.4, 1.35) + bump(ca * 0.45, sa * 0.45, 0.2, 0.35); // one big snowy peak
+        else if (look === 2) peaks = [-0.5, -0.17, 0.17, 0.5].reduce((t, k, i) => t + bump(ca * k - sa * 0.08 * (i % 2), sa * k + ca * 0.08 * (i % 2), 0.21, [0.6, 0.95, 0.8, 0.55][i]), 0); // a range
+        else if (look === 3) peaks = bump(ca * 0.33, sa * 0.33, 0.3, 0.38) + bump(-sa * 0.38, ca * 0.38, 0.26, 0.3) + bump(-ca * 0.3 + sa * 0.2, -sa * 0.3 - ca * 0.2, 0.28, 0.34); // quarry: low rocky hills
+        else if (look === 4) peaks = bump(ca * 0.3, sa * 0.3, 0.27, 0.95) + bump(-ca * 0.3, -sa * 0.3, 0.27, 0.9); // twin peaks
+        else peaks = bump(ca * 0.42, sa * 0.42, 0.3, 1.05) + bump(Math.cos(a + 2.3) * 0.45, Math.sin(a + 2.3) * 0.45, 0.24, 0.7) + bump(Math.cos(a - 2.1) * 0.4, Math.sin(a - 2.1) * 0.4, 0.2, 0.5);
         const ridge = 1 - Math.abs(vnoise(dx * 6 + seed, dz * 6) * 2 - 1);
         return 0.32 + fade * (peaks * (0.8 + 0.35 * ridge) + n * 0.05);
       }
       case 'brick': {
-        const a = rs() * 6.28;
-        return 0.3 + fade * (bump(Math.cos(a) * 0.4, Math.sin(a) * 0.4, 0.3, 0.2) + bump(Math.cos(a + 2.5) * 0.45, Math.sin(a + 2.5) * 0.45, 0.25, 0.16) + n * 0.06);
+        if (look === 1) return 0.3 + fade * (-bump(0, 0, 0.32, 0.13) + n * 0.05); // clay pit
+        if (look === 2) return 0.3 + fade * n * 0.05; // brickworks on flat ground
+        if (look === 3) return 0.3 + fade * (bump(ca * 0.35, sa * 0.35, 0.28, 0.3) + bump(-ca * 0.35, -sa * 0.35, 0.25, 0.24) + bump(-sa * 0.4, ca * 0.4, 0.2, 0.2) + n * 0.06); // red hills
+        if (look === 4) return 0.3 + fade * (0.2 * smooth(-0.08, 0.1, along + (n - 0.5) * 0.2) + n * 0.05); // a bank: high on one side
+        return 0.3 + fade * (bump(ca * 0.4, sa * 0.4, 0.3, 0.2) + bump(Math.cos(a + 2.5) * 0.45, Math.sin(a + 2.5) * 0.45, 0.25, 0.16) + n * 0.06);
       }
       case 'gold':
         return 0.3 + fade * (n * 0.12 + bump(0.3, -0.3, 0.25, 0.15));
       case 'wood':
+        if (look === 1) return 0.3 + fade * (bump(0, 0, 0.45, 0.2) + n * 0.07); // pines on a hill
+        if (look === 4) return 0.3 + fade * (bump(ca * 0.3, sa * 0.3, 0.22, 0.1) + n * 0.08);
         return 0.3 + fade * n * 0.07;
       case 'sheep':
+        if (look === 2) return 0.28 + fade * (bump(ca * 0.35, sa * 0.35, 0.3, 0.2) + bump(-ca * 0.3 - sa * 0.2, -sa * 0.3 + ca * 0.2, 0.25, 0.14) + n * 0.07); // rolling hills
         return 0.28 + fade * n * 0.09;
       case 'wheat':
+        if (look === 2) return 0.26 + fade * (bump(0, 0, 0.35, 0.16) + n * 0.02); // the mill on a knoll
         return 0.26 + fade * n * 0.02;
       case 'desert':
-        return 0.27 + fade * (Math.sin(dx * 8 + dz * 3.5 + seed) * 0.035 + n * 0.05);
+        // pale sand in clear dune ripples, so it never reads as a golden wheat field
+        return 0.27 + fade * (Math.sin(dx * 8 + dz * 3.5 + seed) * 0.06 + n * 0.06);
       default:
         return 0.3;
     }
   }
 
   // splat weights (8 layers) of a terrain kind; w must be zeroed by the caller
-  function featureW(kind, dx, dz, e, h, seed, w, k) {
+  function featureW(kind, dx, dz, e, h, seed, w, k, look = 0) {
     const n = fbm(dx * 4 + seed * 0.3, dz * 4 - seed * 0.2);
     switch (kind) {
-      case 'wood':
-        w[L.forest] += k * (0.75 + 0.25 * smooth(0.05, 0.25, e));
-        w[L.grass] += k * 0.25 * (1 - smooth(0.05, 0.25, e));
+      case 'wood': {
+        let f = 0.75 + 0.25 * smooth(0.05, 0.25, e);
+        if (look === 2) f *= smooth(0.28, 0.46, Math.hypot(dx, dz)); // the woodcutter's clearing
+        if (look === 3) f *= 0.55; // an oak grove: lighter undergrowth
+        const r = look === 4 ? smooth(0.6, 0.72, n) * 0.8 : 0; // rocky forest: patches of stone
+        w[L.forest] += k * f * (1 - r);
+        w[L.rock] += k * f * r;
+        w[look === 3 || look === 2 ? L.meadow : L.grass] += k * (1 - f);
         break;
+      }
       case 'sheep':
         w[L.meadow] += k;
         break;
@@ -388,13 +425,12 @@ function terrainOf(st, faceDown) {
         break;
       }
       case 'brick': {
-        const d = smooth(0.35, 0.65, n);
-        w[L.dirt] += k * (0.45 + 0.55 * d);
-        w[L.grass] += k * 0.55 * (1 - d);
+        // red clay: bare earth tinted terracotta and nothing green, so it never reads as stone
+        w[L.dirt] += k;
         break;
       }
       case 'ore': {
-        const r = smooth(0.42, 0.7, h), s = smooth(0.95, 1.12, h);
+        const r = look === 3 ? Math.max(0.7, smooth(0.36, 0.5, h)) : smooth(0.42, 0.7, h), s = smooth(0.95, 1.12, h);
         w[L.snow] += k * s;
         w[L.rock] += k * r * (1 - s);
         w[L.grass] += k * (1 - r) * 0.7;
@@ -458,8 +494,10 @@ function terrainOf(st, faceDown) {
     }
     const kind = kindOf(t);
     const seed = seedOf(t);
-    let h = featureH(kind, dx, dz, e, seed);
-    const BL = 0.2;
+    const look = lookOf(t);
+    let h = featureH(kind, dx, dz, e, seed, look);
+    // red clay keeps a crisp edge: a narrow blend, so the neighbour's grass never tints it green
+    const BL = kind === 'brick' || (nt && kindOf(nt) === 'brick') ? 0.07 : 0.2;
     let wSelf = 1;
     if (e < BL && nt) {
       const wN = 0.5 * (1 - e / BL);
@@ -467,12 +505,13 @@ function terrainOf(st, faceDown) {
       const nk = kindOf(nt);
       const ndx = x - nx, ndz = z - nz;
       const ne = INR - Math.max(...NORMALS.map(n => Math.abs(ndx * n[0] + ndz * n[1])));
-      const h2 = featureH(nk, ndx, ndz, ne, seedOf(nt));
+      const nl = lookOf(nt);
+      const h2 = featureH(nk, ndx, ndz, ne, seedOf(nt), nl);
       const hs = h;
       h = hs * wSelf + h2 * wN;
       if (out) {
-        featureW(kind, dx, dz, e, hs, seed, out.w, wSelf);
-        featureW(nk, ndx, ndz, ne, h2, seedOf(nt), out.w, wN);
+        featureW(kind, dx, dz, e, hs, seed, out.w, wSelf, look);
+        featureW(nk, ndx, ndz, ne, h2, seedOf(nt), out.w, wN, nl);
         const ta = TINT[kind] || TINT.white, tb = TINT[nk] || TINT.white;
         out.tint.copy(ta).lerp(tb, wN);
       }
@@ -482,13 +521,13 @@ function terrainOf(st, faceDown) {
       const top = h;
       h = top * (1 - c) - 0.34 * c + (vnoise(x * 9, z * 9) - 0.5) * 0.06 * c;
       if (out) {
-        featureW(kind, dx, dz, e, top, seed, out.w, 1 - c);
+        featureW(kind, dx, dz, e, top, seed, out.w, 1 - c, look);
         out.w[L.rock] += c * (1 - smooth(0.75, 1, c));
         out.w[L.sand] += c * smooth(0.75, 1, c);
         out.tint.copy(TINT[kind] || TINT.white).lerp(TINT.white, c);
       }
     } else if (out) {
-      featureW(kind, dx, dz, e, h, seed, out.w, 1);
+      featureW(kind, dx, dz, e, h, seed, out.w, 1, look);
       out.tint.copy(TINT[kind] || TINT.white);
     }
     if (out) {
@@ -497,7 +536,21 @@ function terrainOf(st, faceDown) {
     }
     return h;
   }
-  return { sample, land, kindOf, seedOf };
+  // true when (x, z), inside tile t, lies in the band along an edge shared with red clay:
+  // other tiles keep their bushes, trees and grass out of it
+  function nearClay(t, x, z) {
+    if (t.res === 'brick') return false;
+    const dx = x - t.x, dz = z - t.y;
+    for (let k = 0; k < 3; k++) {
+      const p = dx * NORMALS[k][0] + dz * NORMALS[k][1];
+      if (INR - Math.abs(p) > 0.22) continue;
+      const sg = Math.sign(p) || 1;
+      const nb = land.get(hk(...pixelToHex(t.x + NORMALS[k][0] * sg * 2 * INR, t.y + NORMALS[k][1] * sg * 2 * INR)));
+      if (nb && kindOf(nb) === 'brick') return true;
+    }
+    return false;
+  }
+  return { sample, land, kindOf, seedOf, lookOf, nearClay };
 }
 
 // terrain material: splat 8 array-texture layers + normals + wheat furrows
@@ -1279,61 +1332,191 @@ export class Board3D {
     const bd = st.board;
     const inst = {};
     const put = (name, x, z, s = 1, ry = 0) => (inst[name] = inst[name] || []).push([x, field.sample(x, z) - 0.01, z, s, ry]);
+    // which way is downhill at a point (to turn a mine's entrance away from its mountain)
+    const downhill = (x, z) => {
+      const d = 0.05;
+      return Math.atan2(field.sample(x - d, z) - field.sample(x + d, z), field.sample(x, z - d) - field.sample(x, z + d));
+    };
+    const low = lim => (x, z) => field.sample(x, z) < lim;
     const cornerSafe = (x, z) => !bd.vertices.some(v => (v.x - x) ** 2 + (v.y - z) ** 2 < 0.05);
     for (const t of bd.tiles) {
       if (!t.revealed) continue;
       const rnd = prng(t.id * 977 + t.q * 31 + t.r * 17 + 5);
-      const spots = (n, r0, r1, fn) => {
+      // `ok` filters the spots (e.g. only at the foot of the mountains); `room` keeps big props
+      // (a kiln, a mine) from getting others on top of them
+      const taken = [];
+      const free = (x, z, room) => cornerSafe(x, z) && !field.nearClay(t, x, z) && !taken.some(([tx, tz, tr]) => (tx - x) ** 2 + (tz - z) ** 2 < (tr + room + 0.06) ** 2);
+      // n props at random spots r0..r1 from (cx, cz), the tile's centre by default
+      const spots = (n, r0, r1, fn, ok, room = 0, cx = t.x, cz = t.y) => {
         let placed = 0;
-        for (let tries = 0; placed < n && tries < n * 6; tries++) {
+        for (let tries = 0; placed < n && tries < n * 12; tries++) {
           const a = rnd() * Math.PI * 2, rr = r0 + rnd() * (r1 - r0);
-          const x = t.x + Math.cos(a) * rr, z = t.y + Math.sin(a) * rr;
-          if (!cornerSafe(x, z)) continue;
+          const x = cx + Math.cos(a) * rr, z = cz + Math.sin(a) * rr;
+          if ((ok && !ok(x, z)) || !free(x, z, room)) continue;
+          taken.push([x, z, room]);
           fn(x, z, placed++);
         }
       };
+      // one prop at an exact point, in the tile's own axes: u along its direction, v across it
+      const ta = prng(field.seedOf(t))() * 6.28, tc = Math.cos(ta), ts = Math.sin(ta);
+      const at = (u, v, fn, room = 0) => {
+        const x = t.x + u * tc - v * ts, z = t.y + u * ts + v * tc;
+        if (!free(x, z, room)) return;
+        taken.push([x, z, room]);
+        fn(x, z);
+      };
+      const along = (x, z) => (x - t.x) * tc + (z - t.y) * ts;
+      const look = field.lookOf(t);
+      const R = () => rnd() * 6.3;
       switch (t.res) {
         case 'wood':
-          spots(30, 0.22, 0.8, (x, z, i) => put(i % 3 ? 'pine' : 'oak', x, z, 0.85 + rnd() * 0.55, rnd() * 6.3));
-          spots(1, 0.5, 0.6, (x, z) => put('lumber', x, z, 1.1, rnd() * 6.3));
+          if (look === 1) {
+            // pine wood on a hill
+            spots(34, 0.1, 0.8, (x, z) => put('pine', x, z, 1 + rnd() * 0.6, R()));
+          } else if (look === 2) {
+            // the woodcutter's clearing: hut in the middle, trees all around
+            at(0, 0, (x, z) => put('lumber', x, z, 1.25, R()), 0.16);
+            spots(2, 0.15, 0.28, (x, z) => put('rock', x, z, 0.45, R()), null, 0.04);
+            spots(24, 0.42, 0.82, (x, z, i) => put(i % 4 ? 'pine' : 'oak', x, z, 0.85 + rnd() * 0.5, R()));
+          } else if (look === 3) {
+            // oak grove: fewer, bigger trees and bushes
+            spots(13, 0.15, 0.8, (x, z) => put('oak', x, z, 1.15 + rnd() * 0.5, R()), null, 0.07);
+            spots(7, 0.2, 0.8, (x, z) => put('bush', x, z, 1 + rnd() * 0.5, R()));
+          } else if (look === 4) {
+            // rocky forest
+            spots(5, 0.2, 0.75, (x, z) => put('rock', x, z, 0.8 + rnd() * 0.6, R()), null, 0.1);
+            spots(24, 0.15, 0.8, (x, z, i) => put(i % 3 ? 'pine' : 'oak', x, z, 0.85 + rnd() * 0.55, R()));
+          } else {
+            spots(30, 0.22, 0.8, (x, z, i) => put(i % 3 ? 'pine' : 'oak', x, z, 0.85 + rnd() * 0.55, R()));
+            spots(1, 0.5, 0.6, (x, z) => put('lumber', x, z, 1.1, R()));
+          }
           break;
         case 'sheep':
-          spots(5, 0.3, 0.72, (x, z) => put('sheep', x, z, 1.15, rnd() * 6.3));
-          spots(3, 0.45, 0.8, (x, z) => put('bush', x, z, 1 + rnd() * 0.5, rnd() * 6.3));
-          spots(2, 0.5, 0.7, (x, z) => put('oak', x, z, 0.9, rnd() * 6.3));
-          spots(2, 0.55, 0.7, (x, z) => put('fence', x, z, 1.2, rnd() * 6.3));
+          if (look === 1) {
+            // a round pen with the flock inside
+            for (let i = 0; i < 6; i++) {
+              const a = (i / 6) * Math.PI * 2;
+              at(Math.cos(a) * 0.4, Math.sin(a) * 0.4, (x, z) => put('fence', x, z, 1.1, -(ta + a + Math.PI / 2)));
+            }
+            spots(4, 0.0, 0.24, (x, z) => put('sheep', x, z, 1.15, R()), null, 0.03);
+            spots(2, 0.58, 0.78, (x, z) => put('sheep', x, z, 1.15, R()));
+            spots(1, 0.58, 0.78, (x, z) => put('oak', x, z, 1, R()));
+          } else if (look === 2) {
+            // rolling hills, a lone oak on top
+            at(0.35, 0, (x, z) => put('oak', x, z, 1.2, R()), 0.08);
+            spots(6, 0.15, 0.78, (x, z) => put('sheep', x, z, 1.15, R()));
+            spots(3, 0.45, 0.8, (x, z) => put('bush', x, z, 1 + rnd() * 0.4, R()));
+          } else if (look === 3) {
+            // stony pasture
+            spots(5, 0.2, 0.78, (x, z) => put('rock', x, z, 0.5 + rnd() * 0.4, R()), null, 0.06);
+            spots(4, 0.2, 0.75, (x, z) => put('sheep', x, z, 1.15, R()));
+            spots(4, 0.45, 0.8, (x, z) => put('bush', x, z, 1 + rnd() * 0.4, R()));
+          } else if (look === 4) {
+            // a big flock huddled on one side
+            spots(10, 0.0, 0.26, (x, z) => put('sheep', x, z, 1.1, R()), null, 0.02, t.x + tc * 0.28, t.y + ts * 0.28);
+            spots(1, 0.5, 0.7, (x, z) => put('oak', x, z, 1, R()));
+            spots(2, 0.5, 0.8, (x, z) => put('bush', x, z, 1, R()));
+            at(-0.5, 0, (x, z) => put('fence', x, z, 1.2, -ta));
+          } else {
+            spots(5, 0.3, 0.72, (x, z) => put('sheep', x, z, 1.15, R()));
+            spots(3, 0.45, 0.8, (x, z) => put('bush', x, z, 1 + rnd() * 0.5, R()));
+            spots(2, 0.5, 0.7, (x, z) => put('oak', x, z, 0.9, R()));
+            spots(2, 0.55, 0.7, (x, z) => put('fence', x, z, 1.2, R()));
+          }
           break;
         case 'wheat':
-          spots(1, 0.45, 0.55, (x, z) => put('windmill', x, z, 1.35, rnd() * 6.3));
-          spots(3, 0.35, 0.75, (x, z) => put(rnd() > 0.5 ? 'hay' : 'sheaf', x, z, 1, rnd() * 6.3));
+          if (look === 1) {
+            // sheaves standing in two rows
+            for (const v of [-0.25, 0.25]) for (const u of [-0.42, -0.14, 0.14, 0.42]) at(u, v, (x, z) => put('sheaf', x, z, 1, R()));
+            spots(1, 0.5, 0.7, (x, z) => put('hay', x, z, 1, R()));
+          } else if (look === 2) {
+            // the mill on a knoll
+            at(0, 0, (x, z) => put('windmill', x, z, 1.5, R()), 0.14);
+            spots(2, 0.4, 0.7, (x, z) => put('hay', x, z, 1, R()));
+          } else if (look === 4) {
+            // a fence along the field and the mill beyond it
+            for (const u of [-0.36, 0, 0.36]) at(u, -0.28, (x, z) => put('fence', x, z, 1.2, -ta));
+            at(0.25, 0.3, (x, z) => put('windmill', x, z, 1.3, R()), 0.12);
+            spots(2, 0.3, 0.7, (x, z) => put('sheaf', x, z, 1, R()));
+          } else {
+            spots(1, 0.45, 0.55, (x, z) => put('windmill', x, z, 1.35, R()));
+            spots(3, 0.35, 0.75, (x, z) => put(rnd() > 0.5 ? 'hay' : 'sheaf', x, z, 1, R()));
+          }
           break;
         case 'brick':
-          spots(1, 0.45, 0.6, (x, z) => put('kiln', x, z, 1.3, rnd() * 6.3));
-          spots(2, 0.4, 0.8, (x, z) => put('rock', x, z, 0.6 + rnd() * 0.4, rnd() * 6.3));
-          spots(4, 0.4, 0.8, (x, z) => put('bush', x, z, 0.9, rnd() * 6.3));
+          // brick kilns and mounds of red clay (the rock prop, tinted)
+          if (look === 1) {
+            // clay pit: mounds on the rim, one kiln
+            spots(1, 0.55, 0.68, (x, z) => put('kiln', x, z, 1.25, R()), null, 0.2);
+            spots(5, 0.38, 0.62, (x, z) => put('rock#clay', x, z, 0.55 + rnd() * 0.4, R()), null, 0.08);
+            spots(2, 0.6, 0.8, (x, z) => put('rock#clay', x, z, 0.4 + rnd() * 0.25, R()));
+          } else if (look === 2) {
+            // brickworks: three kilns in a row
+            for (const u of [-0.36, 0, 0.36]) at(u, 0, (x, z) => put('kiln', x, z, 1.2, R()), 0.16);
+            spots(2, 0.4, 0.75, (x, z) => put('rock#clay', x, z, 0.55 + rnd() * 0.35, R()), null, 0.08);
+            spots(1, 0.6, 0.8, (x, z) => put('rock#clay', x, z, 0.4 + rnd() * 0.25, R()));
+          } else if (look === 3) {
+            // red hills, no buildings
+            spots(6, 0.15, 0.78, (x, z) => put('rock#clay', x, z, 0.6 + rnd() * 0.5, R()), null, 0.08);
+            spots(4, 0.4, 0.8, (x, z) => put('rock#clay', x, z, 0.4 + rnd() * 0.25, R()));
+          } else if (look === 4) {
+            // a clay bank: the kiln at the bottom, mounds along the edge, bushes up top
+            at(-0.38, 0.1, (x, z) => put('kiln', x, z, 1.25, R()), 0.2);
+            for (const v of [-0.4, -0.05, 0.3]) at(0.02, v, (x, z) => put('rock#clay', x, z, 0.6 + rnd() * 0.3, R()), 0.08);
+            spots(2, 0.2, 0.75, (x, z) => put('rock#clay', x, z, 0.4 + rnd() * 0.25, R()), (x, z) => along(x, z) > 0.2);
+          } else {
+            spots(2, 0.3, 0.62, (x, z) => put('kiln', x, z, 1.25, R()), null, 0.2);
+            spots(4, 0.3, 0.8, (x, z) => put('rock#clay', x, z, 0.55 + rnd() * 0.45, R()), null, 0.08);
+            spots(2, 0.55, 0.8, (x, z) => put('rock#clay', x, z, 0.4 + rnd() * 0.25, R()));
+          }
           break;
         case 'ore':
-          spots(1, 0.35, 0.5, (x, z) => put('mine', x, z, 1.3, rnd() * 6.3));
-          spots(4, 0.35, 0.8, (x, z) => put('rock', x, z, 0.7 + rnd() * 0.6, rnd() * 6.3));
-          spots(5, 0.55, 0.8, (x, z) => put('pine', x, z, 0.7, rnd() * 6.3));
+          // the mine and the boulders stay at the foot of the peaks, the entrance facing downhill
+          if (look === 3) {
+            // quarry: boulders all over the low rocky hills
+            spots(1, 0.3, 0.72, (x, z) => put('mine', x, z, 1.3, downhill(x, z)), low(0.5), 0.24);
+            spots(9, 0.15, 0.82, (x, z) => put('rock', x, z, 0.6 + rnd() * 0.7, R()), low(0.62), 0.08);
+          } else if (look === 4) {
+            // twin peaks with a pine wood at their feet
+            spots(1, 0.45, 0.72, (x, z) => put('mine', x, z, 1.3, downhill(x, z)), low(0.46), 0.24);
+            spots(3, 0.4, 0.82, (x, z) => put('rock', x, z, 0.7 + rnd() * 0.5, R()), low(0.5), 0.1);
+            spots(9, 0.45, 0.82, (x, z) => put('pine', x, z, 0.75, R()), low(0.42), 0.04);
+          } else {
+            spots(1, 0.45, 0.72, (x, z) => put('mine', x, z, 1.3, downhill(x, z)), low(0.46), 0.24);
+            spots(look === 1 ? 5 : 4, 0.4, 0.82, (x, z) => put('rock', x, z, 0.7 + rnd() * 0.6, R()), low(0.5), 0.1);
+            spots(look === 1 ? 6 : 5, 0.55, 0.8, (x, z) => put('pine', x, z, 0.7, R()), low(0.4), 0.05);
+          }
           break;
         case 'desert':
-          spots(5, 0.3, 0.8, (x, z) => put('cactus', x, z, 1 + rnd() * 0.6, rnd() * 6.3));
-          spots(3, 0.3, 0.8, (x, z) => put('rock', x, z, 0.55 + rnd() * 0.4, rnd() * 6.3));
+          spots(7, 0.2, 0.8, (x, z) => put('cactus', x, z, 1 + rnd() * 0.7, R()));
+          spots(4, 0.3, 0.8, (x, z) => put('rock', x, z, 0.55 + rnd() * 0.5, R()), null, 0.06);
           break;
         case 'gold':
-          spots(6, 0.3, 0.75, (x, z) => put('crystal', x, z, 1.2 + rnd() * 0.8, rnd() * 6.3));
+          spots(6, 0.3, 0.75, (x, z) => put('crystal', x, z, 1.2 + rnd() * 0.8, R()));
           break;
       }
     }
     const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), sv = new THREE.Vector3(), pv = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
-    for (const [name, list] of Object.entries(inst)) {
+    for (const [key, list] of Object.entries(inst)) {
+      const [name, variant] = key.split('#');
       const proto = kit[name];
       if (!proto) continue;
       proto.updateMatrixWorld(true);
       proto.traverse(child => {
         if (!child.isMesh) return;
-        const im = new THREE.InstancedMesh(child.geometry, child.material, list.length);
+        let mat = child.material;
+        if (variant) {
+          mat = (PROP_VARIANTS[key] = PROP_VARIANTS[key] || new Map()).get(child.material);
+          if (!mat) {
+            mat = child.material.clone();
+            mat.color.multiply(VARIANT_TINT[variant]);
+            // same shader patch (fog, wind...) as the original: clone() leaves those hooks behind
+            mat.onBeforeCompile = child.material.onBeforeCompile;
+            mat.customProgramCacheKey = child.material.customProgramCacheKey;
+            PROP_VARIANTS[key].set(child.material, mat);
+          }
+        }
+        const im = new THREE.InstancedMesh(child.geometry, mat, list.length);
         im.castShadow = im.receiveShadow = true;
         list.forEach(([x, y, z, s, ry], i) => {
           m4.compose(pv.set(x, y, z), q.setFromAxisAngle(up, ry), sv.set(s, s, s)).multiply(child.matrixWorld);
@@ -1350,19 +1533,23 @@ export class Board3D {
     const bd = st.board;
     const field = this.field;
     const hi = SETTINGS.quality === 'high';
-    const kinds = { sheep: ['grass', hi ? 320 : 120], wheat: ['wheat', hi ? 420 : 160], brick: ['grass', hi ? 90 : 30], wood: ['grass', hi ? 60 : 20], ore: ['grass', hi ? 50 : 15], gold: ['grass', 20] };
+    const kinds = { sheep: ['grass', hi ? 320 : 120], wheat: ['wheat', hi ? 420 : 160], wood: ['grass', hi ? 60 : 20], ore: ['grass', hi ? 50 : 15], gold: ['grass', 20] };
     const lists = { grass: [], wheat: [] };
     for (const t of bd.tiles) {
       const spec = t.revealed && kinds[t.res];
       if (!spec) continue;
       const rnd = prng(t.id * 1543 + 17);
-      for (let i = 0; i < spec[1]; i++) {
+      const look = field.lookOf(t);
+      // the woodcutter's clearing and the oak grove are grassier
+      const count = t.res === 'wood' && (look === 2 || look === 3) ? spec[1] * 4 : spec[1];
+      for (let i = 0; i < count; i++) {
         const x = t.x + (rnd() - 0.5) * 1.8, z = t.y + (rnd() - 0.5) * 1.8;
         const [q, r] = pixelToHex(x, z);
         if (q !== t.q || r !== t.r) continue;
         const dx = x - t.x, dz = z - t.y;
         const e = INR - Math.max(...NORMALS.map(n => Math.abs(dx * n[0] + dz * n[1])));
         if (e < 0.09) continue; // keep roads and corners clear
+        if (field.nearClay(t, x, z)) continue;
         if (t.res === 'ore' && field.sample(x, z) > 0.55) continue;
         lists[spec[0]].push([x, field.sample(x, z), z, 0.7 + rnd() * 0.7, rnd() * 6.3]);
       }

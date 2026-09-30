@@ -91,7 +91,6 @@ def wood():
     obj('trunk', cone(8, 0.09, 0.07, 0.34), 'bark', T(0, 0, 0.17))
     for i, (r, h, z) in enumerate([(0.52, 0.5, 0.52), (0.42, 0.44, 0.8), (0.3, 0.4, 1.06)]):
         obj('tier', cone(9, r, 0.02, h), 'leaf' if i % 2 == 0 else 'leafdark', T(0, 0, z) @ RZ(i * 0.3))
-    obj('log', cone(8, 0.08, 0.08, 0.5), 'bark', T(0.42, -0.25, 0.08) @ RZ(0.9) @ RY(math.pi / 2))
 
 
 def brick():

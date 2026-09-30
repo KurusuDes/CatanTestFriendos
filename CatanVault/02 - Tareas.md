@@ -21,6 +21,8 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Decidir si se pone el nombre del recurso debajo del icono en las cartas de la mano (hoy solo sale al pasar el ratón y en móvil no se ve) ➕ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
 - [ ] Decidir si el recurso «Mineral» pasa a llamarse «Piedra» en el juego ➕ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
 - [ ] Decidir un nombre nuevo sin «Catan» antes de compartir el proyecto en Reddit o LinkedIn (título, logo, README, página y repo) ➕ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
+- [ ] Ver en una partida real el mapa con las variantes, ya sin «Cosecha a medias» (tras quitarla no se volvió a renderizar) ➕ 2026-09-30 [[S04 - 2026-09-30 - Casillas 3D con variantes]]
+- [ ] Probar en móvil que el mapa con las variantes sigue fluido ➕ 2026-09-30 [[S04 - 2026-09-30 - Casillas 3D con variantes]]
 
 ## Hechas
 - [x] Licencia MIT, `NOTICE.md` y petición de crédito ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
@@ -28,3 +30,4 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [x] Vault de Obsidian y comandos /abrir-sesion y /cerrar-sesion ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [x] Sección ADHD de minijuegos (Plinko, tragamonedas, moneda y cohete, con Auto y fuegos artificiales al ganar) ✅ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
 - [x] Iconos nuevos de trigo y piedra, y cartas que vuelan al intercambiar ✅ 2026-09-30 [[S03 - 2026-09-30 - Iconos de trigo y piedra, cartas voladoras]]
+- [x] Arcilla rojiza, montaña sin mina en las laderas, desierto más claro, madera sin tronco y variantes aprobadas por material ✅ 2026-09-30 [[S04 - 2026-09-30 - Casillas 3D con variantes]]
