@@ -89,6 +89,14 @@ export const App = {
     if (this.onPing) this.onPing(seat, x, z);
   },
 
+  // someone beat the ADHD arcade: fireworks from their buildings and a banner, for everyone
+  cheer(seat) {
+    if (!this.state) return;
+    if (this.isClient()) return this.net.sendCheer();
+    if (this.isOnline()) this.net.relayCheer(seat);
+    if (this.onCheer) this.onCheer(seat);
+  },
+
   // called after every state change (local apply, or state received from host)
   changed() {
     const st = this.state;

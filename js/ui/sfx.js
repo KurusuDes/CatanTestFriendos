@@ -64,5 +64,8 @@ export const play = {
   reveal() { [392, 523, 659, 1046].forEach((f, i) => tone(f, 0.18, 'triangle', 0.13, i * 0.09)); noise(0.4, 0.07, 0.3); },
   win() { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, 0.22, 'triangle', 0.14, i * 0.12)); },
   pop() { tone(420, 0.07, 'sine', 0.1, 0, 2.2); tone(980, 0.05, 'triangle', 0.05, 0.05); },
+  unlock() { [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, 0.12, 'square', 0.06, i * 0.06)); },
+  boom() { noise(0.45, 0.16); tone(140, 0.4, 'sawtooth', 0.08, 0, 0.4); },
+  firework() { noise(0.3, 0.07); tone(1400 + Math.random() * 600, 0.18, 'triangle', 0.03, 0.02, 0.5); },
   turn() { tone(740, 0.1, 'sine', 0.1); tone(988, 0.14, 'sine', 0.1, 0.09); },
 };

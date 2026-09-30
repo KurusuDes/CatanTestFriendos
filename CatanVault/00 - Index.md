@@ -24,6 +24,7 @@ Catan en el navegador (sitio estático, sin build) con mapas personalizables, mo
 | Online | `js/net.js` | PeerJS/WebRTC: el anfitrión aplica todas las acciones y reenvía el estado; reconexión con token, votación por desconexión, salas |
 | Partida (UI) | `js/ui/gameView.js` | Tarjetas, mano, acciones, botón de dados con carga, reacciones, efectos (`handleFx`) |
 | Mapa 3D | `js/ui/board3d.js`, `dice3d.js` | three.js: terreno, piezas, niebla, dados 3D, banderín del botón del medio, globitos |
+| ADHD | `js/ui/adhd.js` | Minijuegos para la espera (Plinko, tragamonedas, moneda, cohete): saldo por jugador, desbloqueo por metas, Auto, fuegos artificiales y franja al ganar (`App.cheer`, mensaje de red `cheer`) |
 | Resto UI | `js/ui/lobby.js`, `editor.js`, `flag.js`, `pixel.js`, `sfx.js`, `help.js`, `dom.js` | Menú/salas, editor de mapas, banderas, sprites pixel, sonidos sintetizados, ayuda |
 | Estilos | `css/style.css`, `css/pixel.css` | Tema pixel (paleta Sweetie-16) |
 | Recursos | `assets/`, `tools/blender/*.py` | Texturas, `kit.glb` e iconos generados con los scripts de Blender |

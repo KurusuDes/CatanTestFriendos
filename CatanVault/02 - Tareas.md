@@ -11,8 +11,13 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Probar online con otra persona: dados con fuerza, banderín del botón del medio y globitos desde todas las construcciones ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [ ] Decidir si se muestra dentro del juego (ayuda o menú) el aviso de "proyecto de fans no oficial" y los créditos ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [ ] Comprobar al reiniciar Claude Code que el hook de inicio carga el Active Context y que aparecen /abrir-sesion y /cerrar-sesion ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
+- [ ] Ver en el navegador el orden nuevo del ADHD (Plinko, Tragamonedas, Moneda, Cohete) y que el Auto aparece solo en las máquinas superadas y funciona ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
+- [ ] Ver con la pestaña visible los fuegos artificiales del ADHD explotando desde las casas y la animación completa de la moneda ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
+- [ ] Probar el ADHD online con otra persona: que la franja y los fuegos de la victoria lleguen a todos ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
+- [ ] Probar el ADHD en móvil (que la ventana quepa en el mapa y se pueda jugar con el dedo) y en hotseat con dos humanos (cada uno con su saldo) ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
 
 ## Hechas
 - [x] Licencia MIT, `NOTICE.md` y petición de crédito ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [x] Botón de dados con carga, reacciones desde todas las construcciones y banderín 3D ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [x] Vault de Obsidian y comandos /abrir-sesion y /cerrar-sesion ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
+- [x] Sección ADHD de minijuegos (Plinko, tragamonedas, moneda y cohete, con Auto y fuegos artificiales al ganar) ✅ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]

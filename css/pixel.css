@@ -382,6 +382,40 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
 .emote-input:focus { outline: none; box-shadow: 0 0 0 2px var(--sand); }
 @keyframes popIn { from { transform: scale(.85); opacity: 0; } }
 
+/* ---------- ADHD: the little arcade for the wait (a machine appears in each empty slot as you earn it) ---------- */
+.adhd-toggle { font-size: 16px; }
+.adhd-toggle.on { background: var(--plum); }
+.adhd { position: absolute; left: 10px; bottom: 10px; z-index: 5; width: min(400px, calc(100% - 70px)); max-height: calc(100% - 64px); overflow: auto; padding: 8px; background: var(--panel); box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--plum), 6px 6px 0 6px rgba(0,0,0,.45); animation: popIn .12s steps(3); transition: opacity .2s, filter .2s; }
+.adhd.hidden { display: none; }
+.adhd.behind { opacity: .3; filter: grayscale(.7); pointer-events: none; }
+.adhd-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.adhd-title { font-family: var(--display); color: var(--sand); font-size: 13px; white-space: nowrap; }
+.adhd-money { font-family: var(--num); color: var(--lime); font-size: 16px; }
+.adhd-prog { flex: 1; min-width: 30px; height: 8px; background: var(--ink); box-shadow: 0 0 0 2px var(--dusk); }
+.adhd-prog i { display: block; height: 100%; width: 0; background: var(--sand); transition: width .2s steps(4); }
+.adhd-goal { font-family: var(--num); font-size: 11px; color: var(--muted); white-space: nowrap; }
+.adhd-wins { font-family: var(--num); font-size: 12px; color: var(--sand); }
+.adhd .btn.sm { padding: 4px 8px; font-size: 12px; border-radius: 0; }
+.adhd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.adhd-slot { min-height: 150px; background: repeating-linear-gradient(45deg, rgba(0,0,0,.2) 0 6px, transparent 6px 12px); box-shadow: inset 0 0 0 2px var(--dusk); }
+.adhd-cell { min-width: 0; display: flex; flex-direction: column; gap: 5px; padding: 6px; background: var(--ink); box-shadow: 0 0 0 2px var(--dusk); }
+.adhd-cell.fresh { animation: adhdIn .6s steps(6); }
+@keyframes adhdIn { 0% { transform: scale(.2); opacity: 0; } 60% { transform: scale(1.08); opacity: 1; } 100% { transform: none; } }
+.adhd-cell h4 { margin: 0; font-family: var(--display); font-size: 11px; color: var(--sand); }
+.adhd-cv { display: block; width: 100%; height: auto; image-rendering: pixelated; background: #0f1020; }
+.adhd-row { display: flex; gap: 4px; align-items: center; }
+.adhd-row .btn { flex: 1; min-width: 0; white-space: nowrap; }
+.adhd-row input + b + .btn { flex: 0 0 auto; }
+.adhd-row input[type=range] { flex: 1; min-width: 0; accent-color: var(--sand); }
+.adhd-row b { font-family: var(--num); font-size: 11px; color: var(--lime); min-width: 38px; text-align: right; }
+.adhd-note { min-height: 13px; font-family: var(--num); font-size: 9px; color: var(--muted); }
+.adhd-bins { display: grid; grid-template-columns: repeat(9, 1fr); font-family: var(--num); font-size: 8px; text-align: center; color: var(--muted); }
+.adhd-fw { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 45; pointer-events: none; image-rendering: pixelated; }
+.adhd-band { position: fixed; left: 0; right: 0; top: 22%; z-index: 46; pointer-events: none; display: grid; place-items: center; padding: 14px 10px; background: var(--ink); box-shadow: 0 5px 0 var(--pc), 0 -5px 0 var(--pc), 0 10px 0 var(--ink), 0 -10px 0 var(--ink); font-family: var(--display); color: var(--sand); font-size: clamp(18px, 4vw, 34px); text-shadow: 3px 3px 0 var(--wine); text-align: center; animation: adhdBand 5s steps(30) forwards; }
+.adhd-band b { color: var(--pc); }
+@keyframes adhdBand { 0% { transform: translateX(-100%); } 8%, 88% { transform: none; opacity: 1; } 100% { transform: translateX(100%); opacity: 0; } }
+@media (max-width: 700px) { .adhd { width: calc(100% - 64px); } .adhd-slot { min-height: 110px; } }
+
 /* a pixel balloon on a string, tied to one of your buildings */
 .balloon { z-index: 60; display: flex; flex-direction: column; align-items: center; will-change: transform, opacity; }
 .balloon-body { position: relative; display: grid; place-items: center; color: var(--ink); font-weight: 700; }
