@@ -1,10 +1,10 @@
 ---
 tags: [sesion]
 fecha: 2026-09-30
-commits: 7a064f3..bd695e6
+commits: 7a064f3..0c1fb81
 ---
 
-# S00 - Historia previa (2026-09-29 → 2026-09-30)
+# S00 - Historia previa (2026-09-29 → madrugada del 2026-09-30)
 
 Resumen de todo lo hecho antes de crear el vault, reconstruido desde el historial de git.
 
@@ -17,10 +17,10 @@ Resumen de todo lo hecho antes de crear el vault, reconstruido desde el historia
 - **Banderas** (`5ef5d93`): editor pixel estilo Gartic Phone, banderas en castillos.
 - **Pulido del mapa** (`77b5867`, `c5f44d8`): 3D como única vista, barra de probabilidad en fichas, caminos con uniones, contorno visible a través del terreno, iconos de recursos renderizados desde Blender.
 
-## 2026-09-30
+## Madrugada del 2026-09-30
 - **Efectos de partida** (`474ff41`, `0c1fb81`): dados 3D que caen en el tablero, recursos que vuelan a la mano, reacciones con emojis en globitos, marcador con el botón del medio, ladrón que tiñe su casilla, puertos con pasarelas, TURN, arreglos de UI (paneles que ya no se reconstruyen en cada jugada).
-- **Licencia** (`f2fb6d8`): MIT, `NOTICE.md` (proyecto de fans no oficial, marca CATAN, terceros: three.js, PeerJS, fuentes OFL) y petición de crédito no vinculante.
-- **Dados con carga** (`bd695e6`): toca = tirar al momento; mantén = barra de fuerza (los dados salen de más lejos, más alto, giran más, rebote extra y golpe en la mesa; la fuerza viaja en `fx.power`, así que en online todos ven lo mismo). Reacciones desde todas las construcciones. Marcador del botón del medio convertido en banderín 3D de tu color que se desvanece.
+
+Lo que vino después (licencia, dados con carga, vault) está en [[S01 - 2026-09-30 - Licencia, dados con carga y vault]].
 
 ## Verificación
-`npm test`: 17 pruebas de reglas y 300 partidas sin errores. Capturas en navegador de la carga, el lanzamiento, los globitos y el banderín. Sin probar: tacto en móvil y online con otra persona.
+`npm test` (17 pruebas de reglas y 300 partidas bot contra bot) pasaba en cada entrega; el online se verificó con scripts de Playwright de 8 jugadores sobre PeerJS real.
