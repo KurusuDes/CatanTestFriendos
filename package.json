@@ -2,6 +2,7 @@
   "type": "module",
   "name": "catan-x-kchudites",
   "private": true,
+  "license": "MIT",
   "scripts": {
     "test": "node tests/rules.mjs && node tests/sim.mjs 300",
     "sim": "node tests/sim.mjs"

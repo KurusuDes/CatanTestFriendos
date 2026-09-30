@@ -28,3 +28,9 @@ Tests del motor (reglas + cientos de partidas bot contra bot con verificación d
 ```bash
 npm test
 ```
+
+## Licencia
+
+Código y recursos originales bajo licencia [MIT](LICENSE) © 2026 Sowtank. Si lo usas en otro proyecto, te agradeceremos que nos des crédito visible (detalles en [NOTICE.md](NOTICE.md)).
+
+Proyecto de fans no oficial: no está afiliado ni aprobado por Catan GmbH, CATAN Studio ni Kosmos. *CATAN* es una marca de sus respectivos propietarios. Avisos de terceros (three.js, PeerJS, fuentes) en [NOTICE.md](NOTICE.md).
