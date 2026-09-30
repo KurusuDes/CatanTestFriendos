@@ -1,6 +1,6 @@
 // SVG board renderer with pan & zoom. Pure view: it receives the state plus a
 // "view" object describing what the local viewer may see and click.
-import { TILE_INFO, pips } from '../engine/constants.js';
+import { TILE_INFO, probLook } from '../engine/constants.js';
 import { s as S, clear } from './dom.js';
 
 const U = 100; // svg units per hex radius
@@ -173,8 +173,9 @@ export class BoardView {
           tk.append(S('circle', { cx, cy: cy + 18, r: 27, fill: 'url(#tokenG)', stroke: '#9c8a60', 'stroke-width': 2, filter: 'url(#shadow)' }));
           if (t.numRevealed) {
             tk.append(S('text', { x: cx, y: cy + 24, class: 'token-num' }, t.num));
-            const p = pips(t.num);
-            for (let i = 0; i < p; i++) tk.append(S('circle', { cx: cx + (i - (p - 1) / 2) * 6, cy: cy + 36, r: 2.3, class: 'pip' }));
+            const pl = probLook(t.num);
+            const bw = 30 * pl.w;
+            tk.append(S('rect', { x: cx - bw / 2, y: cy + 35 - pl.h / 2, width: bw, height: pl.h, fill: pl.c, stroke: 'rgba(26,28,44,.55)', 'stroke-width': 1, class: 'pbar' }));
           } else tk.append(S('text', { x: cx, y: cy + 27, class: 'token-num q' }, '?'));
           g.append(tk);
         }

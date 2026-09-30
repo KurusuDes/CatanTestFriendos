@@ -47,3 +47,10 @@ export const EVENTS = [
 ];
 
 export const pips = n => (n ? 6 - Math.abs(7 - n) : 0);
+// probability bar under a number token: grows from the centre, gets thicker and goes
+// white -> grey -> black -> red (6 and 8, the hot numbers)
+const PROB_COLOR = ['', '#f4f4f4', '#b3ab9b', '#6b665d', '#1a1c2c', '#d62f2f'];
+export const probLook = n => {
+  const p = pips(n);
+  return { p, w: p / 5, h: p + 1, c: PROB_COLOR[p] || '' };
+};

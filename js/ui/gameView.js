@@ -1,5 +1,5 @@
 import { App } from '../app.js';
-import { h, clear, rich, toast, storage } from './dom.js';
+import { h, clear, rich, toast } from './dom.js';
 import { BoardView } from './boardView.js';
 import { RES, TILE_INFO, COSTS, DEV_INFO, EVENTS } from '../engine/constants.js';
 import * as G from '../engine/game.js';
@@ -40,10 +40,9 @@ export function gameScreen(root) {
       h('button', { class: 'btn sm', title: 'Menú', onclick: () => openMenu() }, '☰')));
   boardWrap.append(els.banner, els.offer,
     h('div', { class: 'zoom-ctrl' },
-      h('button', { class: 'btn', title: 'Acercar', onclick: () => ui.board.setZoom(ui.board.zoom * 1.25) }, '+'),
-      h('button', { class: 'btn', title: 'Alejar', onclick: () => ui.board.setZoom(ui.board.zoom / 1.25) }, '−'),
-      h('button', { class: 'btn', title: 'Centrar', onclick: () => ui.board.resetView() }, '⤢'),
-      h('button', { class: 'btn', id: 'viewToggle', title: 'Cambiar vista 2D / 3D', style: { fontSize: '13px', fontWeight: 900 }, onclick: () => setView3D(!ui.is3D) }, '3D')));
+      h('button', { class: 'btn', title: 'Acercar', onclick: () => ui.board && ui.board.setZoom(ui.board.zoom * 1.25) }, '+'),
+      h('button', { class: 'btn', title: 'Alejar', onclick: () => ui.board && ui.board.setZoom(ui.board.zoom / 1.25) }, '−'),
+      h('button', { class: 'btn', title: 'Centrar', onclick: () => ui.board && ui.board.resetView() }, '⤢')));
   root.append(h('div', { class: 'game screen' },
     topbar,
     h('main', { class: 'game-main' }, boardWrap, h('aside', { class: 'side' }, els.players, els.bank, els.log)),
@@ -52,9 +51,8 @@ export function gameScreen(root) {
     els, pick: null, modal: null, draft: null, unlockedFor: null, rolledAt: 0, rolled: null,
     pulseTiles: new Set(), pulseAt: 0, lastCurrent: null, gains: [], lastWinnerShown: false,
   };
-  ui.board2d = ui.board = new BoardView(boardWrap);
   ui.boardWrap = boardWrap;
-  if (storage('kchudites.view3d') !== false) setView3D(true);
+  mountBoard(ui);
   boardWrap.addEventListener('click', e => {
     if (ui.pick && e.target.tagName !== 'CANVAS') {
       ui.pick = null;
@@ -82,34 +80,23 @@ export function gameScreen(root) {
   };
 }
 
-// ---------------- 2D / 3D ----------------
-async function setView3D(on) {
-  const u = ui;
-  storage('kchudites.view3d', on);
-  if (on && !u.is3D) {
-    try {
-      const { Board3D } = await import('./board3d.js');
-      if (ui !== u) return;
-      u.board3d = u.board3d || (await Board3D.create(u.boardWrap));
-      if (ui !== u) return u.board3d.dispose();
-      u.board2d.svg.style.display = 'none';
-      u.board3d.canvas.style.display = '';
-      u.board = u.board3d;
-      u.is3D = true;
-    } catch (e) {
-      console.error(e);
-      toast('No se pudo cargar la vista 3D (¿sin conexión o WebGL?)', 'error');
-      storage('kchudites.view3d', false);
-      return;
-    }
-  } else if (!on && u.is3D) {
-    u.board3d.canvas.style.display = 'none';
-    u.board2d.svg.style.display = '';
-    u.board = u.board2d;
-    u.is3D = false;
+// ---------------- board (3D only; the flat 2D map is just a fallback without WebGL) ----------------
+async function mountBoard(u) {
+  const loading = h('div', { class: 'board-loading jit' }, '🏝️ Levantando la isla...');
+  u.boardWrap.append(loading);
+  try {
+    const { Board3D } = await import('./board3d.js');
+    if (ui !== u) return;
+    const b = await Board3D.create(u.boardWrap);
+    if (ui !== u) return b.dispose();
+    u.board3d = u.board = b;
+  } catch (e) {
+    console.error(e);
+    if (ui !== u) return;
+    toast('No se pudo cargar el mapa 3D (¿sin conexión o WebGL?): uso el plano', 'error', 4000);
+    u.board = new BoardView(u.boardWrap);
   }
-  const b = document.getElementById('viewToggle');
-  if (b) b.textContent = u.is3D ? '2D' : '3D';
+  loading.remove();
   if (App.state) render(App.state);
 }
 
@@ -367,6 +354,7 @@ function bannerText(st, v, inter) {
 }
 
 function renderBoard(st, v, locked) {
+  if (!ui.board) return; // the 3D map is still loading
   const inter = locked ? null : interaction(st, v);
   if (Date.now() - ui.pulseAt > 2600) ui.pulseTiles.clear();
   let blindOwn = [];
@@ -380,6 +368,7 @@ function renderBoard(st, v, locked) {
     flipAt,
     interaction: inter,
     rolled: Date.now() - ui.rolledAt < 2600 ? ui.rolled : null,
+    rolledAt: ui.rolledAt,
     pulseTiles: ui.pulseTiles,
     blindOwn,
   });
@@ -769,8 +758,7 @@ function openMenu() {
   openModal(() => h('div', null,
     h('h2', null, '☰ Menú'),
     h('div', { style: { display: 'grid', gap: '10px' } },
-      h('button', { class: 'btn', onclick: () => { closeModal(); setView3D(!ui.is3D); } }, ui.is3D ? '🗺️ Vista plano 2D' : '🏔️ Vista mapa 3D'),
-      ui.is3D && ui.board3d ? h('div', null, h('div', { class: 'section-label' }, 'Gráficos 3D'), h('div', { class: 'gfx-row' },
+      ui.board3d ? h('div', null, h('div', { class: 'section-label' }, 'Gráficos 3D'), h('div', { class: 'gfx-row' },
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_TILT() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ tiltShift: !ui.board3d.constructor.SETTINGS_TILT() }); renderModal(App.state); } }, '📷 Tilt-shift'),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ pixel: ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? 1 : 3 }); renderModal(App.state); } }, '👾 Filtro pixel'),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_AO() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ ao: !ui.board3d.constructor.SETTINGS_AO() }); renderModal(App.state); } }, '🌑 Oclusión ambiental'),

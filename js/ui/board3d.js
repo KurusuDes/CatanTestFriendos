@@ -20,7 +20,7 @@ import { HorizontalTiltShiftShader } from 'three/addons/shaders/HorizontalTiltSh
 import { VerticalTiltShiftShader } from 'three/addons/shaders/VerticalTiltShiftShader.js';
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 import { Sky } from 'three/addons/objects/Sky.js';
-import { pips } from '../engine/constants.js';
+import { probLook } from '../engine/constants.js';
 import { pixelToHex, hk } from '../engine/board.js';
 import { pxIcon } from './pixel.js';
 import { flagCanvas } from './flag.js';
@@ -740,7 +740,7 @@ export class Board3D {
       this.lastFlip = view.flipAt;
       this.flipPlates(st);
     }
-    this.markRolled(view.rolled);
+    this.markRolled(view.rolled, view.rolledAt);
     this.updateFog(st, view);
     this.buildDynamic(st, view);
   }
@@ -877,7 +877,8 @@ export class Board3D {
       }
       if (t.res === 'desert') continue;
       const red = t.numRevealed && (t.num === 6 || t.num === 8);
-      const tok = css2d('tok3d' + (red ? ' red' : ''), t.numRevealed ? `<span>${t.num}</span><i>${'•'.repeat(pips(t.num))}</i>` : '<span>?</span>');
+      const pl = probLook(t.num);
+      const tok = css2d('tok3d' + (red ? ' red' : ''), t.numRevealed ? `<span>${t.num}</span><i class="pbar"><b style="width:${pl.w * 100}%;height:${pl.h}px;background:${pl.c}"></b></i>` : '<span>?</span>');
       tok.position.set(t.x, Math.max(h, 0.3) + 0.12, t.y);
       tok.userData.num = t.numRevealed ? t.num : null;
       this.tokens.push(tok);
@@ -1033,8 +1034,19 @@ export class Board3D {
     }
   }
 
-  markRolled(num) {
-    for (const tk of this.tokens || []) tk.element.classList.toggle('rolled', num != null && tk.userData.num === num);
+  // the winning numbers blink green for a few seconds (the CSS animation ends by itself).
+  // Never animate `transform` on these labels: CSS2DRenderer positions them with it.
+  markRolled(num, at) {
+    const fresh = at && at !== this.rolledAt;
+    if (fresh) this.rolledAt = at;
+    for (const tk of this.tokens || []) {
+      const on = num != null && tk.userData.num === num;
+      if (fresh && on) {
+        tk.element.classList.remove('rolled');
+        void tk.element.offsetWidth; // same number twice in a row: restart the blink
+      }
+      tk.element.classList.toggle('rolled', on);
+    }
   }
 
   updateFog(st, view) {

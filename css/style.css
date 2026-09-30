@@ -211,8 +211,10 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 .token.red .token-num { fill: #d32f2f; }
 .pip { fill: #2a2a2a; }
 .token.red .pip { fill: #d32f2f; }
-.tile.rolled .hex { filter: brightness(1.35) drop-shadow(0 0 14px #fff6b0); animation: rolledPulse 1s ease-in-out 3; }
-@keyframes rolledPulse { 50% { filter: brightness(1.6) drop-shadow(0 0 22px #fff6b0); } }
+.tile.rolled .hex { animation: rolledPulse .65s ease-in-out 4; }
+@keyframes rolledPulse { 50% { filter: brightness(1.25) drop-shadow(0 0 16px #7ee2a0); } }
+.tile.rolled .token circle { animation: rolledTok .65s ease-in-out 4; }
+@keyframes rolledTok { 50% { fill: #7ee2a0; stroke: #38b764; } }
 .tile.pulse .hex { animation: revealPulse 1.2s ease-out 2; }
 @keyframes revealPulse { 0% { filter: brightness(2.2) } 100% { filter: none } }
 .dock { stroke: #c9a46a; stroke-width: 5; stroke-dasharray: 6 5; }
@@ -231,11 +233,11 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 @keyframes dropIn { 0% { opacity: 0; translate: 0 -40px; } 100% { opacity: 1; translate: 0 0; } }
 .robber-body { fill: #2d2d35; stroke: #111; stroke-width: 2; }
 .robber { filter: drop-shadow(0 4px 4px rgba(0,0,0,.5)); }
-.hot-v { fill: var(--pc); stroke: #fff; stroke-width: 5; animation: hotPulse 1.1s ease-in-out infinite; pointer-events: none; transform-box: fill-box; transform-origin: center; }
-.hot-e-bg { stroke: #fff; stroke-width: 20; stroke-linecap: round; opacity: .95; pointer-events: none; animation: hotFade 1.1s ease-in-out infinite; }
-.hot-e { stroke: var(--pc); stroke-width: 11; stroke-linecap: round; opacity: .85; animation: hotFade 1.1s ease-in-out infinite; pointer-events: none; }
+.hot-v { fill: #ffe7a3; stroke: #1a1c2c; stroke-width: 4; animation: hotFade 2.4s ease-in-out infinite; pointer-events: none; transform-box: fill-box; transform-origin: center; }
+.hot-e-bg { stroke: #1a1c2c; stroke-width: 18; stroke-linecap: round; opacity: .8; pointer-events: none; animation: hotFade 2.4s ease-in-out infinite; }
+.hot-e { stroke: #ffe7a3; stroke-width: 11; stroke-linecap: round; opacity: .9; animation: hotFade 2.4s ease-in-out infinite; pointer-events: none; }
 @keyframes hotPulse { 50% { transform: scale(.7); opacity: .6 } }
-@keyframes hotFade { 50% { opacity: .35 } }
+@keyframes hotFade { 50% { opacity: .55 } }
 .hit, .hit-e { fill: transparent; stroke: transparent; cursor: pointer; }
 .hit-e { stroke-width: 26; stroke-linecap: round; }
 .hit:hover + *, .hit:hover { fill: rgba(255,255,255,.25); }

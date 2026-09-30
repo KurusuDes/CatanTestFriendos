@@ -60,6 +60,33 @@ async function backToRoom(sess) {
   }
 }
 
+const myOrDefaultKingdom = () => myKingdom() || { name: storage('kchudites.name') || '', color: '#e53935', flag: patternFlag('#e53935', 1) };
+
+// "Tu reino" on the main menu: name + banner are set before any game (local, host or join)
+function kingdomPanel() {
+  const box = h('div', { class: 'menu-kingdom' });
+  const draw = () => {
+    const k = myOrDefaultKingdom();
+    const nameIn = h('input', { type: 'text', class: 'hub-name', placeholder: 'Tu nombre', value: k.name || '', maxlength: 16, 'aria-label': 'Tu nombre' });
+    nameIn.addEventListener('input', () => {
+      const n = nameIn.value.trim();
+      storage('kchudites.name', n);
+      saveMyKingdom({ ...myOrDefaultKingdom(), name: n });
+    });
+    box.replaceChildren(
+      h('button', { class: 'hub-flag small mk-flag', title: 'Pintar bandera y color del castillo', onclick: paint }, h('div', { class: 'pole' }), flagImg(k.flag, 36, 'flag-img wave')),
+      h('div', { class: 'mk-info' },
+        h('label', { class: 'section-label' }, h('span', { class: 'swatch', style: { background: k.color } }), 'Tu reino'),
+        nameIn),
+      h('button', { class: 'btn sm', title: 'Pintar bandera y color del castillo', onclick: paint }, '🎨'));
+    function paint() {
+      openFlagEditor({ flag: k.flag, color: k.color, name: nameIn.value.trim(), onSave: ({ flag, color }) => { saveMyKingdom({ ...myOrDefaultKingdom(), name: nameIn.value.trim(), flag, color }); draw(); } });
+    }
+  };
+  draw();
+  return box;
+}
+
 function menuScreen(root) {
   const save = storage(SAVE_KEY);
   const fresh = (x, hours) => x && Date.now() - (x.at || 0) < hours * 3600e3;
@@ -76,6 +103,7 @@ function menuScreen(root) {
       h('span', { class: 'x jit' }, 'x'),
       h('div', { class: 't2 jit' }, 'KCHUDITES'),
       h('div', { class: 'sub' }, 'Colonos, caos y modos que no existen en la caja.')),
+    kingdomPanel(),
     h('div', { class: 'menu-buttons' },
       save ? h('button', { class: 'btn green', onclick: () => App.resume() }, `▶️ Continuar partida (ronda ${save.round || 0})`) : null,
       hostSess ? h('div', { style: { display: 'flex', gap: '6px' } },
@@ -116,7 +144,7 @@ function onlineScreen(root) {
   const inner = h('div', { class: 'hub-inner' });
   root.append(h('div', { class: 'online-hub screen' }, dio, inner));
   menuDiorama(dio);
-  const kingdom = () => myKingdom() || { name: storage('kchudites.name') || '', color: '#e53935', flag: patternFlag('#e53935', 1) };
+  const kingdom = myOrDefaultKingdom;
   let capacity = 4;
   let busy = false;
 
