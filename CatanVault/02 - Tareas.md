@@ -10,7 +10,6 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Probar en móvil el botón de dados manteniendo pulsado con el dedo (que no abra menú ni haga scroll) ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [ ] Probar online con otra persona: dados con fuerza, banderín del botón del medio y globitos desde todas las construcciones ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [ ] Decidir si se muestra dentro del juego (ayuda o menú) el aviso de "proyecto de fans no oficial" y los créditos ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
-- [ ] Comprobar al reiniciar Claude Code que el hook de inicio carga el Active Context y que aparecen /abrir-sesion y /cerrar-sesion ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [ ] Ver en el navegador el orden nuevo del ADHD (Plinko, Tragamonedas, Moneda, Cohete) y que el Auto aparece solo en las máquinas superadas y funciona ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
 - [ ] Ver con la pestaña visible los fuegos artificiales del ADHD explotando desde las casas y la animación completa de la moneda ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
 - [ ] Probar el ADHD online con otra persona: que la franja y los fuegos de la victoria lleguen a todos ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
@@ -23,7 +22,10 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Probar en móvil que el mapa con las variantes sigue fluido ➕ 2026-09-30 [[S04 - 2026-09-30 - Casillas 3D con variantes]]
 - [ ] Ver el tráiler en vivo (`showcase/trailer.html` y `?lang=en`) en un navegador normal y en móvil, con sonido ➕ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
 - [ ] Decidir si se renombra el repositorio y la URL de GitHub Pages (`CatanTestFriendos`) al nombre nuevo ➕ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
-- [ ] Jugar una partida con los testers y apuntar su feedback como tareas ➕ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
+- [ ] Ver en una partida real los detalles dorados del ADHD del nivel 1 al 5 (vigas, caminos, ventanas, pomo y brillo) y el cohete fantasma tras retirarse ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
+- [ ] Probar online con otra persona que dos victorias del ADHD casi a la vez salen en cola y que el oro se ve en las piezas de todos ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
+- [ ] Probar en móvil el historial de tiradas y el botón de vista desde arriba (que no tapen el mapa ni los controles) ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
+- [ ] Enseñar a los testers la vista desde arriba, el historial y las fichas que encogen, y confirmar que resuelven lo que pidieron ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
 
 ## Hechas
 - [x] Licencia MIT, `NOTICE.md` y petición de crédito ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
@@ -35,3 +37,6 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [x] Decidir el nombre del proyecto: Katan x Amiguites ✅ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
 - [x] Ver el mapa con las variantes sin «Cosecha a medias» (se vio en el tráiler y el showcase) ✅ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
 - [x] Nombre Katan x Amiguites y tráiler satírico en español e inglés ✅ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
+- [x] Comprobar al reiniciar Claude Code que el hook de inicio carga el Active Context y que aparecen /abrir-sesion y /cerrar-sesion ✅ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
+- [x] Jugar una partida con los testers y apuntar su feedback como tareas ✅ 2026-10-06 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
+- [x] Feedback de testers: vista desde arriba, historial de tiradas, fichas que encogen, iconos más grandes, cohete x10 y oro del ADHD ✅ 2026-10-06 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
