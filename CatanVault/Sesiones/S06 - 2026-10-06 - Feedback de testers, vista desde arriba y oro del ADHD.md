@@ -33,7 +33,8 @@ Después de una partida con los testers se convirtió su feedback en cambios: un
 - `npm test` (2026-10-07): 19 pruebas de reglas sin fallos (incluye dos nuevas: victoria del ADHD fuera de turno sin cortar el trato, e historial de tiradas con tope de 30) y las simulaciones bot contra bot de todos los mapas terminadas.
 - GitHub Pages publicó `bc52c7e`; `js/ui/adhd.js` y `js/ui/board3d.js` en la web son idénticos a los del repo.
 - En la web publicada, en una partida de bots: el historial de tiradas aparece y se actualiza con el color de cada jugador, y el botón de vista desde arriba pone la cámara cenital con las fichas más pequeñas.
-- **Sin probar:** los detalles dorados del nivel 1 al 5 y el cohete fantasma vistos en pantalla; la cola de franjas con dos ganadores online; todo lo nuevo en móvil.
+- En esa misma partida, forzando 5 victorias del ADHD para Kchudo desde la consola: sale la franja «¡Kchudo venció el ADHD!» con fuegos sobre el mapa, y sus piezas quedan con el pomo dorado en el tejado y clavos dorados en los caminos. Las franjas en cola siguieron saliendo cuando la partida terminó y asomaban detrás del resumen final.
+- **Sin probar:** el brillo del nivel 5 en movimiento y los niveles intermedios uno a uno; el cohete fantasma; la cola de franjas con dos ganadores online; todo lo nuevo en móvil.
 
 ## Archivos importantes
 - `js/ui/board3d.js`: vista desde arriba (`setTopView`), fichas que encogen con el zoom, detalles dorados.

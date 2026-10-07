@@ -22,10 +22,11 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Probar en móvil que el mapa con las variantes sigue fluido ➕ 2026-09-30 [[S04 - 2026-09-30 - Casillas 3D con variantes]]
 - [ ] Ver el tráiler en vivo (`showcase/trailer.html` y `?lang=en`) en un navegador normal y en móvil, con sonido ➕ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
 - [ ] Decidir si se renombra el repositorio y la URL de GitHub Pages (`CatanTestFriendos`) al nombre nuevo ➕ 2026-09-30 [[S05 - 2026-09-30 - Katan x Amiguites y tráiler satírico]]
-- [ ] Ver en una partida real los detalles dorados del ADHD del nivel 1 al 5 (vigas, caminos, ventanas, pomo y brillo) y el cohete fantasma tras retirarse ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
+- [ ] Ver uno a uno los niveles dorados del ADHD (vigas, caminos, ventanas; el pomo y los clavos ya se vieron), el brillo del nivel 5 en movimiento y el cohete fantasma tras retirarse ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
 - [ ] Probar online con otra persona que dos victorias del ADHD casi a la vez salen en cola y que el oro se ve en las piezas de todos ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
 - [ ] Probar en móvil el historial de tiradas y el botón de vista desde arriba (que no tapen el mapa ni los controles) ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
 - [ ] Enseñar a los testers la vista desde arriba, el historial y las fichas que encogen, y confirmar que resuelven lo que pidieron ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
+- [ ] Decidir si las franjas del ADHD que quedan en cola se cortan al terminar la partida (hoy siguen saliendo y asoman detrás del resumen final) ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
 
 ## Hechas
 - [x] Licencia MIT, `NOTICE.md` y petición de crédito ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
