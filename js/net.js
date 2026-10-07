@@ -241,6 +241,12 @@ export class Net {
       const a = msg.action;
       if (!a || ADMIN.has(a.type) || a.pid !== g.seat) return conn.send({ type: 'error', msg: 'Esa acción no es tuya.' });
       if (st.players[g.seat].retired) return conn.send({ type: 'error', msg: 'Te retiraron de la partida.' });
+      if (a.type === 'adhdWin') {
+        // beating the arcade takes minutes: a burst of wins is someone spamming the fireworks
+        const now = Date.now();
+        if (now - (g.cheered || 0) < 15000) return;
+        g.cheered = now;
+      }
       const r = applyAction(st, a);
       if (!r.ok) conn.send({ type: 'error', msg: r.error });
       else App.changed();
@@ -259,12 +265,6 @@ export class Net {
       if (g.pings.length >= 6) return;
       g.pings.push(now);
       App.ping(g.seat, +msg.x, +msg.z);
-    } else if (msg.type === 'cheer') {
-      if (g.seat == null || !App.state) return;
-      const now = Date.now();
-      if (now - (g.cheered || 0) < 15000) return;
-      g.cheered = now;
-      App.cheer(g.seat);
     } else if (msg.type === 'vote') this.castVote(g.seat, msg.choice, msg.voteId);
     else if (msg.type === 'bye') {
       g.leaving = true;
@@ -637,8 +637,6 @@ export class Net {
       if (App.onPing && Number.isFinite(msg.x) && Number.isFinite(msg.z)) App.onPing(msg.seat, msg.x, msg.z);
     } else if (msg.type === 'emote') {
       if (App.onEmote && typeof msg.e === 'string') App.onEmote(msg.seat, msg.e.slice(0, 40));
-    } else if (msg.type === 'cheer') {
-      if (App.onCheer && App.state && App.state.players[msg.seat]) App.onCheer(msg.seat);
     } else if (msg.type === 'meta') {
       this.meta = msg.meta;
       if (App.onMeta) App.onMeta();
@@ -674,14 +672,6 @@ export class Net {
 
   relayPing(seat, x, z) {
     for (const g of this.guests) if (g.conn && g.conn.open) g.conn.send({ type: 'mark', seat, x, z });
-  }
-
-  sendCheer() {
-    if (this.conn && this.conn.open) this.conn.send({ type: 'cheer' });
-  }
-
-  relayCheer(seat) {
-    for (const g of this.guests) if (g.conn && g.conn.open) g.conn.send({ type: 'cheer', seat });
   }
 
   sendAction(a) {

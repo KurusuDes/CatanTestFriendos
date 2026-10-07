@@ -50,6 +50,7 @@ export function createGame(configIn) {
       res: zeroRes(), dev: [], knights: 0, roadLen: 0,
       roadsLeft: R.maxRoads, settlementsLeft: R.maxSettlements, citiesLeft: R.maxCities,
       stats: { gained: 0, stolen: 0, lost: 0 },
+      adhdWins: 0,
     })),
     buildings: {},
     roads: {},
@@ -79,6 +80,7 @@ export function createGame(configIn) {
     log: [],
     fx: [],
     stats: { rolls: Array(13).fill(0) },
+    rollLog: [],
     actions: 0,
   };
   s.devDeck = buildDevDeck(config, n, rng);
@@ -818,6 +820,8 @@ H.roll = (s, a) => {
   const sum = d[0] + d[1];
   s.dice = d;
   s.stats.rolls[sum]++;
+  (s.rollLog ||= []).push({ pid: a.pid, sum });
+  if (s.rollLog.length > 30) s.rollLog.shift();
   // how hard the dice were thrown (hold the button to charge it): only changes the animation
   const power = Math.round(Math.min(1, Math.max(0, +a.power || 0)) * 100) / 100;
   s.fx.push({ kind: 'dice', dice: d, power });
@@ -1189,7 +1193,16 @@ H.retirePlayer = (s, a) => {
   }
 };
 
-const TRADE_ACTIONS = new Set(['proposeTrade', 'respondTrade', 'confirmTrade', 'cancelTrade']);
+// someone beat the ADHD arcade (the minigames for the wait): any seat, any time. It counts the wins
+// of this match (their pieces get gold trims) and sets off the fireworks for everyone
+H.adhdWin = (s, a) => {
+  const p = s.players[a.pid];
+  p.adhdWins = (p.adhdWins || 0) + 1;
+  s.fx.push({ kind: 'cheer', pid: a.pid, n: p.adhdWins });
+};
+
+// actions that leave the trade on the table when the current player makes them
+const TRADE_ACTIONS = new Set(['proposeTrade', 'respondTrade', 'confirmTrade', 'cancelTrade', 'adhdWin']);
 
 export function applyAction(s, a) {
   s.fx = [];

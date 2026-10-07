@@ -148,6 +148,8 @@ input[type=range] { accent-color: var(--sand); }
 .tok3d { font-family: var(--num); background: #f7ecd0; color: var(--ink); width: 40px; height: 40px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   box-shadow: 0 0 0 3px var(--ink), inset -3px -3px 0 #d7c49b, 4px 5px 0 1px rgba(0,0,0,.35); font-weight: 400; font-size: 16px; line-height: 16px; padding-top: 2px; text-align: center; -webkit-font-smoothing: none; }
 .tok3d span { display: block; height: 16px; }
+/* --tk (set by the 3D view) shrinks tokens and port signs as you zoom out, so they never cover the tiles */
+.tok3d, .port3d { scale: var(--tk, 1); }
 /* probability bar: one segment per classic Catan pip, centred, thicker and darker (then red) the likelier the number */
 .tok3d .pbar { display: flex; justify-content: center; align-items: center; gap: 2px; height: 6px; }
 .tok3d .pbar b { display: block; width: 4px; box-shadow: 0 0 0 1px rgba(26,28,44,.6); }
@@ -419,6 +421,8 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
 .adhd-fw { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 45; pointer-events: none; image-rendering: pixelated; }
 .adhd-band { position: fixed; left: 0; right: 0; top: 22%; z-index: 46; pointer-events: none; display: grid; place-items: center; padding: 14px 10px; background: var(--ink); box-shadow: 0 5px 0 var(--pc), 0 -5px 0 var(--pc), 0 10px 0 var(--ink), 0 -10px 0 var(--ink); font-family: var(--display); color: var(--sand); font-size: clamp(18px, 4vw, 34px); text-shadow: 3px 3px 0 var(--wine); text-align: center; animation: adhdBand 5s steps(30) forwards; }
 .adhd-band b { color: var(--pc); }
+.adhd-band-n { color: #ffcd75; }
+.adhd-band small { margin-top: 6px; font-size: 14px; color: var(--sand); opacity: .8; text-shadow: none; }
 @keyframes adhdBand { 0% { transform: translateX(-100%); } 8%, 88% { transform: none; opacity: 1; } 100% { transform: translateX(100%); opacity: 0; } }
 @media (max-width: 700px) { .adhd { width: calc(100% - 64px); } .adhd-slot { min-height: 110px; } }
 
@@ -458,3 +462,17 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
 .roll-btn.full .roll-fill { background: repeating-linear-gradient(90deg, #e04040 0 8px, #b13e53 8px 16px); }
 .roll-btn.full { animation-duration: .06s; }
 @keyframes rollShake { 0% { transform: translate(-1px, 0); } 50% { transform: translate(1px, -1px); } 100% { transform: translate(-1px, 1px); } }
+
+/* build buttons: the piece icon reads bigger than the label */
+.bicon { line-height: 1; display: inline-flex; vertical-align: middle; }
+.bicon img.px { width: 28px; height: 28px; vertical-align: 0; }
+.afford-item .bicon img.px { width: 26px; height: 26px; }
+@media (max-width: 720px) { .bicon img.px, .afford-item .bicon img.px { width: 22px; height: 22px; } }
+
+/* dice history: a column in the top right corner of the map, newest on top, each chip in the thrower's colour */
+.roll-log { position: absolute; top: 10px; right: 10px; z-index: 6; display: flex; flex-direction: column; align-items: center; gap: 5px; max-height: calc(100% - 250px); overflow: hidden; padding: 6px 5px; background: rgba(26,28,44,.82); box-shadow: 0 0 0 3px var(--ink); }
+.roll-log-head { font-size: 15px; flex: none; }
+.roll-chip { flex: none; width: 28px; height: 24px; display: grid; place-items: center; font-family: var(--num); font-weight: 400; font-size: 14px; color: var(--white); background: var(--panel); box-shadow: inset 4px 0 0 var(--pc), 0 0 0 2px var(--ink); padding-left: 3px; opacity: .7; }
+.roll-chip.newest { opacity: 1; width: 32px; height: 28px; font-size: 16px; background: #333c57; box-shadow: inset 5px 0 0 var(--pc), 0 0 0 2px var(--ink), 0 0 0 4px var(--sand); margin-bottom: 2px; }
+.roll-chip.seven { color: #ef7d57; }
+@media (max-width: 720px) { .roll-log { top: 6px; right: 6px; gap: 4px; max-height: calc(100% - 230px); } .roll-chip { width: 24px; height: 20px; font-size: 12px; } }

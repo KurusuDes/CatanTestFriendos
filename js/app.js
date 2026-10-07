@@ -89,12 +89,10 @@ export const App = {
     if (this.onPing) this.onPing(seat, x, z);
   },
 
-  // someone beat the ADHD arcade: fireworks from their buildings and a banner, for everyone
+  // someone beat the ADHD arcade: it's a game action (the win counts for their gold trims), and its
+  // `cheer` fx sets off the fireworks and the banner for everyone
   cheer(seat) {
-    if (!this.state) return;
-    if (this.isClient()) return this.net.sendCheer();
-    if (this.isOnline()) this.net.relayCheer(seat);
-    if (this.onCheer) this.onCheer(seat);
+    if (this.state && this.state.phase !== 'gameOver') this.dispatch({ type: 'adhdWin', pid: seat });
   },
 
   // called after every state change (local apply, or state received from host)

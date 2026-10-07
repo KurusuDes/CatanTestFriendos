@@ -24,6 +24,7 @@ export function gameScreen(root) {
   const els = {
     turn: h('div', { class: 'turn-info' }),
     dice: h('div', { class: 'dice' }),
+    rolls: h('div', { class: 'roll-log hidden' }),
     event: h('div'),
     banner: h('div', { class: 'banner jit hidden' }),
     players: h('div', { class: 'players' }),
@@ -40,8 +41,10 @@ export function gameScreen(root) {
     h('div', { class: 'top-actions' },
       h('button', { class: 'btn sm', title: 'Ayuda', onclick: () => showHelp() }, '❔'),
       h('button', { class: 'btn sm', title: 'Menú', onclick: () => openMenu() }, '☰')));
-  boardWrap.append(els.banner, els.offer,
+  els.topView = h('button', { class: 'btn', title: 'Vista desde arriba', onclick: () => toggleTopView() }, '🗺️');
+  boardWrap.append(els.banner, els.offer, els.rolls,
     h('div', { class: 'zoom-ctrl' },
+      els.topView,
       h('button', { class: 'btn', title: 'Acercar', onclick: () => ui.board && ui.board.setZoom(ui.board.zoom * 1.25) }, '+'),
       h('button', { class: 'btn', title: 'Alejar', onclick: () => ui.board && ui.board.setZoom(ui.board.zoom / 1.25) }, '−'),
       h('button', { class: 'btn', title: 'Centrar', onclick: () => ui.board && ui.board.resetView() }, '⤢')));
@@ -82,13 +85,11 @@ export function gameScreen(root) {
   App.onMeta = () => App.state && ui && render(App.state);
   App.onEmote = (seat, e) => showEmote(seat, e);
   App.onPing = (seat, x, z) => showPing(seat, x, z);
-  App.onCheer = seat => celebrate(seat);
   App.onLeave = () => {
     App.listeners = [];
     App.onMeta = null;
     App.onEmote = null;
     App.onPing = null;
-    App.onCheer = null;
     disposeAdhd();
     document.onpointerdown = null;
     if (ui && ui.emoteBox) ui.emoteBox.remove();
@@ -246,6 +247,9 @@ function handleFx(st) {
         play.win();
         confetti();
         if (host && st.players[f.pid] && st.players[f.pid].kind === 'bot') botEmote(f.pid, ['😎', '🏆', '🎉']);
+        break;
+      case 'cheer':
+        celebrate(f.pid, f.n);
         break;
       case 'flipAll':
         ui.flipAt = Date.now();
@@ -490,6 +494,7 @@ export function render(st) {
   const locked = privacyOn(st) && v >= 0 && ui.unlockedFor !== v;
   renderPass(st, v, locked);
   renderTop(st);
+  renderRolls(st);
   renderBoard(st, v, locked);
   renderPlayers(st, v);
   renderLog(st);
@@ -514,6 +519,30 @@ function renderPass(st, v, locked) {
 function dieFace(n, red) {
   const on = { 1: [4], 2: [0, 8], 3: [0, 4, 8], 4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8] }[n] || [];
   return h('div', { class: 'die' + (red ? ' red-die' : '') }, Array.from({ length: 9 }, (_, i) => h('i', { class: on.includes(i) ? 'on' : '' })));
+}
+
+// the last rolls, newest first, each in the colour of whoever threw it
+function renderRolls(st) {
+  const log = st.rollLog || [];
+  const el = ui.els.rolls;
+  el.classList.toggle('hidden', !log.length);
+  const key = log.length + ':' + log.map(r => r.sum).join(',');
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
+  clear(el).append(h('span', { class: 'roll-log-head', title: 'Últimas tiradas' }, '🎲'),
+    ...log.slice(-12).reverse().map((r, i) => {
+      const p = st.players[r.pid];
+      return h('b', { class: 'roll-chip' + (r.sum === 7 ? ' seven' : '') + (i === 0 ? ' newest' : ''), style: { '--pc': p ? p.color : '#94b0c2' }, title: p ? `${p.name}: ${r.sum}` : String(r.sum) }, r.sum);
+    }));
+}
+
+// the top view button: straight down onto the map and back
+function toggleTopView() {
+  const b = ui.board;
+  if (!b || !b.setTopView) return;
+  b.setTopView(!b.top);
+  ui.els.topView.classList.toggle('active', !!b.top);
+  ui.els.topView.title = b.top ? 'Volver a la vista inclinada' : 'Vista desde arriba';
 }
 
 function renderTop(st) {
@@ -756,7 +785,7 @@ function fillActions(bar, st, v, locked) {
       class: 'btn' + (ui.pick === what ? ' active' : ''), disabled: !ok,
       title: `${label} — cuesta ${costIcons(COSTS[what])} (quedan ${left})`,
       onclick: e => { e.stopPropagation(); ui.pick = ui.pick === what ? null : what; render(App.state); },
-    }, icon, h('span', null, label, h('span', { class: 'cost' }, costIcons(COSTS[what]))));
+    }, h('span', { class: 'bicon' }, icon), h('span', null, label, h('span', { class: 'cost' }, costIcons(COSTS[what]))));
   };
   acts.append(
     buildBtn('road', 'Camino', '🛤️', p.roadsLeft, () => G.legalRoads(st, v)),
@@ -765,7 +794,7 @@ function fillActions(bar, st, v, locked) {
     h('button', {
       class: 'btn', disabled: !st.devDeck.length || !G.canAfford(p.res, COSTS.dev), title: `Carta de desarrollo — cuesta ${costIcons(COSTS.dev)}`,
       onclick: () => App.dispatch({ type: 'buyDev', pid: v }),
-    }, '🃏', h('span', null, 'Carta', h('span', { class: 'cost' }, costIcons(COSTS.dev)))),
+    }, h('span', { class: 'bicon' }, '🃏'), h('span', null, 'Carta', h('span', { class: 'cost' }, costIcons(COSTS.dev)))),
     h('button', { class: 'btn', disabled: !!st.trade, onclick: () => openTrade(v) }, '🤝 Comerciar'),
     h('button', { class: 'btn sm ghost', title: 'Pista', onclick: () => showHint(st, v) }, '💡'),
     h('button', { class: 'btn green', onclick: () => App.dispatch({ type: 'endTurn', pid: v }) }, '✅ Terminar'));
@@ -785,7 +814,7 @@ function affordPreview(real, v) {
     const ok = G.canAfford(p.res, COSTS[what]);
     const tip = ok ? (room ? `Ya puedes pagar: ${label}. Constrúyelo en tu turno.` : `Puedes pagarlo, pero ahora no hay dónde: ${label}.`) : `${label}: te falta ${missing(p.res, COSTS[what])}`;
     return h('div', { class: 'afford-item' + (ok && room ? ' ok' : ok ? ' half' : ''), title: tip },
-      icon, h('span', null, label, h('span', { class: 'cost' }, costIcons(COSTS[what]))), ok && room ? h('b', { class: 'tick' }, '✓') : null);
+      h('span', { class: 'bicon' }, icon), h('span', null, label, h('span', { class: 'cost' }, costIcons(COSTS[what]))), ok && room ? h('b', { class: 'tick' }, '✓') : null);
   }));
 }
 

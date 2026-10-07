@@ -24,6 +24,8 @@ import { pxIcon } from './pixel.js';
 import { flagCanvas } from './flag.js';
 import { Dice3D, diceFlyMs } from './dice3d.js';
 
+const FOV = 32, TOP_FOV = 11; // the normal lens and the narrow one of the top view
+const TOKEN_SPAN = 0.75; // widest a number token gets on the map, in world units (a hex is 1.73 across)
 export const SETTINGS = { pixel: 1, tiltShift: true, quality: 'high', ao: true, outline: true };
 // phones and small screens start on the light preset
 if (typeof matchMedia === 'function' && (matchMedia('(pointer: coarse)').matches || innerWidth < 900)) Object.assign(SETTINGS, { quality: 'low', ao: false });
@@ -291,6 +293,55 @@ function tinted(src, colors) {
   return o;
 }
 
+// ---------- gold trims: every ADHD win of the match gilds a bit more of that player's pieces ----------
+// 1 beams · 2 road edges and studs · 3 windows, chimney and plinth · 4 a gold knob on the roof · 5 the gold shines
+const GOLD = new THREE.Color('#ffc94a');
+const goldCache = new Map();
+const goldGlow = new Set(); // level-5 gold: its shine pulses (see tick)
+function goldOf(mt, glow) {
+  const key = mt.uuid + (glow ? 'G' : 'g');
+  if (!goldCache.has(key)) {
+    const n = mt.clone();
+    n.color = GOLD.clone();
+    n.map = null;
+    n.metalness = 0.75;
+    n.roughness = 0.28;
+    n.transparent = false;
+    n.opacity = 1;
+    // a little light of its own, so the gold still reads as gold in the shade
+    n.emissive = new THREE.Color('#ffb84a');
+    n.emissiveIntensity = mt.name === 'Glass' ? 0.6 : 0.22;
+    n.userData.patched = false;
+    patch(n, { key: 'gold' });
+    if (glow) goldGlow.add(n);
+    goldCache.set(key, n);
+  }
+  return goldCache.get(key);
+}
+function gild(o, names, glow) {
+  if (!names.length) return o;
+  o.traverse(m => {
+    if (!m.isMesh) return;
+    const swap = mt => (names.includes(mt.name) ? goldOf(mt, glow) : mt);
+    m.material = Array.isArray(m.material) ? m.material.map(swap) : swap(m.material);
+  });
+  return o;
+}
+const KNOB_HOUSE = [0, 0.27, 0], KNOB_CITY = [0, 0.57, 0]; // on top of the roof, in model units
+const KNOB_GEO = new THREE.SphereGeometry(0.024, 12, 8);
+const KNOB_STEM = new THREE.CylinderGeometry(0.006, 0.01, 0.04, 8).translate(0, -0.02, 0);
+let knobBase = null;
+function goldKnob(x, y, z, glow) {
+  knobBase = knobBase || new THREE.MeshStandardMaterial({ name: 'Knob' });
+  const mat = goldOf(knobBase, glow);
+  const g = new THREE.Group();
+  const ball = new THREE.Mesh(KNOB_GEO, mat), stem = new THREE.Mesh(KNOB_STEM, mat);
+  ball.castShadow = stem.castShadow = true;
+  g.add(ball, stem);
+  g.position.set(x, y, z);
+  return g;
+}
+
 // ---------- kingdom banners waving on every building ----------
 const JOINT_CYL = new THREE.CylinderGeometry(1, 1, 1, 20);
 const JOINT_BOX = new THREE.BoxGeometry(1, 1, 1);
@@ -338,7 +389,7 @@ function css2d(cls, html, tag = 'div') {
 // ---------- tile looks: 5 variations per resource ----------
 // Which looks each resource may use. A tile's look comes from its id and position, so every player
 // sees the same map. LOOK_OVERRIDE forces one look for a resource (samples, debugging).
-export const TILE_LOOKS = { wood: [0, 1, 2, 3, 4], sheep: [0, 1, 2, 3, 4], wheat: [0, 1, 2, 4], brick: [0, 1, 2, 3, 4], ore: [0, 1, 2, 3, 4] };
+export const TILE_LOOKS = { wood: [0, 1, 2, 3], sheep: [0, 1, 2, 3, 4], wheat: [0, 1, 2, 4], brick: [0, 1, 2, 3, 4], ore: [0, 1, 2, 3, 4] };
 export const LOOK_OVERRIDE = {};
 function tileLook(res, seed) {
   if (LOOK_OVERRIDE[res] != null) return LOOK_OVERRIDE[res];
@@ -694,7 +745,7 @@ export class Board3D {
     pm.dispose();
     scene.fog = new THREE.Fog('#bfd3db', 34, 95);
 
-    this.camera = new THREE.PerspectiveCamera(32, 1, 0.3, 600);
+    this.camera = new THREE.PerspectiveCamera(FOV, 1, 0.3, 600);
     this.camera.layers.enable(LAYER_PIECES);
     this.camera.layers.enable(LAYER_GRASS);
     const rtOpts = { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter };
@@ -785,6 +836,7 @@ export class Board3D {
       this.hts.uniforms.tMask.value = this.vts.uniforms.tMask.value = this.maskVis.texture;
       c.addPass(this.hts);
       c.addPass(this.vts);
+      this.hts.enabled = this.vts.enabled = !this.top;
     }
     c.addPass(new OutputPass());
     this.outlinePass = null;
@@ -815,6 +867,7 @@ export class Board3D {
     this.composer.setPixelRatio(this.renderer.getPixelRatio());
     this.composer.setSize(w, h);
     this.labels.setSize(w, h);
+    this.viewH = h;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     const pr = this.renderer.getPixelRatio();
@@ -1062,18 +1115,98 @@ export class Board3D {
 
   resetView() {
     this.zoom = 1;
+    this.camAnim = null;
     this.frame();
   }
 
-  frame() {
+  // where the camera goes to frame the whole map: tilted (the normal view) or straight down
+  framing(top) {
     const b = this.bounds;
-    if (!b) return;
     const cx = (b.minX + b.maxX) / 2, cz = (b.minY + b.maxY) / 2;
-    const size = Math.max(b.maxX - b.minX, (b.maxY - b.minY) * 1.2);
-    const d = size * 0.86 + 1.4;
-    this.controls.target.set(cx, 0.2, cz + 0.4);
-    this.camera.position.set(cx, d * 0.8, cz + d * 0.62);
+    if (!top) {
+      const size = Math.max(b.maxX - b.minX, (b.maxY - b.minY) * 1.2);
+      const d = size * 0.86 + 1.4;
+      return { target: new THREE.Vector3(cx, 0.2, cz + 0.4), pos: new THREE.Vector3(cx, d * 0.8, cz + d * 0.62), fov: FOV };
+    }
+    // fit the land and the port signs (the bounds also hold a strip of sea)
+    const bd = this.lastSt && this.lastSt.board;
+    const pts = bd ? [...bd.tiles.map(t => [t.x, t.y, 1]), ...bd.ports.map(q => [q.x, q.y, 0.6])] : [[b.minX, b.minY, 0], [b.maxX, b.maxY, 0]];
+    const x0 = Math.min(...pts.map(q => q[0] - q[2])), x1 = Math.max(...pts.map(q => q[0] + q[2]));
+    const z0 = Math.min(...pts.map(q => q[1] - q[2])), z1 = Math.max(...pts.map(q => q[1] + q[2]));
+    const t = Math.tan((TOP_FOV * Math.PI) / 360);
+    const d = Math.max(z1 - z0 + 0.6, (x1 - x0 + 0.6) / this.camera.aspect) / (2 * t);
+    const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
+    // a hair south of straight above, so north stays up like in the tilted view
+    return { target: new THREE.Vector3(mx, 0.2, mz), pos: new THREE.Vector3(mx, 0.2 + d, mz + d * 0.002), fov: TOP_FOV };
+  }
+
+  frame() {
+    if (!this.bounds) return;
+    const f = this.framing(this.top);
+    this.controls.target.copy(f.target);
+    this.camera.position.copy(f.pos);
+    this.lens(f.fov);
     this.controls.update();
+  }
+
+  // a narrower lens goes with a farther camera: the zoom limits and the haze stretch with it
+  lens(fov) {
+    const cam = this.camera, c = this.controls, fog = this.scene.fog;
+    cam.fov = fov;
+    cam.updateProjectionMatrix();
+    const k = Math.tan((FOV * Math.PI) / 360) / Math.tan((fov * Math.PI) / 360);
+    c.minDistance = 3 * k;
+    c.maxDistance = 50 * k;
+    fog.near = 34 * k;
+    fog.far = 95 * k;
+  }
+
+  // top view: straight down through a narrow lens, so the map reads almost like a flat plan. It
+  // looks orthographic but keeps the perspective camera that every effect (AO, tilt-shift) expects
+  setTopView(on) {
+    on = !!on;
+    if (on === !!this.top || !this.bounds) return;
+    const cam = this.camera, c = this.controls;
+    const from = { target: c.target.clone(), pos: cam.position.clone(), fov: cam.fov };
+    let to;
+    if (on) {
+      this.beforeTop = { ...from, zoom: this.zoom };
+      to = this.framing(true);
+      this.zoom = 1;
+      c.minPolarAngle = 0;
+    } else {
+      // back to where you were before going up
+      to = this.beforeTop || this.framing(false);
+      this.zoom = this.beforeTop ? this.beforeTop.zoom : 1;
+    }
+    this.top = on;
+    c.enableRotate = !on;
+    // a plan seen from above has no miniature blur at the edges
+    if (this.hts) this.hts.enabled = this.vts.enabled = !on;
+    this.camAnim = { from, to, t0: this.now() };
+  }
+
+  // eases the camera between the two views (position, aim and lens together)
+  updateCamAnim(now) {
+    const a = this.camAnim;
+    if (!a) return;
+    const k = Math.min(1, (now - a.t0) / 700), e = k * k * (3 - 2 * k);
+    this.controls.target.lerpVectors(a.from.target, a.to.target, e);
+    this.camera.position.lerpVectors(a.from.pos, a.to.pos, e);
+    this.lens(a.from.fov + (a.to.fov - a.from.fov) * e);
+    if (k < 1) return;
+    this.camAnim = null;
+    if (!this.top) this.controls.minPolarAngle = 0.3;
+  }
+
+  // the number tokens keep to their tiles: zoomed out they shrink instead of covering the island
+  scaleTokens() {
+    const dist = this.camera.position.distanceTo(this.controls.target);
+    const ppu = (this.viewH || 600) / (2 * dist * Math.tan((this.camera.fov * Math.PI) / 360)); // screen px per world unit
+    const tk = Math.max(0.35, Math.min(1, Math.round(((ppu * TOKEN_SPAN) / 40) * 20) / 20));
+    if (tk === this.tk) return;
+    this.tk = tk;
+    this.labels.domElement.style.setProperty('--tk', tk);
   }
 
   placeSun(cx, cz) {
@@ -1115,7 +1248,13 @@ export class Board3D {
     const rt = this.robberTile, ru = U.uRobber.value;
     if (rt && (rt.x !== ru.x || rt.y !== ru.y)) ru.set(rt.x, rt.y, 0);
     ru.z += ((rt ? 1 : 0) - ru.z) * 0.06;
+    if (goldGlow.size) {
+      const shine = 0.22 + 0.4 * Math.max(0, Math.sin(t * 2.4)) ** 3;
+      for (const m of goldGlow) m.emissiveIntensity = shine;
+    }
+    this.updateCamAnim(now);
     this.controls.update();
+    this.scaleTokens();
     this.updateFloaters(now);
     this.renderMasks();
     this.composer.render();
@@ -1282,7 +1421,9 @@ export class Board3D {
       if (t.res === 'desert') continue;
       const red = t.numRevealed && (t.num === 6 || t.num === 8);
       const pl = probLook(t.num);
-      const tok = css2d('tok3d' + (red ? ' red' : ''), t.numRevealed ? `<span>${t.num}</span><i class="pbar">${`<b style="height:${pl.h}px;background:${pl.c}"></b>`.repeat(pl.p)}</i>` : '<span>?</span>');
+      // the label is a bare anchor (CSS2DRenderer owns its transform); the token inside scales with the zoom
+      const face = t.numRevealed ? `<span>${t.num}</span><i class="pbar">${`<b style="height:${pl.h}px;background:${pl.c}"></b>`.repeat(pl.p)}</i>` : '<span>?</span>';
+      const tok = css2d('tok3d-at', `<div class="tok3d${red ? ' red' : ''}">${face}</div>`);
       tok.position.set(t.x, Math.max(h, 0.3) + 0.12, t.y);
       tok.userData.num = t.numRevealed ? t.num : null;
       this.tokens.push(tok);
@@ -1319,7 +1460,7 @@ export class Board3D {
       boat.rotation.y = -Math.atan2(port.ny, port.nx) + Math.PI / 2;
       boat.scale.setScalar(1.35);
       this.bobbers.push({ obj: boat, y: 0.0, ph: port.id * 1.7 });
-      const sign = css2d('port3d', port.type === 'any' ? '<b>3:1</b>' : `${pxIcon(port.type, 16).outerHTML}<b>2:1</b>`);
+      const sign = css2d('tok3d-at', `<div class="port3d">${port.type === 'any' ? '<b>3:1</b>' : `${pxIcon(port.type, 16).outerHTML}<b>2:1</b>`}</div>`);
       sign.position.set(port.x, 0.55, port.y);
       this.staticGroup.add(boat, sign);
     }
@@ -1592,8 +1733,17 @@ export class Board3D {
   // the winning numbers blink green for a few seconds (the CSS animation ends by itself).
   // Never animate `transform` on these labels: CSS2DRenderer positions them with it.
   // the road model's own materials (textured bed + tinted planks) for the joints
-  jointMats(color) {
+  jointMats(color, gold = 0) {
     this.jm = this.jm || new Map();
+    if (gold) {
+      // gold road edges: the bed under the planks turns gold (and shines at level 5)
+      const key = color + '|' + gold;
+      if (!this.jm.has(key)) {
+        const m = this.jointMats(color);
+        this.jm.set(key, { top: m.top, bed: goldOf(m.bed, gold >= 5) });
+      }
+      return this.jm.get(key);
+    }
     if (!this.jm.has(color)) {
       const mats = {};
       tinted(this.kit.road, { Player: color, Banner: color, PlayerWood: color }).traverse(m => {
@@ -1618,12 +1768,12 @@ export class Board3D {
     const fresh = at && at !== this.rolledAt;
     if (fresh) this.rolledAt = at;
     for (const tk of this.tokens || []) {
-      const on = num != null && tk.userData.num === num;
+      const on = num != null && tk.userData.num === num, el = tk.element.firstChild;
       if (fresh && on) {
-        tk.element.classList.remove('rolled');
-        void tk.element.offsetWidth; // same number twice in a row: restart the blink
+        el.classList.remove('rolled');
+        void el.offsetWidth; // same number twice in a row: restart the blink
       }
-      tk.element.classList.toggle('rolled', on);
+      el.classList.toggle('rolled', on);
     }
   }
 
@@ -1666,6 +1816,11 @@ export class Board3D {
     });
   }
 
+  // how gilded a player's pieces are: their ADHD wins this match, up to 5
+  goldLevel(p) {
+    return p ? Math.min(5, p.adhdWins || 0) : 0;
+  }
+
   buildDynamic(st, view) {
     const bd = st.board;
     const kit = this.kit;
@@ -1675,7 +1830,7 @@ export class Board3D {
     this.inter = inter;
     const robberOn = bd.robber >= 0 && !st.config.rules.noRobber && bd.tiles[bd.robber].revealed && !bd.robberHidden;
     this.robberTile = robberOn && bd.tiles[bd.robber].res !== 'desert' ? bd.tiles[bd.robber] : null;
-    const key = JSON.stringify([st.roads, st.buildings, robberOn && bd.robber, view.blindOwn || [], st.players.map(p => p.color + (p.flag || '').length),
+    const key = JSON.stringify([st.roads, st.buildings, robberOn && bd.robber, view.blindOwn || [], st.players.map(p => p.color + (p.flag || '').length + '|' + this.goldLevel(p)),
       inter && [inter.kind, inter.color, [...inter.legal].sort((a, b) => a - b)], this.staticKey]);
     if (key === this.dynKey) return;
     this.dynKey = key;
@@ -1713,7 +1868,8 @@ export class Board3D {
     const colors = c => ({ Player: c, Banner: c, PlayerWood: c });
     const road = (eid, color, ghost) => {
       const E = bd.edges[eid], a = bd.vertices[E.a], b = bd.vertices[E.b];
-      const o = tinted(kit.road, colors(color));
+      const lv = ghost ? 0 : this.goldLevel(st.players[st.roads[eid]]);
+      const o = gild(tinted(kit.road, colors(color)), lv >= 2 ? ['Wood'] : [], lv >= 5);
       const ya = vy(E.a), yb = vy(E.b);
       const len = Math.hypot(b.x - a.x, b.y - a.y);
       o.position.set((a.x + b.x) / 2, (ya + yb) / 2 + 0.01, (a.y + b.y) / 2);
@@ -1740,7 +1896,8 @@ export class Board3D {
     for (const [key, others] of ends) {
       const [vid, owner] = key.split(':').map(Number);
       const color = st.players[owner].color;
-      const m = this.jointMats(color);
+      const lv = this.goldLevel(st.players[owner]);
+      const m = this.jointMats(color, lv >= 2 ? lv : 0);
       const V = bd.vertices[vid], y0 = vy(vid);
       const g = new THREE.Group();
       g.position.set(V.x, y0 + 0.01 + owner * 0.002, V.y);
@@ -1753,6 +1910,7 @@ export class Board3D {
       };
       part(g, JOINT_CYL, 0.085, 0.057, 0.085, 0, 0.0285, m.bed);
       part(g, JOINT_CYL, 0.1, 0.024, 0.1, 0, 0.078, m.top);
+      if (lv >= 2) part(g, JOINT_CYL, 0.055, 0.014, 0.055, 0, 0.096, m.bed); // a gold stud on the joint
       for (const o of others) {
         const O = bd.vertices[o];
         const dx = O.x - V.x, dz = O.y - V.y, len = Math.hypot(dx, dz);
@@ -1768,7 +1926,10 @@ export class Board3D {
     }
     const building = (vid, owner, type, ghost) => {
       const V = bd.vertices[vid];
-      const o = tinted(type === 'city' ? kit.city : kit.house, colors(st.players[owner].color));
+      const lv = ghost ? 0 : this.goldLevel(st.players[owner]);
+      const trims = [...(lv >= 1 ? ['Timber'] : []), ...(lv >= 3 ? ['Glass', 'StoneDark'] : [])];
+      const o = gild(tinted(type === 'city' ? kit.city : kit.house, colors(st.players[owner].color)), trims, lv >= 5);
+      if (lv >= 4) o.add(type === 'city' ? goldKnob(KNOB_CITY[0], KNOB_CITY[1], KNOB_CITY[2], lv >= 5) : goldKnob(KNOB_HOUSE[0], KNOB_HOUSE[1], KNOB_HOUSE[2], lv >= 5));
       o.position.set(V.x, vy(vid) - 0.01, V.y);
       o.rotation.y = ((vid * 2.39996) % 6.28) * 0.4;
       const pl = st.players[owner];

@@ -1,8 +1,8 @@
 // ADHD: a tiny arcade to kill time while the others play (🧠 button next to the reactions).
 // Per player and purely local: one wallet that starts at $100, and every goal reached adds the
 // next machine to the grid (Plinko → slots → coin → rocket), all playable at once; a machine you
-// have already beaten gets an Auto button (all but the rocket). Going broke sends you back to the Plinko. Only the final win is shared: fireworks shoot up from the
-// winner's buildings and a banner tells the whole table.
+// have already beaten gets an Auto button (all but the rocket). Going broke sends you back to the Plinko. Only the final win is shared:
+// it is a game action, so everyone sees the fireworks and the banner, and the winner's pieces get gold trims (up to 5 wins).
 import { App } from '../app.js';
 import { h, clear, toast, storage } from './dom.js';
 import { pxURL } from './pixel.js';
@@ -31,6 +31,9 @@ export function mountAdhd(wrap, getBoard) {
 }
 
 export function disposeAdhd() {
+  cheers.length = 0;
+  clearTimeout(cheerT);
+  cheerT = 0;
   if (!A) return;
   settleAll();
   saveNow();
@@ -453,57 +456,72 @@ function slots(K) {
   };
 }
 
-// ---------------- 4. Rocket (the last one, no Auto): the multiplier climbs from x0.00, cash out before it blows (max x5) ----------------
+// ---------------- 4. Rocket (the last one, no Auto): the multiplier climbs from x0.00, cash out before it blows ----------------
+// It mostly blows early: past x5 it's rare and the moon (x10, paid on its own) is 1 in 100. Cash out and a
+// ghost rocket keeps going, so you see how far it would have gone.
 function rocket(K) {
-  const W = 90, H = 50, MAX = 5;
+  const W = 90, H = 50, MAX = 10, MOON = 0.01;
   const stars = Array.from({ length: 24 }, () => [rnd(W), rnd(H - 8), Math.random() * 6]);
   const mAt = s => Math.min(MAX, 0.35 * s + 0.07 * s * s);
-  const px = m => 5 + (m / MAX) * 74, py = m => H - 6 - (m / MAX) ** 1.25 * (H - 16);
+  // P(it gets past xm) = (1 - m/10)^2.5: the best cash-out pays about x1.23 on average, like the old x5 rocket
+  const crashAt = () => (Math.random() < MOON ? MAX : Math.floor(MAX * (1 - Math.random() ** 0.4) * 100) / 100);
   const [cv, g] = canvas(W, H);
-  let bet = 10, fly = null, last = null;
+  let bet = 10, fly = null, last = null, ghost = null, V = 2.5;
+  // the chart zooms out as the rocket climbs, so it never leaves the screen
+  const px = m => 5 + (m / V) * 74, py = m => H - 6 - (m / V) ** 1.25 * (H - 16);
   const btn = h('button', { class: 'btn sm primary', onclick: act }, 'Despegar');
-  const note = h('div', { class: 'adhd-note nopx' }, 'Explota entre x0 y x5');
+  const note = h('div', { class: 'adhd-note nopx' }, 'Puede llegar a x10… casi nunca');
   const el = cell('Cohete', cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), btn), note);
 
-  const cur = now => mAt((now - fly.t0) / 1000);
+  const at = (f, now) => mAt((now - f.t0) / 1000);
+  const cut = m => Math.floor(m * 100) / 100;
   function setBtn(flying) {
     btn.textContent = flying ? 'Retirar' : 'Despegar';
     btn.classList.toggle('primary', !flying);
     btn.classList.toggle('green', flying);
   }
+  const resolve = now => (at(fly, now) < fly.crash ? cashout(now) : fly.crash >= MAX ? cashout(now, true) : boom(now));
   function act() {
     const now = performance.now();
-    if (fly) return cur(now) >= fly.crash ? boom(now) : cashout(now);
+    if (fly) return resolve(now);
     if (!K.spend(bet)) return toast('No te alcanza', 'error', 1500);
-    fly = { bet, t0: now, crash: rnd(MAX * 100 + 1) / 100 };
-    last = null;
+    fly = { bet, t0: now, crash: crashAt() };
+    last = ghost = null;
     setBtn(true);
     note.textContent = '¡Retírate a tiempo!';
   }
-  function cashout(now) {
-    const f = fly, m = Math.floor(cur(now) * 100) / 100, won = round(f.bet * m);
+  function cashout(now, moon) {
+    const f = fly, m = moon ? MAX : cut(at(f, now)), won = round(f.bet * m);
     fly = null;
-    last = { m, ok: true, t: now };
+    last = { m, ok: true, t: now, moon };
+    // the rest of the flight goes on without you
+    if (!moon) ghost = { t0: f.t0, crash: f.crash, end: 0 };
     setBtn(false);
-    note.textContent = `Retiraste en x${m.toFixed(2)} → ${fmt(won)}`;
-    play.gain();
+    note.textContent = moon ? `🌕 ¡Llegaste a la Luna! x10 → ${fmt(won)}` : `Retiraste en x${m.toFixed(2)} → ${fmt(won)}`;
+    moon ? play.event() : play.gain();
     K.pay(won);
   }
   function boom(now) {
     const f = fly;
     fly = null;
-    const a = Array.from({ length: 18 }, () => [Math.random() * 6.3, 8 + Math.random() * 22]);
-    last = { m: f.crash, ok: false, t: now, parts: a };
+    last = { m: f.crash, ok: false, t: now, parts: sparks() };
     setBtn(false);
     note.textContent = `¡Boom en x${f.crash.toFixed(2)}!`;
     play.boom();
     K.done();
   }
-  function curve(m, color) {
+  const sparks = () => Array.from({ length: 18 }, () => [Math.random() * 6.3, 8 + Math.random() * 22]);
+  function curve(m0, m, color) {
     g.fillStyle = color;
     for (let i = 0; i <= 40; i++) {
-      const k = (m * i) / 40;
+      const k = m0 + ((m - m0) * i) / 40;
       g.fillRect(Math.round(px(k)), Math.round(py(k)), 2, 2);
+    }
+  }
+  function blast(m, parts, k) {
+    for (const [ang, sp] of parts) {
+      g.fillStyle = k < 0.3 ? '#f4f4f4' : Math.random() < 0.5 ? '#ef7d57' : '#ffcd75';
+      g.fillRect(Math.round(px(m) + Math.cos(ang) * sp * k), Math.round(py(m) + Math.sin(ang) * sp * k + 10 * k * k), 2, 2);
     }
   }
   return {
@@ -511,15 +529,22 @@ function rocket(K) {
     busy: () => !!fly,
     sync() {},
     settle() {
-      if (!fly) return;
-      const now = performance.now();
-      cur(now) >= fly.crash ? boom(now) : cashout(now);
+      if (fly) resolve(performance.now());
+      ghost = null;
     },
     dispose() {
       K.dead = true;
     },
     frame(now) {
-      if (fly && cur(now) >= fly.crash) boom(now);
+      if (fly && at(fly, now) >= fly.crash) fly.crash >= MAX ? cashout(now, true) : boom(now);
+      if (ghost && !ghost.end && at(ghost, now) >= ghost.crash) {
+        ghost.end = now;
+        ghost.parts = sparks();
+        note.textContent += ghost.crash >= MAX ? ' · ¡llegaba a la Luna! 🌕' : ` · llegaba a x${ghost.crash.toFixed(2)}`;
+      }
+      const gm = ghost && (ghost.end ? ghost.crash : at(ghost, now));
+      const top = fly ? at(fly, now) : Math.max(last ? last.m : 0, gm || 0);
+      V += (Math.max(2.5, top * 1.2) - V) * (fly || (ghost && !ghost.end) ? 1 : 0.15);
       g.fillStyle = '#1a1c2c';
       g.fillRect(0, 0, W, H);
       for (const [x, y, ph] of stars) {
@@ -529,20 +554,29 @@ function rocket(K) {
       g.fillStyle = '#29366f';
       g.fillRect(0, H - 4, W, 4);
       if (fly) {
-        const m = cur(now);
-        curve(m, '#ffcd75');
+        const m = at(fly, now);
+        curve(0, m, '#ffcd75');
         drawSprite(g, '🚀', px(m) - 4, py(m) - 10, 13);
         text(g, 'x' + m.toFixed(2), W / 2, 9, m < 1 ? '#ef7d57' : '#f4f4f4', 10);
-      } else if (last) {
-        curve(last.m, last.ok ? '#38b764' : '#566c86');
-        const k = (now - last.t) / 800;
-        if (!last.ok && k < 1)
-          for (const [ang, sp] of last.parts) {
-            g.fillStyle = k < 0.3 ? '#f4f4f4' : Math.random() < 0.5 ? '#ef7d57' : '#ffcd75';
-            g.fillRect(Math.round(px(last.m) + Math.cos(ang) * sp * k), Math.round(py(last.m) + Math.sin(ang) * sp * k + 10 * k * k), 2, 2);
-          }
-        text(g, 'x' + last.m.toFixed(2), W / 2, 9, last.ok ? '#a7f070' : '#b13e53', 10);
-      } else text(g, 'x0.00', W / 2, 9, '#566c86', 10);
+        return;
+      }
+      if (!last) return text(g, 'x0.00', W / 2, 9, '#566c86', 10);
+      curve(0, last.m, last.ok ? '#38b764' : '#566c86');
+      if (last.moon) drawSprite(g, '🌕', px(last.m) - 6, py(last.m) - 8, 13);
+      if (!last.ok && now - last.t < 800) blast(last.m, last.parts, (now - last.t) / 800);
+      if (ghost) {
+        // what you left on the table: a faded rocket that keeps climbing until it blows
+        curve(last.m, gm, '#566c86');
+        g.fillStyle = '#a7f070';
+        g.fillRect(Math.round(px(last.m)) - 1, Math.round(py(last.m)) - 1, 4, 4);
+        if (!ghost.end) {
+          g.globalAlpha = 0.45;
+          drawSprite(g, '🚀', px(gm) - 4, py(gm) - 10, 13);
+          g.globalAlpha = 1;
+        } else if (now - ghost.end < 800) blast(gm, ghost.parts, (now - ghost.end) / 800);
+        if (ghost.end) text(g, 'x' + ghost.crash.toFixed(2), W - 16, H - 11, '#94b0c2', 8);
+      }
+      text(g, 'x' + last.m.toFixed(2), W / 2, 9, last.ok ? '#a7f070' : '#b13e53', 10);
     },
   };
 }
@@ -642,15 +676,29 @@ function coin(K) {
 }
 
 // ---------------- the win: fireworks from the winner's buildings + a banner (everyone sees it) ----------------
-export function celebrate(seat) {
+// Winners that land together wait their turn: one banner and one round of fireworks each, in order
+const cheers = [];
+let cheerT = 0;
+export function celebrate(seat, n = 1) {
+  cheers.push({ seat, n });
+  if (!cheerT) nextCheer();
+}
+
+function nextCheer() {
+  cheerT = 0;
   const st = App.state;
-  if (!st || !st.players[seat]) return;
-  const p = st.players[seat];
-  const band = h('div', { class: 'adhd-band', style: { '--pc': p.color } }, h('div', null, '🎆 ¡', h('b', null, p.name), ' venció el ADHD! 🧠'));
+  if (!cheers.length || !st) return void (cheers.length = 0);
+  const { seat, n } = cheers.shift(), p = st.players[seat];
+  if (!p) return nextCheer();
+  const queued = cheers.filter(c => st.players[c.seat]).map(c => st.players[c.seat].name);
+  const band = h('div', { class: 'adhd-band', style: { '--pc': p.color } },
+    h('div', null, '🎆 ¡', h('b', null, p.name), ' venció el ADHD! 🧠', n > 1 ? h('span', { class: 'adhd-band-n' }, ` ×${n}`) : null),
+    queued.length ? h('small', { class: 'nopx' }, `Después: ${queued.join(', ')}`) : null);
   document.body.append(band);
   setTimeout(() => band.remove(), 5200);
   play.win();
   fireworks(seat, p.color);
+  cheerT = setTimeout(nextCheer, 5400);
 }
 
 function fireworks(seat, color) {
