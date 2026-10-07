@@ -33,6 +33,6 @@ Juego de colonos inspirado en Catan, en el navegador (sitio estático, sin build
 | Flujo de trabajo | `.claude/commands/`, `.claude/hooks/session-start.mjs`, `.claude/settings.json` | `/abrir-sesion`, `/cerrar-sesion` y el hook que inyecta el Active Context y las tareas abiertas al empezar |
 
 ## Cómo trabajamos
-- Local: `python -m http.server 8123` y abrir http://localhost:8123/
+- Local: `py -m http.server 8123` y abrir http://localhost:8123/ (en este PC `python` abre la Microsoft Store; `py` es el Python 3.14 de verdad)
 - Antes de subir: `npm test`
 - `/abrir-sesion [tarea]` al empezar, `/cerrar-sesion` al terminar (documenta aquí, crea tareas, commit y push)
