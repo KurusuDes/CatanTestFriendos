@@ -9,8 +9,6 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 ## Pendientes
 - [ ] Probar en móvil el botón de dados manteniendo pulsado con el dedo (que no abra menú ni haga scroll) ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
 - [ ] Probar online con otra persona: dados con fuerza, banderín del botón del medio y globitos desde todas las construcciones ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
-- [ ] Decidir si se muestra dentro del juego (ayuda o menú) el aviso de "proyecto de fans no oficial" y los créditos ➕ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
-- [ ] Ver en el navegador el orden nuevo del ADHD (Plinko, Tragamonedas, Moneda, Cohete) y que el Auto aparece solo en las máquinas superadas y funciona ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
 - [ ] Ver con la pestaña visible los fuegos artificiales del ADHD explotando desde las casas y la animación completa de la moneda ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
 - [ ] Probar el ADHD online con otra persona: que la franja y los fuegos de la victoria lleguen a todos ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
 - [ ] Probar el ADHD en móvil (que la ventana quepa en el mapa y se pueda jugar con el dedo) y en hotseat con dos humanos (cada uno con su saldo) ➕ 2026-09-30 [[S02 - 2026-09-30 - Sección ADHD de minijuegos]]
@@ -27,6 +25,12 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Probar en móvil el historial de tiradas y el botón de vista desde arriba (que no tapen el mapa ni los controles) ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
 - [ ] Enseñar a los testers la vista desde arriba, el historial y las fichas que encogen, y confirmar que resuelven lo que pidieron ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
 - [ ] Decidir si las franjas del ADHD que quedan en cola se cortan al terminar la partida (hoy siguen saliendo y asoman detrás del resumen final) ➕ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
+- [ ] Publicar en Reddit siguiendo el kit (una comunidad al día, con el GIF de `showcase/reddit/`), mirando antes las reglas de cada sub y si r/juegosdemesa existe ➕ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [ ] Ver el juego en italiano en pantalla y los seis idiomas en móvil (que los textos largos de alemán y francés quepan en botones y paneles) ➕ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [ ] Probar online con dos personas en idiomas distintos: historial, errores y avisos de la sala en el idioma de cada uno ➕ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [ ] Probar en móvil y online el ADHD transparente en tu turno, la carrera de ovejas y la mina (tocar las piedras con el dedo) ➕ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [ ] Revisar en otros idiomas los avisos de colocación con Casas secretas («En secreto:», «Reubica:»), que se pegan delante de otra frase ➕ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [ ] Si se renombra el repositorio, cambiar la URL del final del tráiler y del showcase y regrabar los tres videos y los GIFs ➕ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
 
 ## Hechas
 - [x] Licencia MIT, `NOTICE.md` y petición de crédito ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]
@@ -41,3 +45,8 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [x] Comprobar al reiniciar Claude Code que el hook de inicio carga el Active Context y que aparecen /abrir-sesion y /cerrar-sesion ✅ 2026-10-07 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
 - [x] Jugar una partida con los testers y apuntar su feedback como tareas ✅ 2026-10-06 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
 - [x] Feedback de testers: vista desde arriba, historial de tiradas, fichas que encogen, iconos más grandes, cohete x10 y oro del ADHD ✅ 2026-10-06 [[S06 - 2026-10-06 - Feedback de testers, vista desde arriba y oro del ADHD]]
+- [x] Decidir si se muestra en el juego el aviso de fans y los créditos: crédito con enlace al repo al pie del menú y en la ayuda ✅ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [x] Ver en el navegador el ADHD y el Auto en las máquinas superadas (ahora con 6 máquinas) ✅ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [x] Nombre oficial Katanittes, bots sin Kchudites, ADHD transparente con carrera de ovejas y la mina, y tráilers regrabados ✅ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [x] El juego en seis idiomas con selector en el menú principal ✅ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [x] Kit de Reddit con textos por comunidad y GIFs del tráiler ✅ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
