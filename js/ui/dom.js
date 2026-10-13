@@ -1,4 +1,5 @@
 import { TILE_INFO } from '../engine/constants.js';
+import { t } from '../i18n.js';
 
 export function h(tag, props, ...children) {
   const el = document.createElement(tag);
@@ -69,7 +70,7 @@ export function rich(msg, players) {
     if (m[1] != null) {
       const p = players[+m[1]];
       frag.append(h('b', { class: 'pname', style: { '--pc': p ? p.color : '#fff' } }, p ? p.name : '?'));
-    } else frag.append(h('span', { class: 'ico', title: TILE_INFO[m[2]].name }, TILE_INFO[m[2]].icon));
+    } else frag.append(h('span', { class: 'ico', title: t(TILE_INFO[m[2]].name) }, TILE_INFO[m[2]].icon));
     last = re.lastIndex;
   }
   if (last < msg.length) frag.append(msg.slice(last));

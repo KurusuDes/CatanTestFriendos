@@ -17,6 +17,6 @@ for (let i=0;i<150;i++){
     for (const f of s.fx) bump('fx:'+f.kind + (f.kind==='devPlayed'?':'+f.card:''));
     if (a.type==='respondTrade') bump('trade:'+(a.accept?'accept':'reject'));
   }
-  for (const l of s.log) { if (l.msg.includes('Choque')) bump('blindConflict'); if (l.msg.includes('Evento')) bump('events'); if (l.msg.includes('Tierra viva')) bump('chaos'); if (l.msg.includes('banco no tiene')) bump('shortage'); if(l.msg.includes('duerme')) bump('grace'); }
+  for (const l of s.log) { const m = l.msg.t || l.msg; if (m.includes('Choque')) bump('blindConflict'); if (m.includes('Evento')) bump('events'); if (m.includes('Tierra viva')) bump('chaos'); if (m.includes('banco no tiene')) bump('shortage'); if(l.msg.includes('duerme')) bump('grace'); }
 }
 console.log(counts);

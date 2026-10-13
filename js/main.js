@@ -7,6 +7,7 @@ import { showHelp, creditLine } from './ui/help.js';
 import { Net, HOST_SESSION, GUEST_SESSION } from './net.js';
 import { openFlagEditor, flagImg, myKingdom, saveMyKingdom, patternFlag } from './ui/flag.js';
 import { autoPixelize } from './ui/pixel.js';
+import { t, LANGS, lang, setLang } from './i18n.js';
 
 // live 3D island slowly orbiting behind the title
 async function menuDiorama(el) {
@@ -38,19 +39,19 @@ async function menuDiorama(el) {
 
 async function reopenRoom(btn) {
   btn.disabled = true;
-  btn.textContent = '⏳ Reabriendo la sala (puede tardar unos segundos)...';
+  btn.textContent = t('⏳ Reabriendo la sala (puede tardar unos segundos)...');
   try {
     await Net.reopen();
-    toast('🔁 Sala reabierta: tus amigos se reconectan solos', 'good', 4000);
+    toast(t('🔁 Sala reabierta: tus amigos se reconectan solos'), 'good', 4000);
   } catch (e) {
     App.net = null;
-    toast('No se pudo reabrir: ' + e.message, 'error', 5000);
+    toast(t('No se pudo reabrir: {msg}', { msg: e.message }), 'error', 5000);
     App.go('menu');
   }
 }
 
 async function backToRoom(sess) {
-  toast('📡 Volviendo a la sala ' + sess.code + '...');
+  toast(t('📡 Volviendo a la sala {code}...', { code: sess.code }));
   try {
     App.net = new Net();
     await App.net.join(sess.code, sess.name, myKingdom() || {});
@@ -63,22 +64,30 @@ async function backToRoom(sess) {
 const myOrDefaultKingdom = () => myKingdom() || { name: storage('katanittes.name') || '', color: '#e53935', flag: patternFlag('#e53935', 1) };
 
 // "Tu reino" on the main menu: name + banner are set before any game (local, host or join)
+// the language picker, top right of the menu: the choice is saved and the page reloads in it
+function langPicker() {
+  const sel = h('select', { id: 'lang', 'aria-label': t('Idioma'), onchange: () => { setLang(sel.value); location.reload(); } },
+    LANGS.map(l => h('option', { value: l.id }, l.name)));
+  sel.value = lang;
+  return h('label', { class: 'lang-pick', title: t('Idioma') }, '🌐', sel);
+}
+
 function kingdomPanel() {
   const box = h('div', { class: 'menu-kingdom' });
   const draw = () => {
     const k = myOrDefaultKingdom();
-    const nameIn = h('input', { type: 'text', class: 'hub-name', placeholder: 'Tu nombre', value: k.name || '', maxlength: 16, 'aria-label': 'Tu nombre' });
+    const nameIn = h('input', { type: 'text', class: 'hub-name', placeholder: t('Tu nombre'), value: k.name || '', maxlength: 16, 'aria-label': t('Tu nombre') });
     nameIn.addEventListener('input', () => {
       const n = nameIn.value.trim();
       storage('katanittes.name', n);
       saveMyKingdom({ ...myOrDefaultKingdom(), name: n });
     });
     box.replaceChildren(
-      h('button', { class: 'hub-flag small mk-flag', title: 'Pintar bandera y color del castillo', onclick: paint }, h('div', { class: 'pole' }), flagImg(k.flag, 36, 'flag-img wave')),
+      h('button', { class: 'hub-flag small mk-flag', title: t('Pintar bandera y color del castillo'), onclick: paint }, h('div', { class: 'pole' }), flagImg(k.flag, 36, 'flag-img wave')),
       h('div', { class: 'mk-info' },
-        h('label', { class: 'section-label' }, h('span', { class: 'swatch', style: { background: k.color } }), 'Tu reino'),
+        h('label', { class: 'section-label' }, h('span', { class: 'swatch', style: { background: k.color } }), t('Tu reino')),
         nameIn),
-      h('button', { class: 'btn sm', title: 'Pintar bandera y color del castillo', onclick: paint }, '🎨'));
+      h('button', { class: 'btn sm', title: t('Pintar bandera y color del castillo'), onclick: paint }, '🎨'));
     function paint() {
       openFlagEditor({ flag: k.flag, color: k.color, name: nameIn.value.trim(), onSave: ({ flag, color }) => { saveMyKingdom({ ...myOrDefaultKingdom(), name: nameIn.value.trim(), flag, color }); draw(); } });
     }
@@ -98,26 +107,26 @@ function menuScreen(root) {
     class: 'fhex', style: { left: ((i * 37) % 100) + '%', top: ((i * 53) % 100) + '%', animationDelay: -(i * 0.7) + 's', fontSize: 26 + ((i * 7) % 30) + 'px' },
   }, icons[i % icons.length])));
   const dio = h('div', { class: 'menu-bg3d' });
-  root.append(h('div', { class: 'menu screen' }, bg, dio,
+  root.append(h('div', { class: 'menu screen' }, bg, dio, langPicker(),
     h('div', { class: 'logo' },
       h('div', { class: 't1 jit' }, 'KATAN', h('span', { class: 't1b' }, 'ITTES')),
-      h('div', { class: 'sub' }, 'Colonos, caos y modos que no existen en la caja.')),
+      h('div', { class: 'sub' }, t('Colonos, caos y modos que no existen en la caja.'))),
     kingdomPanel(),
     h('div', { class: 'menu-buttons' },
-      save ? h('button', { class: 'btn green', onclick: () => App.resume() }, `▶️ Continuar partida (ronda ${save.round || 0})`) : null,
+      save ? h('button', { class: 'btn green', onclick: () => App.resume() }, t('▶️ Continuar partida (ronda {n})', { n: save.round || 0 })) : null,
       hostSess ? h('div', { style: { display: 'flex', gap: '6px' } },
-        h('button', { class: 'btn green', style: { flex: 1 }, onclick: e => reopenRoom(e.currentTarget) }, `🔁 Reabrir sala ${hostSess.code} (ronda ${hostSess.state.round})`),
-        h('button', { class: 'btn ghost', title: 'Cerrar esa sala para siempre', onclick: () => { storage(HOST_SESSION, null); App.go('menu'); } }, '✕')) : null,
-      guestSess ? h('button', { class: 'btn green', onclick: () => backToRoom(guestSess) }, `📡 Volver a la sala ${guestSess.code}`) : null,
-      h('button', { class: 'btn primary', onclick: () => App.go('lobby') }, '🎮 Jugar local (hotseat + bots)'),
-      h('button', { class: 'btn pink', onclick: () => App.go('online') }, '🌐 Jugar online con amigos'),
-      h('button', { class: 'btn', onclick: () => App.go('editor') }, '✏️ Editor de mapas'),
-      h('button', { class: 'btn', onclick: () => quickBots() }, '👀 Ver una partida de bots'),
-      h('button', { class: 'btn', onclick: () => showHelp() }, '📖 Cómo se juega'),
+        h('button', { class: 'btn green', style: { flex: 1 }, onclick: e => reopenRoom(e.currentTarget) }, t('🔁 Reabrir sala {code} (ronda {n})', { code: hostSess.code, n: hostSess.state.round })),
+        h('button', { class: 'btn ghost', title: t('Cerrar esa sala para siempre'), onclick: () => { storage(HOST_SESSION, null); App.go('menu'); } }, '✕')) : null,
+      guestSess ? h('button', { class: 'btn green', onclick: () => backToRoom(guestSess) }, t('📡 Volver a la sala {code}', { code: guestSess.code })) : null,
+      h('button', { class: 'btn primary', onclick: () => App.go('lobby') }, t('🎮 Jugar local (hotseat + bots)')),
+      h('button', { class: 'btn pink', onclick: () => App.go('online') }, t('🌐 Jugar online con amigos')),
+      h('button', { class: 'btn', onclick: () => App.go('editor') }, t('✏️ Editor de mapas')),
+      h('button', { class: 'btn', onclick: () => quickBots() }, t('👀 Ver una partida de bots')),
+      h('button', { class: 'btn', onclick: () => showHelp() }, t('📖 Cómo se juega')),
       h('div', { style: { display: 'flex', gap: '6px' } },
-        h('a', { class: 'btn', href: 'showcase/trailer.html', style: { textDecoration: 'none', flex: 1 } }, '🎞️ Tráiler'),
-        h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none', flex: 1 } }, '🎬 Showcase'))),
-    h('div', { class: 'menu-foot' }, 'Hecho para jugar con amigos · funciona en PC y móvil · sin instalar nada', creditLine())));
+        h('a', { class: 'btn', href: 'showcase/trailer.html', style: { textDecoration: 'none', flex: 1 } }, t('🎞️ Tráiler')),
+        h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none', flex: 1 } }, t('🎬 Showcase')))),
+    h('div', { class: 'menu-foot' }, t('Hecho para jugar con amigos · funciona en PC y móvil · sin instalar nada'), creditLine())));
   menuDiorama(dio);
 }
 
@@ -150,15 +159,15 @@ function onlineScreen(root) {
   let busy = false;
 
   const header = () => h('div', { class: 'hub-head' },
-    h('button', { class: 'btn', onclick: () => { if (App.net) { App.net.close(); App.net = null; } App.go('menu'); } }, '← Menú'),
-    h('div', null, h('h2', { class: 'jit' }, '🌐 Jugar con amigos'), h('div', { class: 'hub-sub' }, 'Hasta 8 reinos · sin cuentas · sin instalar nada')));
+    h('button', { class: 'btn', onclick: () => { if (App.net) { App.net.close(); App.net = null; } App.go('menu'); } }, t('← Menú')),
+    h('div', null, h('h2', { class: 'jit' }, t('🌐 Jugar con amigos')), h('div', { class: 'hub-sub' }, t('Hasta 8 reinos · sin cuentas · sin instalar nada'))));
 
   function draw() {
     App.onLobby = draw;
     const net = App.net;
     if (net && net.role === 'client' && net.lobby) return drawWaiting(net);
     const k = kingdom();
-    const nameIn = h('input', { type: 'text', class: 'hub-name', placeholder: 'Tu nombre', value: k.name || storage('katanittes.name') || '', maxlength: 16 });
+    const nameIn = h('input', { type: 'text', class: 'hub-name', placeholder: t('Tu nombre'), value: k.name || storage('katanittes.name') || '', maxlength: 16 });
     const saveName = () => {
       const n = nameIn.value.trim();
       storage('katanittes.name', n);
@@ -169,7 +178,7 @@ function onlineScreen(root) {
 
     // code as 5 PIN-like boxes
     const boxes = Array.from({ length: 5 }, (_, i) => {
-      const b = h('input', { type: 'text', maxlength: 1, class: 'pin', inputmode: 'text', autocomplete: 'off', 'aria-label': `Letra ${i + 1} del código` });
+      const b = h('input', { type: 'text', maxlength: 1, class: 'pin', inputmode: 'text', autocomplete: 'off', 'aria-label': t('Letra {n} del código', { n: i + 1 }) });
       b.addEventListener('input', () => {
         b.value = b.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
         if (b.value && i < 4) boxes[i + 1].focus();
@@ -194,9 +203,9 @@ function onlineScreen(root) {
 
     async function host() {
       if (busy) return;
-      const n = saveName() || 'Anfitrión';
+      const n = saveName() || t('Anfitrión');
       busy = true;
-      status.textContent = '⏳ Abriendo tu sala...';
+      status.textContent = t('⏳ Abriendo tu sala...');
       try {
         App.net = new Net();
         await App.net.host();
@@ -219,19 +228,19 @@ function onlineScreen(root) {
       const code = (codeArg || boxes.map(b => b.value).join('')).toUpperCase();
       if (!n) {
         nameIn.focus();
-        return toast('Primero pon tu nombre', 'error');
+        return toast(t('Primero pon tu nombre'), 'error');
       }
-      if (code.length < 5) return toast('El código tiene 5 letras', 'error');
+      if (code.length < 5) return toast(t('El código tiene 5 letras'), 'error');
       busy = true;
-      status.textContent = '⏳ Buscando la sala ' + code + '...';
+      status.textContent = t('⏳ Buscando la sala {code}...', { code });
       try {
         App.net = new Net();
         await App.net.join(code, n, kingdom(), st => {
           if (st === 'waiting') {
             rememberRoom(code);
-            status.textContent = '✅ ¡Dentro!';
+            status.textContent = t('✅ ¡Dentro!');
           }
-          if (st === 'closed' && App.screen !== 'game') status.textContent = '🔌 Conexión cerrada.';
+          if (st === 'closed' && App.screen !== 'game') status.textContent = t('🔌 Conexión cerrada.');
         });
       } catch (e) {
         App.net = null;
@@ -244,30 +253,30 @@ function onlineScreen(root) {
     inner.replaceChildren(header(),
       h('div', { class: 'hub-grid' },
         h('div', { class: 'card hub-card kingdom-card' },
-          h('h3', null, '🏰 Tu reino'),
+          h('h3', null, t('🏰 Tu reino')),
           h('div', { class: 'kingdom-hero' }, flagPole,
             h('div', { class: 'kingdom-info' },
-              h('label', { class: 'section-label' }, 'Nombre'), nameIn,
-              h('div', { class: 'castle-line' }, h('span', { class: 'swatch', style: { background: k.color } }), h('span', null, 'Color de tu castillo')))),
-          h('button', { class: 'btn', onclick: () => openFlagEditor({ flag: k.flag, color: k.color, name: nameIn.value.trim(), onSave: ({ flag, color }) => { saveMyKingdom({ ...kingdom(), name: nameIn.value.trim(), flag, color }); draw(); } }) }, '🎨 Pintar bandera y castillo')),
+              h('label', { class: 'section-label' }, t('Nombre')), nameIn,
+              h('div', { class: 'castle-line' }, h('span', { class: 'swatch', style: { background: k.color } }), h('span', null, t('Color de tu castillo'))))),
+          h('button', { class: 'btn', onclick: () => openFlagEditor({ flag: k.flag, color: k.color, name: nameIn.value.trim(), onSave: ({ flag, color }) => { saveMyKingdom({ ...kingdom(), name: nameIn.value.trim(), flag, color }); draw(); } }) }, t('🎨 Pintar bandera y castillo'))),
         h('div', { class: 'card hub-card create-card' },
-          h('h3', null, '👑 Crear sala'),
-          h('p', null, 'Tú eliges el mapa y los modos. Tu navegador hace de servidor: déjalo abierto mientras juegan.'),
-          h('div', { class: 'section-label' }, '¿Cuántos jugadores?'),
+          h('h3', null, t('👑 Crear sala')),
+          h('p', null, t('Tú eliges el mapa y los modos. Tu navegador hace de servidor: déjalo abierto mientras juegan.')),
+          h('div', { class: 'section-label' }, t('¿Cuántos jugadores?')),
           h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (n === capacity ? ' on' : ''), onclick: () => { capacity = n; draw(); } }, n))),
           h('div', { class: 'cap-people' }, Array.from({ length: capacity }, (_, i) => h('span', { class: i === 0 ? 'me' : '' }, i === 0 ? '👑' : '🧑'))),
-          h('button', { class: 'btn primary big', onclick: host }, '✨ Crear sala')),
+          h('button', { class: 'btn primary big', onclick: host }, t('✨ Crear sala'))),
         h('div', { class: 'card hub-card join-card' },
-          h('h3', null, '🚪 Unirse'),
-          h('p', null, 'Pide el código de 5 letras al anfitrión (o entra con su enlace).'),
+          h('h3', null, t('🚪 Unirse')),
+          h('p', null, t('Pide el código de 5 letras al anfitrión (o entra con su enlace).')),
           h('div', { class: 'pins' }, boxes),
-          h('button', { class: 'btn pink big', onclick: () => join() }, '🚀 Entrar'),
-          recent.length ? h('div', null, h('div', { class: 'section-label' }, 'Salas recientes'), h('div', { class: 'chips' }, recent.map(r => h('button', { class: 'chip', onclick: () => join(r.code) }, '↩ ' + r.code)))) : null)),
+          h('button', { class: 'btn pink big', onclick: () => join() }, t('🚀 Entrar')),
+          recent.length ? h('div', null, h('div', { class: 'section-label' }, t('Salas recientes')), h('div', { class: 'chips' }, recent.map(r => h('button', { class: 'chip', onclick: () => join(r.code) }, '↩ ' + r.code)))) : null)),
       status,
       h('div', { class: 'hub-tips' },
-        h('span', null, '📡 Conexión directa entre navegadores'),
-        h('span', null, '🔁 Si se te cae la señal, vuelves a tu asiento'),
-        h('span', null, '🗳️ Si alguien se va, la mesa vota')));
+        h('span', null, t('📡 Conexión directa entre navegadores')),
+        h('span', null, t('🔁 Si se te cae la señal, vuelves a tu asiento')),
+        h('span', null, t('🗳️ Si alguien se va, la mesa vota'))));
     if (pre && !boxes[4].value) boxes[pre.length] && boxes[pre.length].focus();
   }
 
@@ -277,15 +286,15 @@ function onlineScreen(root) {
     const me = storage('katanittes.name');
     inner.replaceChildren(header(),
       h('div', { class: 'card hub-card waiting-card' },
-        h('h3', null, '🏰 Sala ', h('span', { class: 'room-code inline' }, L.code || net.code), h('span', { class: 'room-state ' + (L.open ? 'on' : 'off') }, L.open ? 'abierta' : 'cerrada')),
-        h('p', { class: 'waiting-msg jit' }, '⏳ Esperando a que el anfitrión empiece la partida...'),
-        h('div', { class: 'section-label' }, `Reinos en la sala ${seats.length} / ${L.capacity}`),
+        h('h3', null, t('🏰 Sala '), h('span', { class: 'room-code inline' }, L.code || net.code), h('span', { class: 'room-state ' + (L.open ? 'on' : 'off') }, L.open ? t('abierta') : t('cerrada'))),
+        h('p', { class: 'waiting-msg jit' }, t('⏳ Esperando a que el anfitrión empiece la partida...')),
+        h('div', { class: 'section-label' }, t('Reinos en la sala {n} / {max}', { n: seats.length, max: L.capacity })),
         h('div', { class: 'seat-grid' },
           seats.map(p => h('div', { class: 'seat' + (p.host ? ' host' : '') + (p.name === me ? ' me' : '') },
             h('div', { class: 'hub-flag small' }, h('div', { class: 'pole' }), flagImg(p.flag, 40, 'flag-img wave')),
-            h('b', null, p.name), h('small', null, p.host ? '👑 anfitrión' : p.name === me ? 'tú' : 'listo'))),
-          Array.from({ length: Math.max(0, L.capacity - seats.length) }, () => h('div', { class: 'seat empty' }, h('div', { class: 'seat-q' }, '?'), h('small', null, 'libre')))),
-        h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => { net.close(); App.net = null; storage(GUEST_SESSION, null); App.go('online'); } }, '🚪 Salir de la sala'))));
+            h('b', null, p.name), h('small', null, p.host ? t('👑 anfitrión') : p.name === me ? t('tú') : t('listo')))),
+          Array.from({ length: Math.max(0, L.capacity - seats.length) }, () => h('div', { class: 'seat empty' }, h('div', { class: 'seat-q' }, '?'), h('small', null, t('libre'))))),
+        h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: () => { net.close(); App.net = null; storage(GUEST_SESSION, null); App.go('online'); } }, t('🚪 Salir de la sala')))));
   }
 
   App.onLeave = () => {

@@ -4,6 +4,7 @@ import { createGame, applyAction, pendingActors } from './engine/game.js';
 import { botAct } from './engine/bot.js';
 import { toast, storage } from './ui/dom.js';
 import { sfx } from './ui/sfx.js';
+import { tx } from './i18n.js';
 
 export const SAVE_KEY = 'katanittes.save.v1';
 
@@ -62,7 +63,7 @@ export const App = {
     }
     const r = applyAction(this.state, action);
     if (!r.ok) {
-      toast(r.error, 'error');
+      toast(tx(r.error), 'error');
       return false;
     }
     this.changed();

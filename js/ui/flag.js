@@ -3,6 +3,7 @@
 // the colour of their castle. A flag is stored as a small PNG data URL (120x80); the
 // old 12x12 pixel format (144 hex digits) is still understood.
 import { h, clear, storage } from './dom.js';
+import { t, tk } from '../i18n.js';
 
 export const FLAG_PAL = ['#1a1c2c', '#5d275d', '#b13e53', '#ef7d57', '#ffcd75', '#a7f070', '#38b764', '#257179',
   '#29366f', '#3b5dc9', '#41a6f6', '#73eff7', '#f4f4f4', '#94b0c2', '#566c86', '#333c57'];
@@ -104,7 +105,7 @@ export function flagURL(flag) {
   return urlCache.get(k);
 }
 export function flagImg(flag, size = 24, cls = 'flag-img') {
-  return h('img', { src: flagURL(flag), width: Math.round(size * 1.5), height: size, class: cls + (isGrid(flag) ? ' pixel' : ''), alt: 'bandera', draggable: 'false' });
+  return h('img', { src: flagURL(flag), width: Math.round(size * 1.5), height: size, class: cls + (isGrid(flag) ? ' pixel' : ''), alt: t('bandera'), draggable: 'false' });
 }
 
 export function myKingdom() {
@@ -115,7 +116,7 @@ export function saveMyKingdom(k) {
 }
 
 // ---------------- the paint editor ----------------
-export function openFlagEditor({ flag, color, name, title = 'Tu reino', onSave }) {
+export function openFlagEditor({ flag, color, name, title = tk('Tu reino'), onSave }) {
   let col = color || '#e53935';
   let ink = '#000000';
   let size = SIZES[2];
@@ -281,49 +282,49 @@ export function openFlagEditor({ flag, color, name, title = 'Tu reino', onSave }
   const toolsBox = h('div', { class: 'paint-tools' });
   const palBox = h('div', { class: 'paint-pal' });
   const sizeBox = h('div', { class: 'paint-sizes' });
-  const custom = h('input', { type: 'color', value: ink, class: 'paint-custom', title: 'Otro color' });
+  const custom = h('input', { type: 'color', value: ink, class: 'paint-custom', title: t('Otro color') });
   custom.addEventListener('input', () => {
     ink = custom.value;
     drawUI();
   });
-  const TOOLS = [['pen', '✏️', 'Lápiz'], ['eraser', '🧽', 'Borrador'], ['fill', '🪣', 'Balde'], ['line', '📏', 'Línea'], ['rect', '⬛', 'Rectángulo'], ['ellipse', '⚫', 'Círculo']];
+  const TOOLS = [['pen', '✏️', t('Lápiz')], ['eraser', '🧽', t('Borrador')], ['fill', '🪣', t('Balde')], ['line', '📏', t('Línea')], ['rect', '⬛', t('Rectángulo')], ['ellipse', '⚫', t('Círculo')]];
   function drawUI() {
     clear(toolsBox).append(
       ...TOOLS.map(([k, ic, label]) => h('button', { class: 'ptool' + (tool === k ? ' on' : ''), title: label, onclick: () => { tool = k; drawUI(); } }, ic)),
       h('div', { class: 'psep' }),
-      h('button', { class: 'ptool', title: 'Deshacer', disabled: !undo.length, onclick: () => { redo.push(g.getImageData(0, 0, EDIT_W, EDIT_H)); g.putImageData(undo.pop(), 0, 0); drawPreview(); drawUI(); } }, '↶'),
-      h('button', { class: 'ptool', title: 'Rehacer', disabled: !redo.length, onclick: () => { undo.push(g.getImageData(0, 0, EDIT_W, EDIT_H)); g.putImageData(redo.pop(), 0, 0); drawPreview(); drawUI(); } }, '↷'));
+      h('button', { class: 'ptool', title: t('Deshacer'), disabled: !undo.length, onclick: () => { redo.push(g.getImageData(0, 0, EDIT_W, EDIT_H)); g.putImageData(undo.pop(), 0, 0); drawPreview(); drawUI(); } }, '↶'),
+      h('button', { class: 'ptool', title: t('Rehacer'), disabled: !redo.length, onclick: () => { undo.push(g.getImageData(0, 0, EDIT_W, EDIT_H)); g.putImageData(redo.pop(), 0, 0); drawPreview(); drawUI(); } }, '↷'));
     clear(palBox).append(
-      h('div', { class: 'pcur', style: { background: ink }, title: 'Color actual' }),
+      h('div', { class: 'pcur', style: { background: ink }, title: t('Color actual') }),
       h('div', { class: 'pgrid' }, PAINT.map(c => h('button', { class: 'pcol' + (c === ink ? ' on' : ''), style: { background: c }, onclick: () => { ink = c; if (tool === 'eraser') tool = 'pen'; drawUI(); } }))),
       custom);
     clear(sizeBox).append(
       ...SIZES.map(s => h('button', { class: 'psize' + (s === size ? ' on' : ''), title: s + 'px', onclick: () => { size = s; drawUI(); } }, h('i', { style: { width: Math.max(4, s * 0.8) + 'px', height: Math.max(4, s * 0.8) + 'px', background: tool === 'eraser' ? '#fff' : ink } }))),
       h('div', { class: 'psep' }),
-      h('button', { class: 'btn sm', onclick: () => { snapshot(); g.fillStyle = '#ffffff'; g.fillRect(0, 0, EDIT_W, EDIT_H); drawPreview(); drawUI(); } }, '🗑️ Limpiar'),
-      h('button', { class: 'btn sm', onclick: () => { snapshot(); seed++; drawGrid(g, patternFlag(col, seed, nearestPal(ink) === nearestPal(col) ? 12 : nearestPal(ink)), EDIT_W, EDIT_H); drawPreview(); drawUI(); } }, '🎲 Plantilla'));
+      h('button', { class: 'btn sm', onclick: () => { snapshot(); g.fillStyle = '#ffffff'; g.fillRect(0, 0, EDIT_W, EDIT_H); drawPreview(); drawUI(); } }, t('🗑️ Limpiar')),
+      h('button', { class: 'btn sm', onclick: () => { snapshot(); seed++; drawGrid(g, patternFlag(col, seed, nearestPal(ink) === nearestPal(col) ? 12 : nearestPal(ink)), EDIT_W, EDIT_H); drawPreview(); drawUI(); } }, t('🎲 Plantilla')));
     canvas.style.cursor = tool === 'fill' ? 'cell' : 'crosshair';
   }
 
   const close = () => ov.remove();
   const presets = ['#e53935', '#1e88e5', '#ff9800', '#f5f5f5', '#43a047', '#8e24aa', '#00acc1', '#795548', '#fdd835', '#ec407a', '#26a69a', '#5d4037'];
-  const castleIn = h('input', { type: 'color', value: col, class: 'castle-color', title: 'Otro color' });
+  const castleIn = h('input', { type: 'color', value: col, class: 'castle-color', title: t('Otro color') });
   castleIn.addEventListener('input', () => {
     col = castleIn.value;
     drawPreview();
   });
   const ov = h('div', { class: 'overlay', onclick: e => e.target === ov && close() },
     h('div', { class: 'modal flag-modal' },
-      h('h2', null, `🏰 ${title}${name ? ': ' + name : ''}`),
+      h('h2', null, `🏰 ${t(title)}${name ? ': ' + name : ''}`),
       h('div', { class: 'paint' }, toolsBox, h('div', { class: 'paint-stage' }, canvas, ghost), palBox),
       sizeBox,
       h('div', { class: 'flag-bottom' },
-        h('div', null, h('div', { class: 'section-label' }, 'Color de tu castillo'),
+        h('div', null, h('div', { class: 'section-label' }, t('Color de tu castillo')),
           h('div', { class: 'chips' }, presets.map(p => h('button', { class: 'sw big', style: { background: p }, onclick: () => { col = p; castleIn.value = p; drawPreview(); } })), castleIn)),
-        h('div', null, h('div', { class: 'section-label' }, 'Así se verá'), preview)),
+        h('div', null, h('div', { class: 'section-label' }, t('Así se verá')), preview)),
       h('div', { class: 'row' },
-        h('button', { class: 'btn ghost', onclick: close }, 'Cancelar'),
-        h('button', { class: 'btn primary', onclick: () => { const res = { flag: exportFlag(), color: col }; close(); onSave && onSave(res); } }, '✅ Guardar reino'))));
+        h('button', { class: 'btn ghost', onclick: close }, t('Cancelar')),
+        h('button', { class: 'btn primary', onclick: () => { const res = { flag: exportFlag(), color: col }; close(); onSave && onSave(res); } }, t('✅ Guardar reino')))));
   document.body.append(ov);
   drawUI();
   drawPreview();

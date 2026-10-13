@@ -2,7 +2,7 @@
 
 *[English](README.md) · Español*
 
-Un juego de colonos inspirado en Catan, en el navegador, con mapas personalizables y modos que no existen en la caja.
+Un juego de colonos inspirado en Catan, en el navegador, con mapas personalizables y modos que no existen en la caja. Disponible en español, inglés, portugués, francés, alemán e italiano: toma el idioma del navegador y se cambia desde el menú principal.
 
 **Jugar:** https://kurusudes.github.io/CatanTestFriendos/ · **Tráiler:** https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html ([MP4](showcase/katanittes-trailer.mp4)) · **Trailer (English):** https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en ([MP4](showcase/katanittes-trailer-en.mp4)) · **Showcase:** https://kurusudes.github.io/CatanTestFriendos/showcase/ ([MP4](showcase/katanittes.mp4))
 

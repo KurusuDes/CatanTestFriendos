@@ -96,6 +96,11 @@ input[type=range] { accent-color: var(--sand); }
 .menu-kingdom .hub-name { width: 100%; font-size: 18px !important; padding: 7px 10px !important; }
 .menu-kingdom .btn.sm { font-size: 20px; padding: 8px 10px; }
 .menu-foot { color: var(--steel); text-shadow: 2px 2px 0 var(--ink); }
+/* language picker, top right of the menu */
+.lang-pick { position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 12px; z-index: 3; display: flex; align-items: center; gap: 6px; padding: 5px 6px 5px 8px; background: var(--panel); box-shadow: 0 0 0 3px var(--ink), 0 0 0 5px var(--panel2), 4px 4px 0 5px rgba(0,0,0,.4); cursor: pointer; }
+.lang-pick img.px { width: 20px; height: 20px; }
+.lang-pick select { font-family: var(--display); font-size: 14px; color: var(--white); background: var(--ink); border: 0; padding: 4px 6px; cursor: pointer; }
+.lang-pick select:focus-visible { outline: 3px solid var(--sand); }
 .menu-foot .credits { margin-top: 6px; font-size: 12px; }
 .menu-foot a, .help-body a { color: var(--sand); }
 

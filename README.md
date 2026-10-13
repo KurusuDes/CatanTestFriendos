@@ -15,7 +15,7 @@ Free, no ads, no accounts, nothing to install. Works on desktop and mobile.
 
 [![Katanittes](showcase/poster.jpg)](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en)
 
-> The in-game interface is in Spanish. The trailer is available in English and Spanish.
+> The game is available in English, Spanish, Portuguese, French, German and Italian: it picks your browser's language, and you can change it from the main menu. The trailer is in English and Spanish.
 
 ---
 
@@ -117,6 +117,7 @@ A small window of gambling minigames for while you wait for your turn, with **fa
 | 3D board | `js/ui/board3d.js`, `dice3d.js`, `flag.js` | Terrain, tile variants, pieces, fog, 3D dice, flags |
 | ADHD arcade | `js/ui/adhd.js` | The six minigames, balance, unlocks, fireworks |
 | Other UI | `js/ui/lobby.js`, `editor.js`, `pixel.js`, `sfx.js`, `help.js` | Lobby and rooms, map editor, pixel sprites, sounds, help |
+| Languages | `js/i18n.js`, `js/i18n/*.js`, `tools/i18n.mjs` | Spanish is the source; one dictionary per language. `node tools/i18n.mjs check` lists missing texts |
 | Styles | `css/style.css`, `css/pixel.css` | Pixel theme (Sweetie-16 palette) |
 | Assets | `assets/`, `tools/blender/` | Textures, `kit.glb` models and icons, and the Blender scripts that make them |
 | Videos | `showcase/` | Showcase and trailer pages (`trailer.html?lang=en`), shared animation helpers in `motion.js` |
