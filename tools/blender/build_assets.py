@@ -1,4 +1,4 @@
-# Textured, smooth-shaded asset kit for Catan x Kchudites ("realistic tabletop miniature").
+# Textured, smooth-shaded asset kit for Katanittes ("realistic tabletop miniature").
 # Run headless:
 #   blender --background --python tools/blender/build_assets.py -- <out.glb> <textures dir>
 # - organic props: Subdivision Surface + smooth shading

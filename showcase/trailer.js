@@ -1,9 +1,9 @@
-// "Katan x Amiguites" satirical trailer. Like the showcase, every frame is a pure function of the
+// "Katanittes" satirical trailer. Like the showcase, every frame is a pure function of the
 // clock T (the 3D view included), so it plays live or is recorded frame by frame (?rec).
 import { h, s as S } from '../js/ui/dom.js';
 import { createGame, victoryPoints, viewFor } from '../js/engine/game.js';
 import { pixelize, pxIcon } from '../js/ui/pixel.js';
-import { clamp, P, eOut, eIn, eInOut, eBack, lerp, step, tf, botConfig, step1, clone, makeTitle, clearLabels } from './motion.js';
+import { clamp, P, eOut, eIn, eInOut, eBack, lerp, step, tf, botConfig, step1, clone, makeTitle, clearLabels, logoWord } from './motion.js';
 
 const stage = document.getElementById('stage');
 const REC = new URLSearchParams(location.search).has('rec');
@@ -23,10 +23,12 @@ const STR = {
     you: 'Tú', cards: '6 cartas', bank: '🏦 Banco', smiles: 'sonríe', deal: '¡TRATO HECHO!',
     hook: '¿ABURRIDO ESPERANDO TU TURNO?', try: '¡PRUEBA EL ADHD!', trySub: 'Minijuegos de apuestas* mientras los demás piensan su jugada', fake: '*con dinero 100% falso',
     slots: 'TRAGAMONEDAS', coin: 'MONEDA', rocket: 'COHETE', jackpot: '¡JACKPOT!', coinAsk: '¿CARA O CRUZ?', coinWin: '¡CARA! x2', heads: 'C', tails: 'X',
-    quotes: [['«Perdí 1.600 monedas que no existen. Lo volvería a hacer.»', '— Kchudo, bot normal'], ['«Ya no sé en qué turno estamos, pero voy ganando.»', '— Tu primo, 3 horas en el Plinko']],
+    quotes: [['«Perdí 1.600 monedas que no existen. Lo volvería a hacer.»', '— Sir Ladrillo, bot normal'], ['«Ya no sé en qué turno estamos, pero voy ganando.»', '— Tu primo, 3 horas en el Plinko']],
     prize: 'Llega a $1600 y gana... ¡fuegos artificiales! 🎆',
+    fresh: '¡NUEVAS MÁQUINAS!', sheep: 'CARRERA DE OVEJAS', mine: 'LA MINA', sheepWin: '¡x10!', robber: '¡EL LADRÓN!',
+    freshSub: 'Ahora con más ovejas y más ladrones. Como el juego de verdad.',
     legal: 'Dinero 100% falso. No se puede retirar nada. No hay premios. No hay nada. Los fuegos artificiales tampoco son reales. ' +
-      'No afecta a la partida. Se minimiza solo cuando te toca. Ningún bot fue dañado en la producción de este Plinko. ' +
+      'No afecta a la partida. Se vuelve transparente cuando te toca. Ningún bot fue dañado en la producción de este Plinko. ' +
       'Las probabilidades del cohete no las entiende nadie, ni el cohete. Consulte a su médico si el Plinko le habla.',
     resp: 'APUESTA RESPONSABLEMENTE*', resp2: '*o sea: no apuestes. Juega al Katan.',
     botsTitle: '3 niveles de odio', botsSub: 'Fácil, normal y «me bloqueó el único puerto que tenía».', vp: 'PV', wins: n => `🏆 ${n} gana. Nadie la invita más.`,
@@ -36,7 +38,7 @@ const STR = {
       ['10/10', '«Tiene ovejas.»', '— Revista Que No Existe'],
       ['★☆☆☆☆', '«Me robaron tres turnos seguidos.»', '— Don Trigo, bot'],
       ['★★★★★', '«¿Alguien tiene piedra?»', '— Todos, siempre'],
-      ['GOTY', '«Juego del año en mi grupo de WhatsApp.»', '— Los Amiguites'],
+      ['GOTY', '«Juego del año en mi grupo de WhatsApp.»', '— Los Katanittes'],
     ],
     features: ['🙈 Blindfold', '🌑 Niebla', '🧠 ADHD', '🎲 Eventos', '🌀 Tierra viva', '🗺️ 10 mapas', '✏️ Editor', '🤖 Bots', '🌐 Online', '🏔️ Maqueta 3D', '📱 Móvil'],
     cta: 'Gratis · Sin anuncios · Sin micropagos', cta2: '(solo microapuestas imaginarias)',
@@ -52,10 +54,12 @@ const STR = {
     you: 'You', cards: '6 cards', bank: '🏦 Bank', smiles: 'smiling', deal: 'DEAL!',
     hook: 'BORED WAITING FOR YOUR TURN?', try: 'TRY THE ADHD!', trySub: 'Gambling* minigames while everyone else thinks', fake: '*with 100% fake money',
     slots: 'SLOTS', coin: 'COIN FLIP', rocket: 'ROCKET', jackpot: 'JACKPOT!', coinAsk: 'HEADS OR TAILS?', coinWin: 'HEADS! x2', heads: 'H', tails: 'T',
-    quotes: [['"I lost 1,600 coins that don\'t exist. Would do it again."', '— Kchudo, normal bot'], ['"No idea whose turn it is, but I\'m winning."', '— Your cousin, 3 hours into Plinko']],
+    quotes: [['"I lost 1,600 coins that don\'t exist. Would do it again."', '— Sir Ladrillo, normal bot'], ['"No idea whose turn it is, but I\'m winning."', '— Your cousin, 3 hours into Plinko']],
     prize: 'Reach $1600 and win... fireworks! 🎆',
+    fresh: 'NEW MACHINES!', sheep: 'SHEEP RACE', mine: 'THE MINE', sheepWin: 'x10!', robber: 'THE ROBBER!',
+    freshSub: 'Now with more sheep and more robbers. Just like the real game.',
     legal: 'Money is 100% fake. Nothing can be withdrawn. There are no prizes. There is nothing. The fireworks aren\'t real either. ' +
-      'It doesn\'t affect the game. It minimizes itself when it\'s your turn. No bots were harmed in the making of this Plinko. ' +
+      'It doesn\'t affect the game. It turns see-through when it\'s your turn. No bots were harmed in the making of this Plinko. ' +
       'Nobody understands the rocket odds, not even the rocket. Ask your doctor if Plinko starts talking to you.',
     resp: 'GAMBLE RESPONSIBLY*', resp2: '*meaning: don\'t. Play Katan.',
     botsTitle: '3 levels of hatred', botsSub: 'Easy, normal and "it blocked the only port I had".', vp: 'VP', wins: n => `🏆 ${n} wins. Never invited again.`,
@@ -65,7 +69,7 @@ const STR = {
       ['10/10', '"It has sheep."', '— A Magazine That Doesn\'t Exist'],
       ['★☆☆☆☆', '"Robbed three turns in a row."', '— Don Trigo, bot'],
       ['★★★★★', '"Anyone got ore?"', '— Everyone, always'],
-      ['GOTY', '"Game of the year in our group chat."', '— The Amiguites'],
+      ['GOTY', '"Game of the year in our group chat."', '— The Katanittes'],
     ],
     features: ['🙈 Blindfold', '🌑 Fog', '🧠 ADHD', '🎲 Events', '🌀 Living land', '🗺️ 10 maps', '✏️ Editor', '🤖 Bots', '🌐 Online', '🏔️ 3D diorama', '📱 Mobile'],
     cta: 'Free · No ads · No microtransactions', cta2: '(only imaginary micro-bets)',
@@ -75,9 +79,9 @@ const STR = {
 const X = STR[LANG];
 document.documentElement.lang = LANG;
 if (LANG === 'en') {
-  document.title = 'Katan x Amiguites — Trailer';
+  document.title = 'Katanittes — Trailer';
   const mp4 = document.getElementById('mp4'), lang = document.getElementById('lang');
-  mp4.href = 'katan-x-amiguites-trailer-en.mp4';
+  mp4.href = 'katanittes-trailer-en.mp4';
   mp4.textContent = '⬇️ Trailer MP4';
   lang.href = '?';
   lang.textContent = '🌐 Español';
@@ -159,18 +163,15 @@ scene('logo', 5200, {
     sc.st = sc.st || createGame(botConfig('pangea', 4242, c => ((c.map.size = 32), (c.map.gold = 1))));
     show3d(sc.st, {});
     B.labels.domElement.style.visibility = 'hidden';
-    sc.t1 = h('div', { class: 'logo-t1' }, 'KATAN');
-    sc.x = h('div', { class: 'logo-x' }, 'x');
-    sc.t2 = h('div', { class: 'logo-t2' }, 'AMIGUITES');
-    sc.sub = h('div', { class: 'logo-sub' }, X.logoSub);
-    root.append(sc.t1, sc.x, sc.t2, sc.sub);
+    [sc.t1, sc.t2] = logoWord({ top: '230px' });
+    sc.sub = h('div', { class: 'logo-sub', style: { top: '430px' } }, X.logoSub);
+    root.append(sc.t1, sc.t2, sc.sub);
   },
   update(lt, sc) {
     orbit(sc.st.board.bounds, -0.6 + lt / 9000, 11 - lt / 1500, 9 - lt / 1400);
     const out = eIn(P(lt, 4700, 450));
-    tf(sc.t1, boil(lt, 0), (1 - eBack(P(lt, 200, 650))) * -220 + boil(lt, 1), 1, 0, P(lt, 200, 150) * (1 - out));
-    tf(sc.x, 0, 0, eBack(P(lt, 800, 400)), 0, P(lt, 800, 100) * (1 - out));
-    tf(sc.t2, (1 - eOut(P(lt, 1050, 550))) * 800 + boil(lt, 2), boil(lt, 3), 1, 0, P(lt, 1050, 200) * (1 - out));
+    tf(sc.t1, (1 - eBack(P(lt, 200, 650))) * -700 + boil(lt, 0), boil(lt, 1), 1, 0, P(lt, 200, 150) * (1 - out));
+    tf(sc.t2, (1 - eBack(P(lt, 650, 650))) * 700 + boil(lt, 2), boil(lt, 3), 1, 0, P(lt, 650, 150) * (1 - out));
     tf(sc.sub, 0, (1 - eOut(P(lt, 1900, 500))) * 20, 1, 0, P(lt, 1900, 400) * (1 - out));
     shade.style.background = `rgba(26,28,44,${0.5 - P(lt, 3500, 1000) * 0.2})`;
   },
@@ -281,7 +282,7 @@ scene('trade', 5600, {
     const who = (name, color, x) => h('div', { class: 'tr-seat', style: { left: x + 'px', '--pc': color } }, h('b', null, name), h('span', null, X.cards));
     sc.you = who(X.you, '#e53935', 150);
     sc.bank = h('div', { class: 'tr-seat bank', style: { left: '530px', '--pc': '#ffcd75' } }, h('b', null, X.bank), h('span', null, X.smiles));
-    sc.pal = who('La Kchuda', '#41a6f6', 910);
+    sc.pal = who('Ovejita', '#41a6f6', 910);
     root.append(sc.you, sc.bank, sc.pal);
     // the flights: [resource, from, to, start ms]
     sc.flights = [
@@ -317,7 +318,7 @@ scene('trade', 5600, {
 });
 
 // 6 · THE CASINO: the ADHD arcade, sold like a gambling ad
-scene('casino', 16500, {
+scene('casino', 19700, {
   enter(root, sc) {
     root.classList.add('tr-casino');
     sc.bulbs = h('div', { class: 'tr-bulbs' });
@@ -329,7 +330,7 @@ scene('casino', 16500, {
     sc.brain = h('div', { class: 'tr-brain' }, '🧠');
     root.append(sc.q, sc.brain, sc.big, sc.bigSub, sc.star);
 
-    // four machines
+    // the machines (four, then the two new ones)
     const panel = (title, x, y, body) => {
       const el = h('div', { class: 'tr-machine', style: { left: x + 'px', top: y + 'px' } }, h('div', { class: 'tr-mtitle' }, title), body);
       root.append(el);
@@ -370,6 +371,26 @@ scene('casino', 16500, {
     sc.rocket = panel(X.rocket, 985, 240, h('div', { class: 'tr-rocket' }, sc.graph, sc.mult, sc.boom));
     sc.machines = [sc.plinko, sc.slots, sc.coinP, sc.rocket];
 
+    // the two new machines: our sheep (the long shot) wins, and the mine finds the robber on the boom
+    sc.fresh = h('div', { class: 'tr-neon', style: { top: '52px', fontSize: '58px' } }, X.fresh);
+    sc.freshSub = h('div', { class: 'tr-neon-sub', style: { top: '590px', fontSize: '30px' } }, X.freshSub);
+    root.append(sc.fresh, sc.freshSub);
+    const SCARF = ['#f4f4f4', '#ffcd75', '#41a6f6', '#b13e53'];
+    sc.sheep = SCARF.map((c, i) => {
+      const el = h('div', { class: 'tr-sheep' }, '🐑', h('i', { style: { background: c } }));
+      return { el, lane: h('div', { class: 'tr-lane' + (i % 2 ? ' alt' : '') }, el, h('b', { class: 'tr-odds' }, ['x2.6', 'x3.5', 'x5', 'x10'][i])) };
+    });
+    sc.race = panel(X.sheep, 130, 170, h('div', { class: 'tr-race' }, sc.sheep.map(s => s.lane)));
+    sc.mineCells = Array.from({ length: 16 }, () => h('div', { class: 'tr-rock' }, h('span', { class: 'gem' }, '💎'), h('span', { class: 'rob' }, '🦹')));
+    sc.mineMult = h('div', { class: 'tr-mine-mult' }, 'x1.00');
+    sc.mineP = panel(X.mine, 730, 170, h('div', { class: 'tr-mine' }, h('div', { class: 'tr-mine-grid' }, sc.mineCells), sc.mineMult));
+    sc.race.classList.add('wide');
+    sc.mineP.classList.add('wide');
+    sc.sheepWin = stamp(root, X.sheepWin, 'green');
+    sc.robber = stamp(root, X.robber, 'red');
+    // dug in this order (they line up with the clicks of the music), the 5th one is the robber
+    sc.digs = [5, 10, 2, 13, 6];
+
     // testimonials
     const quote = (text, who, x, y) => {
       const el = h('div', { class: 'tr-quote', style: { left: x + 'px', top: y + 'px' } }, h('div', { class: 'stars' }, '★★★★★'), h('p', null, text), h('small', null, who));
@@ -378,8 +399,8 @@ scene('casino', 16500, {
     };
     sc.quotes = [quote(...X.quotes[0], 120, 200), quote(...X.quotes[1], 660, 330)];
     // the climb to $1600
-    sc.ladder = ['$100', '$200', '$400', '$800', '$1600'].map((v, i) => {
-      const el = h('div', { class: 'tr-step' + (i === 4 ? ' top' : '') }, v);
+    sc.ladder = ['$100', '$150', '$250', '$400', '$650', '$1000', '$1600'].map((v, i, all) => {
+      const el = h('div', { class: 'tr-step' + (i === all.length - 1 ? ' top' : '') }, v);
       root.append(el);
       return el;
     });
@@ -460,28 +481,54 @@ scene('casino', 16500, {
     sc.mult.classList.toggle('dead', boom);
     tf(sc.boom, 0, 0, eBack(P(lt, 7000, 250)) * 1.4, 0, P(lt, 7000, 50) * (1 - P(lt, 7600, 250)));
 
-    // 3 · testimonials (8.1 s .. 10.9 s)
-    sc.quotes.forEach((q, i) => tf(q, (1 - eOut(P(lt, 8100 + i * 700, 400))) * (i ? 300 : -300), 0, 1, i ? 2 : -2, P(lt, 8100 + i * 700, 150) * (1 - P(lt, 10700, 250))));
-
-    // 4 · the ladder and the fireworks (11 s .. 13.6 s)
-    sc.ladder.forEach((el, i) => {
-      const t0 = 11000 + i * 260;
-      tf(el, 170 + i * 200, 470 - i * 60, step(eBack(P(lt, t0, 300)), 5), 0, P(lt, t0, 60) * (1 - P(lt, 13500, 200)));
+    // 3 · the new machines (8 s .. 11.2 s)
+    const N0 = 8000, nOut = 1 - P(lt, N0 + 3000, 200);
+    tf(sc.fresh, boil(lt, 4), 0, eBack(P(lt, N0, 350)) * (1 + Math.sin(lt / 90) * 0.02), -3, P(lt, N0, 80) * nOut * flick);
+    tf(sc.freshSub, 0, (1 - eOut(P(lt, N0 + 300, 400))) * 30, 1, 0, P(lt, N0 + 300, 200) * nOut);
+    [sc.race, sc.mineP].forEach((m, i) => tf(m, 0, (1 - eBack(P(lt, N0 + 100 + i * 140, 380))) * 120, step(eBack(P(lt, N0 + 100 + i * 140, 380)), 6), 0, P(lt, N0 + 100 + i * 140, 80) * nOut));
+    // the race: the long shot (lane 4, ours) crosses first at +1.09 s
+    sc.sheep.forEach((sh, i) => {
+      const fin = [1380, 1260, 1500, 1090][i], u = clamp((lt - N0 - 150) / (fin - 150));
+      const x = (u + 0.07 * Math.sin(u * Math.PI * (2 + i)) * Math.sin(u * Math.PI)) * 280;
+      const hop = lt > N0 + 150 && u < 1 ? [0, -3][Math.floor(lt / 90 + i) % 2] : 0;
+      sh.el.style.transform = `translate(${Math.round(Math.min(x, i === 3 ? 280 : 272))}px, ${hop}px)`;
+      sh.lane.classList.toggle('won', i === 3 && lt > N0 + 1090 && Math.floor(lt / 160) % 2 === 0);
     });
-    tf(sc.prize, 0, (1 - eOut(P(lt, 12300, 400))) * 30, 1, 0, P(lt, 12300, 200) * (1 - P(lt, 13500, 200)));
+    sc.sheepWin(lt, N0 + 1090, 150, 196, -8, N0 + 3000);
+    // the mine: four ores on the beat, then the robber on the boom (+2.2 s)
+    const dug = sc.digs.filter((_, k) => lt >= N0 + [290, 690, 1090, 1490, 2190][k]).length;
+    sc.mineCells.forEach((c, i) => {
+      const k = sc.digs.indexOf(i);
+      c.classList.toggle('dug', k >= 0 && k < Math.min(dug, 4));
+      c.classList.toggle('bad', k === 4 && dug === 5);
+    });
+    const mult = [1, 1.23, 1.53, 1.96, 2.55][Math.min(dug, 4)];
+    sc.mineMult.textContent = dug === 5 ? 'x0.00' : 'x' + mult.toFixed(2);
+    sc.mineMult.classList.toggle('dead', dug === 5);
+    sc.robber(lt, N0 + 2190, 790, 440, 5, N0 + 3000);
+
+    // 4 · testimonials (11.3 s .. 14.1 s)
+    sc.quotes.forEach((q, i) => tf(q, (1 - eOut(P(lt, 11300 + i * 700, 400))) * (i ? 300 : -300), 0, 1, i ? 2 : -2, P(lt, 11300 + i * 700, 150) * (1 - P(lt, 13900, 250))));
+
+    // 5 · the ladder and the fireworks (14.2 s .. 16.8 s)
+    sc.ladder.forEach((el, i) => {
+      const t0 = 14200 + i * 190;
+      tf(el, 50 + i * 158, 572 - i * 64, step(eBack(P(lt, t0, 300)), 5), 0, P(lt, t0, 60) * (1 - P(lt, 16700, 200)));
+    });
+    tf(sc.prize, 0, (1 - eOut(P(lt, 15500, 400))) * 30, 1, 0, P(lt, 15500, 200) * (1 - P(lt, 16700, 200)));
     sc.sparks.forEach((el, i) => {
-      const t0 = 12300 + (i % 4) * 180, p = clamp((lt - t0) / 1100);
+      const t0 = 15500 + (i % 4) * 180, p = clamp((lt - t0) / 1100);
       const a = hash(i) * Math.PI * 2, sp = 120 + hash(i + 50) * 160;
       const cx = [1010, 860, 1150, 960][i % 4], cy = [140, 190, 170, 110][i % 4];
       tf(el, cx + Math.cos(a) * sp * eOut(p), cy + Math.sin(a) * sp * eOut(p) + p * p * 60, 1, 0, p > 0 && p < 1 ? 1 - p * p : 0);
     });
 
-    // 5 · the small print, read way too fast (13.7 s ..)
-    const lp = clamp((lt - 13700) / 2600);
+    // 6 · the small print, read way too fast (16.9 s ..)
+    const lp = clamp((lt - 16900) / 2600);
     sc.legal.style.transform = `translateX(${Math.round(lerp(1280, -sc.legal.scrollWidth + 200, lp))}px)`;
-    sc.legal.style.opacity = lt > 13700 && lt < 16400 ? 1 : 0;
-    tf(sc.resp, boil(lt, 2), 0, eBack(P(lt, 13900, 350)), -4, P(lt, 13900, 80) * flick);
-    tf(sc.resp2, 0, 0, 1, 0, P(lt, 14500, 200));
+    sc.legal.style.opacity = lt > 16900 && lt < 19600 ? 1 : 0;
+    tf(sc.resp, boil(lt, 2), 0, eBack(P(lt, 17100, 350)), -4, P(lt, 17100, 80) * flick);
+    tf(sc.resp2, 0, 0, 1, 0, P(lt, 17700, 200));
   },
 });
 
@@ -562,25 +609,22 @@ scene('outro', 6800, {
     sc.st = createGame(botConfig('star', 99, c => (c.map.gold = 2)));
     show3d(sc.st, {});
     B.labels.domElement.style.visibility = 'hidden';
-    sc.t1 = h('div', { class: 'logo-t1', style: { top: '40px', fontSize: '130px' } }, 'KATAN');
-    sc.x = h('div', { class: 'logo-x', style: { top: '180px', fontSize: '54px' } }, 'x');
-    sc.t2 = h('div', { class: 'logo-t2', style: { top: '240px', fontSize: '96px' } }, 'AMIGUITES');
+    [sc.t1, sc.t2] = logoWord({ top: '160px', fontSize: '104px' });
     sc.cta = h('div', { class: 'logo-sub', style: { top: '385px', fontSize: '30px' } }, X.cta);
     sc.cta2 = h('div', { class: 'tr-fine center', style: { top: '430px' } }, X.cta2);
     sc.feats = X.features.map(f => h('span', null, f));
     sc.grid = h('div', { class: 'feature-grid', style: { top: '480px' } }, sc.feats);
     sc.url = h('div', { class: 'url' }, '▶ ' + URL_TEXT);
     sc.legal = h('div', { class: 'tr-disclaimer' }, X.disclaimer);
-    root.append(sc.t1, sc.x, sc.t2, sc.cta, sc.cta2, sc.grid, sc.url, sc.legal);
+    root.append(sc.t1, sc.t2, sc.cta, sc.cta2, sc.grid, sc.url, sc.legal);
     pixelize(root);
   },
   update(lt, sc) {
     orbit(sc.st.board.bounds, lt / 7000, 9, 7.5);
     shade.style.background = 'rgba(26,28,44,.66)';
     const out = eIn(P(lt, 6400, 400));
-    tf(sc.t1, boil(lt, 0), (1 - eBack(P(lt, 100, 550))) * -200 + boil(lt, 1), 1, 0, P(lt, 100, 150) * (1 - out));
-    tf(sc.x, 0, 0, eBack(P(lt, 450, 400)), 0, P(lt, 450, 100) * (1 - out));
-    tf(sc.t2, (1 - eOut(P(lt, 650, 500))) * -800 + boil(lt, 2), boil(lt, 3), 1, 0, P(lt, 650, 200) * (1 - out));
+    tf(sc.t1, boil(lt, 0), (1 - eBack(P(lt, 100, 550))) * -260 + boil(lt, 1), 1, 0, P(lt, 100, 150) * (1 - out));
+    tf(sc.t2, boil(lt, 2), (1 - eBack(P(lt, 450, 550))) * -260 + boil(lt, 3), 1, 0, P(lt, 450, 150) * (1 - out));
     tf(sc.cta, 0, (1 - eOut(P(lt, 1200, 450))) * 20, 1, 0, P(lt, 1200, 350) * (1 - out));
     tf(sc.cta2, 0, 0, 1, 0, P(lt, 1900, 300) * (1 - out));
     sc.feats.forEach((f, i) => tf(f, 0, 0, step(eOut(P(lt, 2200 + i * 80, 320)), 6), 0, P(lt, 2200 + i * 80, 80) * (1 - out)));

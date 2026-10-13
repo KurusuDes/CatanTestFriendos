@@ -12,9 +12,9 @@ import { applyAction, createGame } from './engine/game.js';
 import { toast, storage } from './ui/dom.js';
 
 const PREFIX = 'kchx-v1-';
-export const HOST_SESSION = 'kchudites.hostSession';
-export const GUEST_SESSION = 'kchudites.guestSession';
-const TOKEN_KEY = 'kchudites.token';
+export const HOST_SESSION = 'katanittes.hostSession';
+export const GUEST_SESSION = 'katanittes.guestSession';
+const TOKEN_KEY = 'katanittes.token';
 const GRACE_MS = 12000; // time to come back before the table votes
 const PING_MS = 3000, DEAD_MS = 10000; // heartbeat: abrupt signal loss is noticed in ~10s
 const VOTE_MS = 45000;

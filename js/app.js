@@ -5,7 +5,7 @@ import { botAct } from './engine/bot.js';
 import { toast, storage } from './ui/dom.js';
 import { sfx } from './ui/sfx.js';
 
-export const SAVE_KEY = 'kchudites.save.v1';
+export const SAVE_KEY = 'katanittes.save.v1';
 
 export const App = {
   screens: {},
@@ -15,7 +15,7 @@ export const App = {
   net: null, // online session (see net.js)
   mySeat: null,
   viewer: -1,
-  speed: +(storage('kchudites.speed') || 650),
+  speed: +(storage('katanittes.speed') || 650),
   botTimer: null,
   listeners: [],
 
@@ -151,15 +151,15 @@ export const App = {
 
   setSpeed(ms) {
     this.speed = ms;
-    storage('kchudites.speed', ms);
+    storage('katanittes.speed', ms);
   },
 
   toggleSound() {
     sfx.on = !sfx.on;
-    storage('kchudites.sound', sfx.on);
+    storage('katanittes.sound', sfx.on);
     return sfx.on;
   },
 };
 
-const snd = storage('kchudites.sound');
+const snd = storage('katanittes.sound');
 if (snd === false) sfx.on = false;

@@ -30,7 +30,7 @@ export const SETTINGS = { pixel: 1, tiltShift: true, quality: 'high', ao: true, 
 // phones and small screens start on the light preset
 if (typeof matchMedia === 'function' && (matchMedia('(pointer: coarse)').matches || innerWidth < 900)) Object.assign(SETTINGS, { quality: 'low', ao: false });
 try {
-  Object.assign(SETTINGS, JSON.parse(localStorage.getItem('kchudites.gfx') || '{}'));
+  Object.assign(SETTINGS, JSON.parse(localStorage.getItem('katanittes.gfx') || '{}'));
 } catch {}
 
 const INR = Math.sqrt(3) / 2; // hex inradius
@@ -856,7 +856,7 @@ export class Board3D {
   setGraphics(opts) {
     Object.assign(SETTINGS, opts);
     try {
-      localStorage.setItem('kchudites.gfx', JSON.stringify(SETTINGS));
+      localStorage.setItem('katanittes.gfx', JSON.stringify(SETTINGS));
     } catch {}
     this.setupPasses();
   }

@@ -1,7 +1,7 @@
 import { newSeed } from './rng.js';
 
 export const PLAYER_COLORS = ['#e53935', '#1e88e5', '#ff9800', '#f5f5f5', '#43a047', '#8e24aa', '#00acc1', '#795548'];
-export const BOT_NAMES = ['Kchudo', 'La Kchuda', 'Chuchito', 'Don Trigo', 'Ovejita', 'Mineralman', 'Doña Arcilla', 'Ladronzuelo'];
+export const BOT_NAMES = ['Leñadora', 'Sir Ladrillo', 'El Banquero', 'Don Trigo', 'Ovejita', 'Mineralman', 'Doña Arcilla', 'Ladronzuelo'];
 
 export function defaultConfig() {
   return {

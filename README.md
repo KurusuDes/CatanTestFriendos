@@ -1,4 +1,4 @@
-# Katan x Amiguites
+# Katanittes
 
 *English · [Español](README.es.md)*
 
@@ -9,11 +9,11 @@ Free, no ads, no accounts, nothing to install. Works on desktop and mobile.
 | | |
 |---|---|
 | 🎮 **Play** | https://kurusudes.github.io/CatanTestFriendos/ |
-| 🎞️ **Trailer (English)** | [Watch in the browser](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en) · [MP4](showcase/katan-x-amiguites-trailer-en.mp4) |
-| 🎞️ **Tráiler (español)** | [Ver en el navegador](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html) · [MP4](showcase/katan-x-amiguites-trailer.mp4) |
-| 🎬 **Feature showcase** | [Watch in the browser](https://kurusudes.github.io/CatanTestFriendos/showcase/) · [MP4](showcase/katan-x-amiguites.mp4) |
+| 🎞️ **Trailer (English)** | [Watch in the browser](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en) · [MP4](showcase/katanittes-trailer-en.mp4) |
+| 🎞️ **Tráiler (español)** | [Ver en el navegador](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html) · [MP4](showcase/katanittes-trailer.mp4) |
+| 🎬 **Feature showcase** | [Watch in the browser](https://kurusudes.github.io/CatanTestFriendos/showcase/) · [MP4](showcase/katanittes.mp4) |
 
-[![Katan x Amiguites](showcase/poster.jpg)](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en)
+[![Katanittes](showcase/poster.jpg)](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en)
 
 > The in-game interface is in Spanish. The trailer is available in English and Spanish.
 
@@ -21,14 +21,14 @@ Free, no ads, no accounts, nothing to install. Works on desktop and mobile.
 
 ## The trailer
 
-A 70-second satirical motion-graphics trailer: an epic movie-trailer cold open ("In a world... where your friends steal your sheep..."), a tour of the modes, fake critic reviews and, as the centerpiece, a parody casino ad for the in-game arcade.
+A 72-second satirical motion-graphics trailer: an epic movie-trailer cold open ("In a world... where your friends steal your sheep..."), a tour of the modes, fake critic reviews and, as the centerpiece, a parody casino ad for the in-game arcade, now with its two new machines (the sheep race and the mine).
 
 ![The ADHD arcade, sold like a casino ad](showcase/readme/trailer-casino.gif)
 
 | | | |
 |---|---|---|
 | ![3D diorama](showcase/readme/diorama.jpg) | ![Blindfold mode](showcase/readme/blindfold.jpg) | ![Fog of war](showcase/readme/fog.jpg) |
-| ![The four machines](showcase/readme/adhd-machines.jpg) | ![Reach $1600 and win fireworks](showcase/readme/adhd-ladder.jpg) | ![What critics say](showcase/readme/reviews.jpg) |
+| ![The new machines: sheep race and the mine](showcase/readme/adhd-machines.jpg) | ![Reach $1600 and win fireworks](showcase/readme/adhd-ladder.jpg) | ![What critics say](showcase/readme/reviews.jpg) |
 
 Like the showcase, the trailer is a live web page: every frame is a pure function of the clock, including the real 3D board and real bot games, so the same page plays in the browser or is recorded frame by frame into the MP4. The chiptune soundtrack and sound effects are synthesized in code and timed to the scenes.
 
@@ -81,11 +81,15 @@ Victory points, hand limit, setup rounds, starting bonus, pieces per player, dev
 
 ### The ADHD arcade
 A small window of gambling minigames for while you wait for your turn, with **fake money**:
-- **Plinko**, **slots**, **coin flip** and **rocket** (cash out before it blows up; it can reach x10, but almost never does, and after you cash out a ghost rocket shows how far it would have gone), unlocked one after another as your balance grows ($200, $400, $800).
-- Machines you've already beaten get an **Auto** button.
+- Six machines, unlocked one after another as your balance grows ($150, $250, $400, $650, $1000):
+  - **Plinko**, **slots** and **coin flip** (double or nothing).
+  - **Sheep race:** bet on one of four sheep; the favourite pays x2.6, the long shot x10.
+  - **The mine:** 16 rocks, 3 of them hide the robber. Every ore you dig raises the payout; cash out before you find him.
+  - **Rocket:** cash out before it blows up; it can reach x10, but almost never does, and after you cash out a ghost rocket shows how far it would have gone.
+- Machines you've already beaten get an **Auto** button (all but the mine and the rocket).
 - Reach **$1600** and fireworks burst from your houses, with a banner every player sees (winners who land together get their banners one after another).
 - Every win of the match adds **gold trims** to your pieces, up to 5: beams, road edges and studs, windows, a gold knob on the roof and finally a shine.
-- It **minimizes itself when it's your turn** and stays behind trade offers, so it never gets in the way of the game.
+- When it's your turn (or a trade offer is up) it **turns see-through and ignores clicks** until you're done, so you can always see the game behind it and never play the arcade by accident.
 
 ### Board and interface
 - **3D diorama board** built with three.js: one continuous terrain blending 8 PBR textures, a physical sky with image-based lighting, water with depth-based foam, grass and wheat swaying in the wind, cloud shadows, ambient occlusion and a tilt-shift camera.
@@ -111,7 +115,7 @@ A small window of gambling minigames for while you wait for your turn, with **fa
 | Online | `js/net.js` | Rooms, host-authoritative sync, reconnection, voting |
 | Game screen | `js/ui/gameView.js` | Cards, hand, actions, dice, trading, flying cards |
 | 3D board | `js/ui/board3d.js`, `dice3d.js`, `flag.js` | Terrain, tile variants, pieces, fog, 3D dice, flags |
-| ADHD arcade | `js/ui/adhd.js` | The four minigames, balance, unlocks, fireworks |
+| ADHD arcade | `js/ui/adhd.js` | The six minigames, balance, unlocks, fireworks |
 | Other UI | `js/ui/lobby.js`, `editor.js`, `pixel.js`, `sfx.js`, `help.js` | Lobby and rooms, map editor, pixel sprites, sounds, help |
 | Styles | `css/style.css`, `css/pixel.css` | Pixel theme (Sweetie-16 palette) |
 | Assets | `assets/`, `tools/blender/` | Textures, `kit.glb` models and icons, and the Blender scripts that make them |
@@ -121,7 +125,7 @@ A small window of gambling minigames for while you wait for your turn, with **fa
 ## Running it locally
 
 ```bash
-python -m http.server 8123
+py -m http.server 8123
 # then open http://localhost:8123/
 ```
 
@@ -133,6 +137,6 @@ npm test
 
 ## License and credits
 
-Original code and assets are under the [MIT license](LICENSE) © 2026 Sowtank. If you use this project or part of it, a visible credit is kindly appreciated (details in [NOTICE.md](NOTICE.md)).
+Original code and assets are under the [MIT license](LICENSE) © 2026 Sowtank. If you use this project or part of it, a visible credit is kindly appreciated (details in [NOTICE.md](NOTICE.md)). The game itself shows that credit, with a link to this repository, under the main menu and in the help screen.
 
 **Unofficial fan project.** It isn't affiliated with, sponsored or endorsed by Catan GmbH, CATAN Studio or Kosmos. *CATAN* is a trademark of its respective owners. Third-party notices (three.js, PeerJS, fonts) are in [NOTICE.md](NOTICE.md).

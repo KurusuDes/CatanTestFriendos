@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Katan x Amiguites pixel UI theme — Forager-like chunky pixels + Octopath gold frames.
+   Katanittes pixel UI theme — Forager-like chunky pixels + Octopath gold frames.
    Palette: Sweetie-16. Loaded after style.css and overrides its look.
    ========================================================================== */
 :root {
@@ -96,11 +96,13 @@ input[type=range] { accent-color: var(--sand); }
 .menu-kingdom .hub-name { width: 100%; font-size: 18px !important; padding: 7px 10px !important; }
 .menu-kingdom .btn.sm { font-size: 20px; padding: 8px 10px; }
 .menu-foot { color: var(--steel); text-shadow: 2px 2px 0 var(--ink); }
+.menu-foot .credits { margin-top: 6px; font-size: 12px; }
+.menu-foot a, .help-body a { color: var(--sand); }
 
 /* ---------- game ---------- */
 .topbar { background: var(--ink); border-bottom: 0; box-shadow: 0 3px 0 var(--sand), 0 6px 0 var(--ink); z-index: 6; }
 .brand { font-family: var(--display); color: var(--sand); text-shadow: 3px 3px 0 var(--wine); font-size: 22px; }
-.brand i { color: var(--cyan); }
+.brand i { color: var(--white); }
 .turn-dot { box-shadow: 0 0 0 3px var(--ink); }
 .side { background: #1f2440; border-left: 0; box-shadow: inset 3px 0 0 var(--sand), inset 6px 0 0 var(--ink); padding-left: 6px; }
 .log { border-top: 0; box-shadow: inset 0 3px 0 var(--ink); font-size: 14px; }
@@ -177,8 +179,10 @@ input[type=range] { accent-color: var(--sand); }
 .vp, .dice-sum, .rcard b, .dcard b, .stepper .n, .token-num, .pcard .stats, .bank-info, .room-code, .hist em, .hist span { font-family: var(--num); }
 .pcard .name, .btn, .chip, .banner { font-weight: 600; }
 .logo .t1, .logo .t2, .brand, .card h3, .modal h2, .announce .at { font-family: var(--display); font-weight: 700; }
-.logo .t1 { font-size: clamp(54px, 11vw, 124px); }
-.logo .t2 { font-size: clamp(34px, 7vw, 76px); }
+/* one word, two colours: KATAN in sand, ITTES in white */
+.logo .t1 { font-size: clamp(30px, 8.6vw, 112px); letter-spacing: 4px; white-space: nowrap; }
+.logo .t1b { color: var(--white); text-shadow: 0 6px 0 var(--wine), 0 12px 0 var(--ink); }
+.logo .sub { margin-top: 18px; }
 
 /* ---------- kingdom flag editor ---------- */
 .flag-modal { width: min(760px, 100%); }
@@ -395,7 +399,9 @@ img.flag-img.wave { animation: flagWave 1.2s steps(4) infinite; transform-origin
 .adhd-toggle.on { background: var(--plum); }
 .adhd { position: absolute; left: 10px; bottom: 10px; z-index: 5; width: min(400px, calc(100% - 70px)); max-height: calc(100% - 64px); overflow: auto; padding: 8px; background: var(--panel); box-shadow: 0 0 0 3px var(--ink), 0 0 0 6px var(--plum), 6px 6px 0 6px rgba(0,0,0,.45); animation: popIn .12s steps(3); transition: opacity .2s, filter .2s; }
 .adhd.hidden { display: none; }
-.adhd.behind { opacity: .3; filter: grayscale(.7); pointer-events: none; }
+/* your turn or a trade offer: still there, but see-through and clicks go to the board */
+.adhd.ghost { opacity: .4; filter: grayscale(.5); pointer-events: none; }
+.adhd-picks .btn { padding: 4px 2px !important; }
 .adhd-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .adhd-title { font-family: var(--display); color: var(--sand); font-size: 13px; white-space: nowrap; }
 .adhd-money { font-family: var(--num); color: var(--lime); font-size: 16px; }

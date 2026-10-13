@@ -279,7 +279,7 @@ const SPRITES_PICO = {
 //   'pico'    hand-drawn, PICO-8-like palette with a sticker border
 //   'classic' the original hand-drawn Sweetie-16 sprites
 export const ICON_SETS = ['render', 'pico', 'classic'];
-const SET_KEY = 'kchudites.icons';
+const SET_KEY = 'katanittes.icons';
 const pickSet = n => (ICON_SETS.includes(n) ? n : 'render');
 let iconSetName = (() => {
   try {

@@ -9,7 +9,7 @@ export const FLAG_PAL = ['#1a1c2c', '#5d275d', '#b13e53', '#ef7d57', '#ffcd75', 
 export const FLAG_N = 12;
 export const FLAG_W = 120, FLAG_H = 80; // stored flag size (3:2)
 const EDIT_W = 300, EDIT_H = 200; // drawing resolution
-const MY_KEY = 'kchudites.myKingdom';
+const MY_KEY = 'katanittes.myKingdom';
 // Gartic-like palette
 const PAINT = ['#000000', '#666666', '#b2b2b2', '#ffffff', '#7a1f1f', '#e53935', '#ff7a00', '#ffd400', '#fff3a3', '#1b5e20',
   '#43a047', '#9be15d', '#0d2c6c', '#1e88e5', '#4fc3f7', '#6a1b9a', '#ba68c8', '#ff80ab', '#6d4c41', '#f1c8a0'];

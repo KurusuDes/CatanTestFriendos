@@ -2,7 +2,7 @@
 
 ## Proyecto de fans, no oficial
 
-**Katan x Amiguites** es un proyecto de fans, gratuito y sin ánimo de lucro. **No está afiliado,
+**Katanittes** es un proyecto de fans, gratuito y sin ánimo de lucro. **No está afiliado,
 patrocinado ni aprobado** por Catan GmbH, CATAN Studio ni Kosmos. *CATAN* y los nombres, logotipos
 y elementos asociados son marcas registradas de sus respectivos propietarios; aquí se mencionan
 solo para describir el juego en el que se inspira.
@@ -43,7 +43,7 @@ proyecto, menciones el original en un lugar visible (README, créditos o pantall
 ejemplo:
 
 ```
-Basado en Katan x Amiguites de Sowtank — https://github.com/KurusuDes/CatanTestFriendos
+Basado en Katanittes de Sowtank — https://github.com/KurusuDes/CatanTestFriendos
 ```
 
 Es una petición de cortesía: no modifica los términos de la licencia MIT. ¡Y si haces algo con él,

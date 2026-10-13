@@ -1,11 +1,11 @@
-// "Katan x Amiguites" motion graphics. Every frame is a pure function of the clock T
+// "Katanittes" motion graphics. Every frame is a pure function of the clock T
 // (the 3D view included), so the video can be recorded frame by frame (?rec) or played live.
 import { h, s as S } from '../js/ui/dom.js';
 import { createGame, victoryPoints, viewFor } from '../js/engine/game.js';
 import { SHAPES, hexagon, hexCenter } from '../js/engine/board.js';
 import { TILE_INFO } from '../js/engine/constants.js';
 import { pixelize, pxIcon } from '../js/ui/pixel.js';
-import { clamp, P, eOut, eIn, eInOut, eBack, lerp, step, tf, botConfig, step1, clone, makeTitle, clearLabels } from './motion.js';
+import { clamp, P, eOut, eIn, eInOut, eBack, lerp, step, tf, botConfig, step1, clone, makeTitle, clearLabels, logoWord } from './motion.js';
 
 const stage = document.getElementById('stage');
 const REC = new URLSearchParams(location.search).has('rec');
@@ -49,19 +49,16 @@ scene('intro', 5000, {
     sc.st = sc.st || createGame(botConfig('pangea', 4242, c => ((c.map.size = 32), (c.map.gold = 1))));
     show3d(sc.st, {});
     B.labels.domElement.style.visibility = 'hidden';
-    sc.t1 = h('div', { class: 'logo-t1' }, 'KATAN');
-    sc.x = h('div', { class: 'logo-x' }, 'x');
-    sc.t2 = h('div', { class: 'logo-t2' }, 'AMIGUITES');
-    sc.sub = h('div', { class: 'logo-sub' }, 'Colonos, caos y modos que no existen en la caja');
-    root.append(sc.t1, sc.x, sc.t2, sc.sub);
+    [sc.t1, sc.t2] = logoWord({ top: '230px' });
+    sc.sub = h('div', { class: 'logo-sub', style: { top: '430px' } }, 'Colonos, caos y modos que no existen en la caja');
+    root.append(sc.t1, sc.t2, sc.sub);
   },
   update(lt, sc) {
     orbit(sc.st.board.bounds, -0.6 + lt / 9000, 11 - lt / 1500, 9 - lt / 1400);
     const out = eIn(P(lt, 4450, 500));
     const boil = i => [0, 1, -1, 0][Math.floor(lt / 110 + i) % 4];
-    tf(sc.t1, boil(0), (1 - eBack(P(lt, 300, 650))) * -220 + boil(1), 1, 0, P(lt, 300, 150) * (1 - out));
-    tf(sc.x, 0, 0, eBack(P(lt, 900, 400)), 0, P(lt, 900, 100) * (1 - out));
-    tf(sc.t2, (1 - eOut(P(lt, 1150, 550))) * 800 + boil(2), boil(3), 1, 0, P(lt, 1150, 200) * (1 - out));
+    tf(sc.t1, (1 - eBack(P(lt, 300, 650))) * -700 + boil(0), boil(1), 1, 0, P(lt, 300, 150) * (1 - out));
+    tf(sc.t2, (1 - eBack(P(lt, 750, 650))) * 700 + boil(2), boil(3), 1, 0, P(lt, 750, 150) * (1 - out));
     tf(sc.sub, 0, (1 - eOut(P(lt, 2000, 500))) * 20, 1, 0, P(lt, 2000, 400) * (1 - out));
     shade.style.background = `rgba(26,28,44,${0.45 - P(lt, 3500, 1000) * 0.2})`;
   },
@@ -332,14 +329,12 @@ scene('outro', 6200, {
     sc.st = createGame(botConfig('star', 99, c => (c.map.gold = 2)));
     show3d(sc.st, {});
     B.labels.domElement.style.visibility = 'hidden';
-    sc.t1 = h('div', { class: 'logo-t1', style: { top: '60px', fontSize: '130px' } }, 'KATAN');
-    sc.x = h('div', { class: 'logo-x', style: { top: '200px', fontSize: '54px' } }, 'x');
-    sc.t2 = h('div', { class: 'logo-t2', style: { top: '262px', fontSize: '96px' } }, 'AMIGUITES');
-    sc.cta = h('div', { class: 'logo-sub', style: { top: '410px', fontSize: '30px' } }, '¡Arma tu mapa, elige tu caos y juega!');
+    [sc.t1, sc.t2] = logoWord({ top: '170px', fontSize: '104px' });
+    sc.cta = h('div', { class: 'logo-sub', style: { top: '370px', fontSize: '30px' } }, '¡Arma tu mapa, elige tu caos y juega!');
     sc.feats = FEATURES.map(f => h('span', null, f));
     sc.grid = h('div', { class: 'feature-grid' }, sc.feats);
     sc.url = h('div', { class: 'url' }, '▶ ' + URL_TEXT);
-    root.append(sc.t1, sc.x, sc.t2, sc.cta, sc.grid, sc.url);
+    root.append(sc.t1, sc.t2, sc.cta, sc.grid, sc.url);
     pixelize(root);
   },
   update(lt, sc) {
@@ -347,9 +342,8 @@ scene('outro', 6200, {
     shade.style.background = 'rgba(26,28,44,.62)';
     const out = eIn(P(lt, 5750, 450));
     const boil = i => [0, 1, -1, 0][Math.floor(lt / 110 + i) % 4];
-    tf(sc.t1, boil(0), (1 - eBack(P(lt, 100, 550))) * -200 + boil(1), 1, 0, P(lt, 100, 150) * (1 - out));
-    tf(sc.x, 0, 0, eBack(P(lt, 450, 400)), 0, P(lt, 450, 100) * (1 - out));
-    tf(sc.t2, (1 - eOut(P(lt, 650, 500))) * -800 + boil(2), boil(3), 1, 0, P(lt, 650, 200) * (1 - out));
+    tf(sc.t1, boil(0), (1 - eBack(P(lt, 100, 550))) * -260 + boil(1), 1, 0, P(lt, 100, 150) * (1 - out));
+    tf(sc.t2, boil(2), (1 - eBack(P(lt, 450, 550))) * -260 + boil(3), 1, 0, P(lt, 450, 150) * (1 - out));
     tf(sc.cta, 0, (1 - eOut(P(lt, 1200, 450))) * 20, 1, 0, P(lt, 1200, 350) * (1 - out));
     sc.feats.forEach((f, i) => tf(f, 0, 0, step(eOut(P(lt, 1600 + i * 80, 320)), 6), 0, P(lt, 1600 + i * 80, 80) * (1 - out)));
     tf(sc.url, 0, 0, 1, 0, P(lt, 2900, 350) * (1 - out));

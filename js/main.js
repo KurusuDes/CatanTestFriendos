@@ -3,7 +3,7 @@ import { h, storage, toast } from './ui/dom.js';
 import { lobbyScreen } from './ui/lobby.js';
 import { gameScreen } from './ui/gameView.js';
 import { editorScreen, decodeMap } from './ui/editor.js';
-import { showHelp } from './ui/help.js';
+import { showHelp, creditLine } from './ui/help.js';
 import { Net, HOST_SESSION, GUEST_SESSION } from './net.js';
 import { openFlagEditor, flagImg, myKingdom, saveMyKingdom, patternFlag } from './ui/flag.js';
 import { autoPixelize } from './ui/pixel.js';
@@ -60,7 +60,7 @@ async function backToRoom(sess) {
   }
 }
 
-const myOrDefaultKingdom = () => myKingdom() || { name: storage('kchudites.name') || '', color: '#e53935', flag: patternFlag('#e53935', 1) };
+const myOrDefaultKingdom = () => myKingdom() || { name: storage('katanittes.name') || '', color: '#e53935', flag: patternFlag('#e53935', 1) };
 
 // "Tu reino" on the main menu: name + banner are set before any game (local, host or join)
 function kingdomPanel() {
@@ -70,7 +70,7 @@ function kingdomPanel() {
     const nameIn = h('input', { type: 'text', class: 'hub-name', placeholder: 'Tu nombre', value: k.name || '', maxlength: 16, 'aria-label': 'Tu nombre' });
     nameIn.addEventListener('input', () => {
       const n = nameIn.value.trim();
-      storage('kchudites.name', n);
+      storage('katanittes.name', n);
       saveMyKingdom({ ...myOrDefaultKingdom(), name: n });
     });
     box.replaceChildren(
@@ -100,9 +100,7 @@ function menuScreen(root) {
   const dio = h('div', { class: 'menu-bg3d' });
   root.append(h('div', { class: 'menu screen' }, bg, dio,
     h('div', { class: 'logo' },
-      h('div', { class: 't1 jit' }, 'KATAN'),
-      h('span', { class: 'x jit' }, 'x'),
-      h('div', { class: 't2 jit' }, 'AMIGUITES'),
+      h('div', { class: 't1 jit' }, 'KATAN', h('span', { class: 't1b' }, 'ITTES')),
       h('div', { class: 'sub' }, 'Colonos, caos y modos que no existen en la caja.')),
     kingdomPanel(),
     h('div', { class: 'menu-buttons' },
@@ -119,7 +117,7 @@ function menuScreen(root) {
       h('div', { style: { display: 'flex', gap: '6px' } },
         h('a', { class: 'btn', href: 'showcase/trailer.html', style: { textDecoration: 'none', flex: 1 } }, '🎞️ Tráiler'),
         h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none', flex: 1 } }, '🎬 Showcase'))),
-    h('div', { class: 'menu-foot' }, 'Hecho para los Amiguites · funciona en PC y móvil · sin instalar nada')));
+    h('div', { class: 'menu-foot' }, 'Hecho para jugar con amigos · funciona en PC y móvil · sin instalar nada', creditLine())));
   menuDiorama(dio);
 }
 
@@ -133,7 +131,7 @@ async function quickBots() {
   App.startGame(c);
 }
 
-const RECENT_KEY = 'kchudites.recentRooms';
+const RECENT_KEY = 'katanittes.recentRooms';
 function rememberRoom(code) {
   const list = (storage(RECENT_KEY) || []).filter(r => r.code !== code);
   list.unshift({ code, at: Date.now() });
@@ -160,10 +158,10 @@ function onlineScreen(root) {
     const net = App.net;
     if (net && net.role === 'client' && net.lobby) return drawWaiting(net);
     const k = kingdom();
-    const nameIn = h('input', { type: 'text', class: 'hub-name', placeholder: 'Tu nombre', value: k.name || storage('kchudites.name') || '', maxlength: 16 });
+    const nameIn = h('input', { type: 'text', class: 'hub-name', placeholder: 'Tu nombre', value: k.name || storage('katanittes.name') || '', maxlength: 16 });
     const saveName = () => {
       const n = nameIn.value.trim();
-      storage('kchudites.name', n);
+      storage('katanittes.name', n);
       saveMyKingdom({ ...kingdom(), name: n });
       return n;
     };
@@ -202,10 +200,10 @@ function onlineScreen(root) {
       try {
         App.net = new Net();
         await App.net.host();
-        const cfg = storage('kchudites.lastConfig');
+        const cfg = storage('katanittes.lastConfig');
         if (cfg && cfg.players) {
           cfg.players[0] = { ...cfg.players[0], name: n, kind: 'human', color: kingdom().color, flag: kingdom().flag };
-          storage('kchudites.lastConfig', cfg);
+          storage('katanittes.lastConfig', cfg);
         }
         App.go('lobby', { online: 'host', capacity });
       } catch (e) {
@@ -276,7 +274,7 @@ function onlineScreen(root) {
   function drawWaiting(net) {
     const L = net.lobby;
     const seats = [{ ...L.host, host: true }, ...L.players];
-    const me = storage('kchudites.name');
+    const me = storage('katanittes.name');
     inner.replaceChildren(header(),
       h('div', { class: 'card hub-card waiting-card' },
         h('h3', null, '🏰 Sala ', h('span', { class: 'room-code inline' }, L.code || net.code), h('span', { class: 'room-state ' + (L.open ? 'on' : 'off') }, L.open ? 'abierta' : 'cerrada')),

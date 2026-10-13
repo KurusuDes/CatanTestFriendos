@@ -1,7 +1,9 @@
 // ADHD: a tiny arcade to kill time while the others play (🧠 button next to the reactions).
 // Per player and purely local: one wallet that starts at $100, and every goal reached adds the
-// next machine to the grid (Plinko → slots → coin → rocket), all playable at once; a machine you
-// have already beaten gets an Auto button (all but the rocket). Going broke sends you back to the Plinko. Only the final win is shared:
+// next machine to the grid (Plinko → slots → coin → sheep race → mine → rocket), all playable at once; a machine
+// you have already beaten gets an Auto button (all but the mine and the rocket). Going broke sends you back to the
+// Plinko. When it's your turn (or a trade offer is up) the window turns see-through and ignores clicks until you're
+// done, so it never hides the board nor the game. Only the final win is shared:
 // it is a game action, so everyone sees the fireworks and the banner, and the winner's pieces get gold trims (up to 5 wins).
 import { App } from '../app.js';
 import { h, clear, toast, storage } from './dom.js';
@@ -9,9 +11,9 @@ import { pxURL } from './pixel.js';
 import { play } from './sfx.js';
 import { pendingActors } from '../engine/game.js';
 
-const KEY = 'kchudites.adhd.v1';
+const KEY = 'katanittes.adhd.v2';
 const START = 100;
-const GOALS = [200, 400, 800, 1600]; // reaching GOALS[i] adds machine i+1; the last one wins
+const GOALS = [150, 250, 400, 650, 1000, 1600]; // reaching GOALS[i] adds machine i+1; the last one wins
 const BETS = [5, 10, 25, 50, 100];
 const BG = '#0f1020';
 
@@ -24,7 +26,7 @@ let A = null;
 // ---------------- mounting & the window ----------------
 export function mountAdhd(wrap, getBoard) {
   disposeAdhd();
-  A = { wrap, getBoard, seat: null, w: null, games: [], open: false, forced: false, mustAct: null, visible: false, raf: 0 };
+  A = { wrap, getBoard, seat: null, w: null, games: [], open: false, wait: false, visible: false, ghost: false, raf: 0 };
   // clicks inside must not reach the board (they would cancel a pending pick)
   A.win = h('div', { class: 'adhd hidden', onclick: e => e.stopPropagation(), onpointerdown: e => e.stopPropagation() });
   wrap.append(A.win);
@@ -54,36 +56,32 @@ export function adhdButton() {
   }, '🧠');
 }
 
-// called on every render: whose wallet, whether it's your turn (out of the way) and whether a
-// trade offer is up (the arcade goes behind it)
+// called on every render: whose wallet, and whether you have something to do in the game (your turn,
+// a discard, a trade offer up...): then the arcade stays on screen but see-through and untouchable
 export function updateAdhd(st, v, offerUp) {
   if (!A) return;
   const seat = v >= 0 && st.phase !== 'gameOver' ? v : null;
   if (seat !== A.seat) setSeat(seat);
-  const must = seat != null && pendingActors(st).includes(seat);
-  if (must !== A.mustAct) {
-    A.mustAct = must;
-    A.forced = must; // your turn: it hides, and comes back by itself when you're done
-  }
-  A.win.classList.toggle('behind', !!offerUp);
+  A.wait = seat != null && (pendingActors(st).includes(seat) || !!offerUp);
   apply();
 }
 
 function toggleAdhd() {
   if (!A || A.seat == null) return;
-  if (A.open && !A.forced) A.open = false;
-  else {
-    A.open = true;
-    A.forced = false; // opened by hand during your turn: your call
-  }
+  A.open = !A.open;
   apply();
 }
 
 function apply() {
-  const vis = A.seat != null && A.open && !A.forced;
-  if (!vis && A.visible) settleAll(); // closing it cashes out anything still in the air
+  const vis = A.seat != null && A.open;
+  const ghost = vis && A.wait;
+  // closing it or fading it out cashes out anything still in the air (and stops the Autos)
+  if (A.visible && !A.ghost && (!vis || ghost)) settleAll();
   A.visible = vis;
+  A.ghost = ghost;
   A.win.classList.toggle('hidden', !vis);
+  A.win.classList.toggle('ghost', ghost);
+  A.win.inert = ghost; // no clicks, no keyboard focus while you play
   const btn = document.querySelector('.adhd-toggle');
   if (btn) btn.classList.toggle('on', vis);
   if (vis && !A.raf) A.raf = requestAnimationFrame(loop);
@@ -129,7 +127,6 @@ function setSeat(seat) {
   saveNow();
   A.seat = seat;
   A.w = seat == null ? null : loadStore().seats[seat] || { money: START, level: 1, wins: 0 };
-  A.mustAct = null;
   build();
 }
 
@@ -154,7 +151,7 @@ function build() {
 }
 
 function addGame(i, fresh) {
-  const g = [plinko, slots, coin, rocket][i](purse(i));
+  const g = [plinko, slots, coin, sheep, mine, rocket][i](purse(i));
   A.games[i] = g;
   if (fresh) g.el.classList.add('fresh');
   A.grid.children[i].replaceWith(g.el);
@@ -456,7 +453,217 @@ function slots(K) {
   };
 }
 
-// ---------------- 4. Rocket (the last one, no Auto): the multiplier climbs from x0.00, cash out before it blows ----------------
+// ---------------- 4. Sheep race: bet on one of four sheep; the long shot pays more (Auto backs the same one) ----------------
+function sheep(K) {
+  const W = 90, H = 44, LANE = 10, TOP = 2, START = 12, END = W - 12;
+  const ODDS = [0.4, 0.3, 0.2, 0.1], PAY = [2.6, 3.5, 5, 10];
+  const SCARF = ['#f4f4f4', '#ffcd75', '#41a6f6', '#b13e53'];
+  const [cv, g] = canvas(W, H);
+  let bet = 10, race = null, last = null, pick = 0;
+  const auto = autoButton();
+  const note = h('div', { class: 'adhd-note nopx' }, '¿Cuál llega primero?');
+  const picks = PAY.map((m, i) => h('button', { class: 'btn sm', style: { boxShadow: `inset 0 -4px 0 ${SCARF[i]}` }, title: `Oveja ${i + 1}`, onclick: () => go(i) }, 'x' + m));
+  const el = cell('Carrera de ovejas', cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), auto.el), h('div', { class: 'adhd-row adhd-picks' }, picks), note);
+  // each sheep finishes at its own time (the winner first) and wobbles on the way, so it looks close
+  const at = (r, i, now) => {
+    const u = Math.min(1, (now - r.t0) / r.T[i]);
+    return u + r.wob[i] * Math.sin(u * Math.PI * r.k[i]) * Math.sin(u * Math.PI);
+  };
+
+  function go(i, byAuto) {
+    if (race) return;
+    if (!K.spend(bet)) {
+      auto.set(false);
+      return byAuto || toast('No te alcanza', 'error', 1500);
+    }
+    pick = i;
+    let r = Math.random(), win = 0;
+    while (win < 3 && (r -= ODDS[win]) > 0) win++;
+    const T = SCARF.map((_, j) => (j === win ? 2400 : 2400 * (1.03 + Math.random() * 0.22)));
+    race = { pick: i, win, bet, t0: performance.now(), T, wob: T.map(() => 0.05 + Math.random() * 0.07), k: T.map(() => 2 + rnd(3)) };
+    note.textContent = '¡Arrancan!';
+    play.click();
+  }
+  function end() {
+    const r = race;
+    race = null;
+    last = r;
+    auto.at = performance.now() + 700;
+    if (r.pick !== r.win) {
+      note.textContent = `Ganó la ${r.win + 1}: -${fmt(r.bet)}`;
+      play.bad();
+      return K.done();
+    }
+    note.textContent = `¡Ganó tu oveja! x${PAY[r.win]} → +${fmt(round(r.bet * PAY[r.win]))}`;
+    PAY[r.win] >= 5 ? play.event() : play.gain();
+    K.pay(round(r.bet * PAY[r.win]));
+  }
+  return {
+    el,
+    busy: () => !!race,
+    sync() {
+      auto.show(K.passed());
+    },
+    settle() {
+      auto.set(false);
+      if (race) end();
+    },
+    dispose() {
+      K.dead = true;
+    },
+    frame(now) {
+      if (!race && auto.due(now)) go(pick, true);
+      if (race && now - race.t0 >= race.T[race.win]) end();
+      g.fillStyle = BG;
+      g.fillRect(0, 0, W, H);
+      for (let i = 0; i < 4; i++) {
+        const y = TOP + i * LANE;
+        g.fillStyle = i % 2 ? '#257179' : '#38b764';
+        g.fillRect(0, y, W, LANE);
+        // the finish line, checkered
+        for (let k = 0; k < LANE; k += 2) {
+          g.fillStyle = (k / 2 + i) % 2 ? '#f4f4f4' : '#1a1c2c';
+          g.fillRect(END + 4, y + k, 2, 2);
+        }
+        const r = race || last;
+        const u = race ? Math.min(1, at(race, i, now)) : last ? (i === last.win ? 1 : Math.min(0.97, at(last, i, last.t0 + last.T[last.win]))) : 0;
+        const x = START + (END - START) * u;
+        if (r && !race && i === r.win && Math.floor(now / 250) % 2) {
+          g.fillStyle = '#ffcd75';
+          g.fillRect(Math.round(x) - 7, y, 14, LANE);
+        }
+        g.save();
+        g.scale(-1, 1); // the sprite faces left: mirror it so it runs towards the finish line
+        drawSprite(g, '🐑', -x - 4, y + (race && Math.floor((now - race.t0) / 90 + i) % 2 ? 0 : 1), 10, 9);
+        g.restore();
+        g.fillStyle = SCARF[i];
+        g.fillRect(Math.round(x) - 1, y + 6, 3, 2);
+        if (i === pick && (race || last)) {
+          g.fillStyle = '#f4f4f4';
+          g.fillRect(1, y + 4, 3, 2);
+        }
+      }
+    },
+  };
+}
+
+// ---------------- 5. The mine (no Auto): 16 rocks, 3 hide the robber. Every ore you dig raises the payout; cash out before he finds you ----------------
+function mine(K) {
+  const N = 4, CELLS = N * N, ROBBERS = 3, C = 14, GAP = 2, W = 90, H = 66;
+  const OX = Math.round((W - (N * C + (N - 1) * GAP)) / 2), OY = 2;
+  // the fair payout for surviving k digs: C(16,k) / C(13,k)
+  const mult = k => {
+    let m = 1;
+    for (let i = 0; i < k; i++) m *= (CELLS - i) / (CELLS - ROBBERS - i);
+    return Math.floor(m * 100) / 100;
+  };
+  const [cv, g] = canvas(W, H);
+  let bet = 10, run = null, last = null, hover = -1;
+  const btn = h('button', { class: 'btn sm primary', onclick: act }, 'Entrar');
+  const note = h('div', { class: 'adhd-note nopx' }, 'Pica piedra, no despiertes al ladrón');
+  const el = cell('La mina', cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), btn), note);
+  cv.style.cursor = 'pointer';
+  const cellAt = e => {
+    const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W - OX, y = ((e.clientY - r.top) / r.height) * H - OY;
+    const cx = Math.floor(x / (C + GAP)), cy = Math.floor(y / (C + GAP));
+    return cx >= 0 && cy >= 0 && cx < N && cy < N && x % (C + GAP) < C && y % (C + GAP) < C ? cy * N + cx : -1;
+  };
+  cv.onpointermove = e => (hover = cellAt(e));
+  cv.onpointerleave = () => (hover = -1);
+  cv.onclick = e => dig(cellAt(e));
+
+  function setBtn() {
+    const k = run ? run.dug.size : 0;
+    btn.textContent = !run ? 'Entrar' : k ? `Cobrar ${fmt(round(run.bet * mult(k)))}` : 'Pica una';
+    btn.classList.toggle('primary', !run);
+    btn.classList.toggle('green', !!run && k > 0);
+    btn.disabled = !!run && !k;
+  }
+  function act() {
+    if (run) return run.dug.size && cash();
+    if (!K.spend(bet)) return toast('No te alcanza', 'error', 1500);
+    const bad = new Set();
+    while (bad.size < ROBBERS) bad.add(rnd(CELLS));
+    run = { bet, bad, dug: new Set() };
+    last = null;
+    note.textContent = `Siguiente piedra: x${mult(1)}`;
+    setBtn();
+  }
+  function dig(i) {
+    if (!run || i < 0 || run.dug.has(i)) return;
+    if (run.bad.has(i)) {
+      last = { ...run, hit: i, t: performance.now() };
+      run = null;
+      note.textContent = `¡El ladrón! Perdiste ${fmt(last.bet)}`;
+      play.boom();
+      setBtn();
+      return K.done();
+    }
+    run.dug.add(i);
+    play.click();
+    if (run.dug.size === CELLS - ROBBERS) return cash();
+    note.textContent = `x${mult(run.dug.size)} · siguiente: x${mult(run.dug.size + 1)}`;
+    setBtn();
+  }
+  function cash() {
+    const r = run, m = mult(r.dug.size), won = round(r.bet * m);
+    run = null;
+    last = { ...r, t: performance.now() };
+    note.textContent = `Saliste con x${m} → ${fmt(won)}`;
+    m >= 3 ? play.event() : play.gain();
+    setBtn();
+    K.pay(won);
+  }
+  return {
+    el,
+    busy: () => !!run,
+    sync() {},
+    settle() {
+      // leaving mid-dig: you keep what you dug (or get the ticket back if you hadn't started)
+      if (!run) return;
+      if (run.dug.size) return cash();
+      const b = run.bet;
+      run = null;
+      setBtn();
+      K.pay(b);
+    },
+    dispose() {
+      K.dead = true;
+    },
+    frame(now) {
+      g.fillStyle = BG;
+      g.fillRect(0, 0, W, H);
+      const s = run || last;
+      for (let i = 0; i < CELLS; i++) {
+        const x = OX + (i % N) * (C + GAP), y = OY + Math.floor(i / N) * (C + GAP);
+        const dug = s && s.dug.has(i), open = last && !run, bad = s && s.bad.has(i);
+        if (dug) {
+          g.fillStyle = '#333c57';
+          g.fillRect(x, y, C, C);
+          drawSprite(g, '💎', x + 2, y + 2, C - 4);
+        } else if (open && bad) {
+          g.fillStyle = last.hit === i && Math.floor((now - last.t) / 150) % 2 ? '#ef7d57' : '#b13e53';
+          g.fillRect(x, y, C, C);
+          drawSprite(g, '🦹', x + 1, y + 1, C - 2);
+        } else {
+          g.fillStyle = run && hover === i ? '#94b0c2' : '#566c86';
+          g.fillRect(x, y, C, C);
+          g.fillStyle = run && hover === i ? '#f4f4f4' : '#94b0c2';
+          g.fillRect(x, y, C, 2);
+          g.fillStyle = '#333c57';
+          g.fillRect(x, y + C - 2, C, 2);
+          if (open) {
+            g.globalAlpha = 0.35;
+            drawSprite(g, '💎', x + 3, y + 3, C - 6);
+            g.globalAlpha = 1;
+          }
+        }
+      }
+    },
+  };
+}
+
+// ---------------- 6. Rocket (the last one, no Auto): the multiplier climbs from x0.00, cash out before it blows ----------------
 // It mostly blows early: past x5 it's rare and the moon (x10, paid on its own) is 1 in 100. Cash out and a
 // ghost rocket keeps going, so you see how far it would have gone.
 function rocket(K) {

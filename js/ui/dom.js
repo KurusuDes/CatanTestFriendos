@@ -88,6 +88,25 @@ export function toast(msg, kind = 'info', ms = 2600) {
   setTimeout(() => t.remove(), ms + 400);
 }
 
+// The game used to save under 'kchudites.*' with bots named after it: move everything to
+// 'katanittes.*' once (saved games, settings, rooms) and rename those bots inside the saves.
+const OLD_BOTS = { Kchudo: 'Leñadora', 'La Kchuda': 'Sir Ladrillo', Chuchito: 'El Banquero' };
+(function migrateStorage() {
+  for (const box of ['localStorage', 'sessionStorage']) {
+    try {
+      const s = window[box];
+      for (const k of Object.keys(s)) {
+        if (!k.startsWith('kchudites.')) continue;
+        const nk = 'katanittes.' + k.slice(10);
+        let v = s.getItem(k);
+        for (const [a, b] of Object.entries(OLD_BOTS)) v = v.split(`"${a}"`).join(`"${b}"`);
+        if (s.getItem(nk) == null) s.setItem(nk, v);
+        s.removeItem(k);
+      }
+    } catch {}
+  }
+})();
+
 export function storage(key, value) {
   try {
     if (value === undefined) return JSON.parse(localStorage.getItem(key) || 'null');

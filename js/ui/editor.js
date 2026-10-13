@@ -149,12 +149,12 @@ export function editorScreen(root, initial) {
     storage(MAPS_KEY, saved);
     toast(`💾 "${m.name}" guardado`, 'good');
     if (play) {
-      const cfg = storage('kchudites.lastConfig');
+      const cfg = storage('katanittes.lastConfig');
       if (cfg) {
         cfg.map.shape = 'custom';
         cfg.map.custom = m;
-        storage('kchudites.lastConfig', cfg);
-      } else storage('kchudites.lastConfig', { map: { shape: 'custom', custom: m } });
+        storage('katanittes.lastConfig', cfg);
+      } else storage('katanittes.lastConfig', { map: { shape: 'custom', custom: m } });
       App.go('lobby');
     } else drawSide();
   }

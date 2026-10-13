@@ -5,6 +5,13 @@ import { applyAction, pendingActors } from '../js/engine/game.js';
 import { botAct } from '../js/engine/bot.js';
 import { defaultConfig, PLAYER_COLORS, BOT_NAMES } from '../js/engine/config.js';
 
+// the name, one word in two colours: KATAN (sand) and ITTES (white), meeting at the centre
+export function logoWord(style) {
+  const t1 = h('div', { class: 'logo-t1', style: { right: '50%', textAlign: 'right', letterSpacing: '6px', fontSize: '120px', lineHeight: 1, ...style } }, 'KATAN');
+  const t2 = h('div', { class: 'logo-t2', style: { left: '50%', textAlign: 'left', letterSpacing: '6px', paddingLeft: '6px', fontSize: '120px', lineHeight: 1, ...style } }, 'ITTES');
+  return [t1, t2];
+}
+
 // ---------- easing ----------
 export const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
 export const P = (t, s, d) => clamp((t - s) / d);

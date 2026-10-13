@@ -1,6 +1,14 @@
 import { h } from './dom.js';
 import { MODES } from '../engine/config.js';
 
+export const REPO_URL = 'https://github.com/KurusuDes/CatanTestFriendos';
+const repoLink = () => h('a', { href: REPO_URL, target: '_blank', rel: 'noopener' }, 'código en GitHub');
+
+// the credit line under the main menu: copies of the game usually keep it, so the link travels with them
+export function creditLine() {
+  return h('div', { class: 'credits' }, 'Katanittes, por Sowtank · ', repoLink(), ' · proyecto de fans no oficial');
+}
+
 export function showHelp() {
   const close = () => ov.remove();
   const ov = h('div', { class: 'overlay', onclick: e => e.target === ov && close() },
@@ -21,7 +29,7 @@ export function showHelp() {
       h('ul', null,
         h('li', null, 'Poblado 1 · Ciudad 2 · Carta de punto 1 (oculta).'),
         h('li', null, '🛣️ Camino más largo (5+ tramos seguidos): 2 puntos. ⚔️ Ejército más grande (3+ caballeros): 2 puntos.')),
-      h('h3', null, 'Modos Amiguites'),
+      h('h3', null, 'Modos Katanittes'),
       h('ul', null, MODES.map(m => h('li', null, h('b', null, `${m.icon} ${m.name}: `), m.desc))),
       h('h3', null, 'Controles'),
       h('ul', null,
@@ -29,6 +37,10 @@ export function showHelp() {
         h('li', null, '🎲 Toca «Tirar dados» para tirar al momento, o mantenlo pulsado para cargar fuerza y suéltalo: los dados salen más fuerte.'),
         h('li', null, '🖱️ Botón del medio: clava un banderín de tu color en el mapa que ven todos. 😀: reacciona con un emoji que sale de todas tus construcciones.'),
         h('li', null, 'Esc: cancelar la construcción. 💡: pedir una pista al bot difícil.')),
+      h('h3', null, 'Créditos'),
+      h('ul', null,
+        h('li', null, 'Katanittes es un juego de Sowtank. El ', repoLink(), ' es libre (licencia MIT): si lo usas en otro proyecto, menciona el original y enlaza el repositorio.'),
+        h('li', null, 'Proyecto de fans no oficial: no está afiliado a Catan GmbH, CATAN Studio ni Kosmos. CATAN es una marca de sus respectivos propietarios.')),
       h('div', { class: 'row' }, h('button', { class: 'btn primary', onclick: close }, '¡Entendido!'))));
   document.body.append(ov);
 }
