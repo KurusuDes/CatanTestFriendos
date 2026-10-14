@@ -31,6 +31,13 @@ Formato compatible con el plugin Tasks de Obsidian: `➕` = fecha en que se cre�
 - [ ] Probar en móvil y online el ADHD transparente en tu turno, la carrera de ovejas y la mina (tocar las piedras con el dedo) ➕ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
 - [ ] Revisar en otros idiomas los avisos de colocación con Casas secretas («En secreto:», «Reubica:»), que se pegan delante de otra frase ➕ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
 - [ ] Si se renombra el repositorio, cambiar la URL del final del tráiler y del showcase y regrabar los tres videos y los GIFs ➕ 2026-10-13 [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
+- [ ] Cambiar la descripción del repo en GitHub, que todavía dice «Catan x Kchudites» (decidir el texto; propuesta en la nota) ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
+- [ ] Poner el tráiler reproduciéndose dentro del README: comprimir el MP4 en inglés a menos de 10 MB, subirlo desde el editor de github.com y dejar el GIF debajo como extra ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
+- [ ] Hacer el ladrón más visible: más grande y alto, con contorno o halo, y la mancha roja de su casilla más fuerte (ya se prometió en Reddit) ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
+- [ ] Decidir si se crea la cuenta gratuita de Metered para el relay TURN y poner `METERED_APP` y `METERED_KEY` en `js/net.js` (sin TURN no conectan dos jugadores detrás de NAT estricto) ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
+- [ ] Corregir en los README la frase «there's no game server»: explicar el servidor de saludo de PeerJS y los STUN ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
+- [ ] Revisar el rendimiento del juego: medir FPS y tiempo por fotograma en el navegador y proponer mejoras concretas ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
+- [ ] Publicar en Reddit las tres respuestas redactadas (ladrón, NAT, azar); la del ladrón después de arreglarlo ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
 
 ## Hechas
 - [x] Licencia MIT, `NOTICE.md` y petición de crédito ✅ 2026-09-30 [[S01 - 2026-09-30 - Licencia, dados con carga y vault]]

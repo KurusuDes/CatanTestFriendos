@@ -4,11 +4,11 @@ tags: [contexto]
 
 # 01 - Active Context
 
-**Última sesión:** [[S07 - 2026-10-13 - Katanittes, seis idiomas y kit de Reddit]]
-**Último commit documentado:** `fb08408` (el juego en seis idiomas y GIFs del tráiler para Reddit)
+**Última sesión:** [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
+**Último commit documentado:** `33a2883` (cierre de S07; en S08 no hubo commits de código)
 
 ## Estado
-**Katanittes** (nombre oficial desde S07) está publicado en GitHub Pages y listo para lanzarse: reglas completas con modos propios, hasta 8 jugadores, bots, hotseat y online P2P, mapa 3D de maqueta y el ADHD con 6 minijuegos (la carrera de ovejas y la mina son nuevas), que se vuelve transparente cuando te toca. El juego está en español, inglés, portugués, francés, alemán e italiano, con selector en el menú y el idioma del navegador por defecto; en online cada jugador ve el historial en su idioma. Los tráilers ES/EN y el showcase están regrabados con el nombre nuevo, y el kit de Reddit (textos por comunidad y GIFs del tráiler) está listo. El crédito con enlace al repo se ve en el menú y en la ayuda.
+**Katanittes** está publicado en GitHub Pages, en seis idiomas, con tráilers regrabados y el kit de Reddit listo. Ya se compartió y llegaron los primeros comentarios: el ladrón cuesta verlo, el online falla cuando los dos jugadores están detrás de NAT estricto (no hay relay TURN configurado) y alguien opina que Catan tiene demasiado azar. Las respuestas en inglés están redactadas. Además, la descripción del repo en GitHub todavía dice «Catan x Kchudites» y el README no tiene un video que se reproduzca en la página, solo un póster con enlace y un GIF.
 
 ## Siguiente paso
-Lanzar en Reddit con el kit (https://claude.ai/artifact/DmAJ51KFAawAdmCBdnWvuZ), una comunidad al día, y contestar los comentarios. Mientras tanto, probar lo que solo se ve con gente o en móvil: idiomas en móvil, online con dos idiomas distintos y el ADHD nuevo. Ver [[02 - Tareas]].
+Aplicar el plan de S08, que quedó sin hacer: descripción del repo, video dentro del README (comprimir a menos de 10 MB y subirlo desde github.com), ladrón más visible, corregir la frase del README sobre el servidor y revisar el rendimiento. Decidir si se crea la cuenta de Metered para el TURN. Después, publicar las respuestas en Reddit. Ver [[02 - Tareas]].
