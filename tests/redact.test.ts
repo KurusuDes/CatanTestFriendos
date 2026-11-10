@@ -118,7 +118,7 @@ describe('redactFor', () => {
     let before = 0, after = 0, n = 0;
     play([1, 4, 7, 10], 500, (s, step) => {
       if (step % 5 || step === 0) return;
-      const full = { ...s, board: Object.fromEntries(Object.entries(s.board).filter(([k]) => !['vertices', 'edges', 'sea', 'ports', 'bounds'].includes(k))), log: s.log.slice(-40), players: s.players.map(({ flag, ...p }) => (void flag, p)) };
+      const full = { ...s, board: Object.fromEntries(Object.entries(s.board).filter(([k]) => !['vertices', 'edges', 'sea', 'ports', 'bounds', 'tiles'].includes(k))), log: s.log.slice(-40), players: s.players.map(({ flag, ...p }) => (void flag, p)) };
       delete (full as Partial<GameState>).config;
       before += JSON.stringify(full).length;
       // tiles are only sent when they change, so a typical state message has none
