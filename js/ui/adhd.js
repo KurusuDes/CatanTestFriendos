@@ -244,7 +244,7 @@ function drawSprite(g, e, x, y, w, hh = w) {
 }
 
 function text(g, s, x, y, color, size = 8) {
-  g.font = `${size}px Silkscreen, monospace`;
+  g.font = `800 ${size + 2}px "Baloo 2", sans-serif`;
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillStyle = '#1a1c2c';

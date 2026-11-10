@@ -7,6 +7,7 @@ import { DEV_DECKS, TILE_INFO } from '../engine/constants.js';
 import { createGame } from '../engine/game.js';
 import { newSeed } from '../engine/rng.js';
 import { openFlagEditor, flagImg, patternFlag, validFlag, myKingdom, saveMyKingdom } from './flag.js';
+import { pixelize } from './pixel.js';
 
 const CFG_KEY = 'katanittes.lastConfig';
 export const MAPS_KEY = 'katanittes.maps';
@@ -83,6 +84,13 @@ export function lobbyScreen(root, opts = {}) {
     renderOnline();
   }
 
+  // small changes (a switch, a select, a slider) only touch the preview: rebuilding the whole
+  // column made the page jump and the switches lose their slide
+  function light() {
+    save();
+    renderPreview();
+  }
+
   function renderPreview() {
     let st;
     try {
@@ -100,6 +108,8 @@ export function lobbyScreen(root, opts = {}) {
       h('span', { class: 'pill' }, `${st.board.ports.length} cảng`),
       ...Object.entries(counts).map(([r, n]) => h('span', { class: 'pill' }, `${TILE_INFO[r].icon}${n}`)),
       h('button', { class: 'btn sm', onclick: () => { cfg.seed = newSeed(); renderPreview(); } }, '🎲 Bản đồ khác'));
+    // swap emojis for sprites now, not a frame later (the pills would change width and jump)
+    pixelize(previewMeta);
   }
 
   // ---------- the online room (host) ----------
@@ -254,7 +264,8 @@ export function lobbyScreen(root, opts = {}) {
     // map
     const customs = storage(MAPS_KEY) || [];
     const m = cfg.map;
-    const sel = (k, v) => h('select', { onchange: e => { m[k] = isNaN(+e.target.value) || e.target.value === '' ? e.target.value : +e.target.value; refresh(); } },
+    const goldNote = h('p', { style: { color: 'var(--muted)', fontSize: '12px', display: m.gold ? '' : 'none' } }, '💰 Ô vàng cho bạn loại tài nguyên bạn đang ít nhất.');
+    const sel = (k, v) => h('select', { onchange: e => { m[k] = isNaN(+e.target.value) || e.target.value === '' ? e.target.value : +e.target.value; goldNote.style.display = m.gold ? '' : 'none'; light(); } },
       v.map(([val, label]) => h('option', { value: val, selected: String(m[k]) === String(val) ? true : null }, label)));
     left.append(h('div', { class: 'card' },
       h('h3', null, '🗺️ Bản đồ'),
@@ -270,26 +281,39 @@ export function lobbyScreen(root, opts = {}) {
         h('div', { class: 'map-card', onclick: () => App.go('editor') }, h('div', { class: 'mini', style: { display: 'grid', placeItems: 'center', fontSize: '38px' } }, '➕'), h('b', null, 'Tạo bản đồ'))),
       h('p', { style: { color: 'var(--muted)', fontSize: '13px', margin: '10px 0 0' } }, (SHAPES[m.shape] || SHAPES.custom).desc),
       h('div', { class: 'opt-grid' },
-        (SHAPES[m.shape] || {}).random ? h('div', null, h('label', null, `Kích thước: ${m.size} ô`), h('input', { type: 'range', min: 12, max: 60, value: m.size, onchange: e => { m.size = +e.target.value; refresh(); } })) : null,
+        (SHAPES[m.shape] || {}).random ? h('div', null, h('label', null, `Kích thước: ${m.size} ô`), h('input', { type: 'range', min: 12, max: 60, value: m.size, oninput: e => { e.target.previousSibling.textContent = `Kích thước: ${e.target.value} ô`; }, onchange: e => { m.size = +e.target.value; light(); } })) : null,
         h('div', null, h('label', null, 'Tài nguyên'), sel('resources', [['balanced', 'Cân bằng'], ['chaos', 'Hỗn loạn']])),
         h('div', null, h('label', null, 'Số'), sel('numbers', [['balanced', 'Không để 6 và 8 cạnh nhau'], ['random', 'Hoàn toàn ngẫu nhiên']])),
         h('div', null, h('label', null, 'Sa mạc'), sel('deserts', [['auto', 'Tự động'], [0, '0'], [1, '1'], [2, '2'], [3, '3']])),
         h('div', null, h('label', null, 'Ô vàng 💰'), sel('gold', [[0, '0'], [1, '1'], [2, '2'], [3, '3'], [4, '4']])),
         h('div', null, h('label', null, 'Cảng'), sel('ports', [['none', 'Không có'], ['few', 'Ít'], ['normal', 'Bình thường'], ['many', 'Nhiều']]))),
-      m.gold ? h('p', { style: { color: 'var(--muted)', fontSize: '12px' } }, '💰 Ô vàng cho bạn loại tài nguyên bạn đang ít nhất.') : null));
+      goldNote));
 
-    // modes
+    // modes: toggled in place, so the switch slides and nothing around it moves
+    const chaosBox = h('div');
+    const renderChaos = () => {
+      clear(chaosBox);
+      if (!cfg.modes.chaosEvery) return;
+      chaosBox.append(h('div', { class: 'opt-grid' },
+        h('div', null, h('label', null, 'Đất chuyển mình: xáo trộn gì'), h('select', { onchange: e => { cfg.modes.chaosWhat = e.target.value; save(); } },
+          [['numbers', 'Số'], ['resources', 'Tài nguyên'], ['both', 'Cả hai']].map(([v, l]) => h('option', { value: v, selected: cfg.modes.chaosWhat === v ? true : null }, l)))),
+        h('div', null, h('label', null, `Mỗi ${cfg.modes.chaosEvery} vòng`), h('input', { type: 'range', min: 1, max: 6, value: cfg.modes.chaosEvery, oninput: e => { e.target.previousSibling.textContent = `Mỗi ${e.target.value} vòng`; }, onchange: e => { cfg.modes.chaosEvery = +e.target.value; save(); } }))));
+    };
+    renderChaos();
     left.append(h('div', { class: 'card' },
       h('h3', null, '🎭 Chế độ chơi ', h('small', null, 'kết hợp tùy thích')),
-      h('div', { class: 'modes' }, MODES.map(md => {
-        const on = md.get(cfg);
-        return h('div', { class: 'mode' + (on ? ' on' : '') + (md.flagship ? ' flag' : ''), onclick: () => { md.set(cfg, !on); refresh(); } },
-          h('div', { class: 'mi' }, md.icon), h('div', null, md.flagship ? h('span', { class: 'flagship' }, '★ CHẾ ĐỘ ĐẶC SẮC') : null, h('b', null, md.name), h('small', null, md.desc)), h('div', { class: 'switch' }));
-      })),
-      cfg.modes.chaosEvery ? h('div', { class: 'opt-grid' },
-        h('div', null, h('label', null, 'Đất chuyển mình: xáo trộn gì'), h('select', { onchange: e => { cfg.modes.chaosWhat = e.target.value; refresh(); } },
-          [['numbers', 'Số'], ['resources', 'Tài nguyên'], ['both', 'Cả hai']].map(([v, l]) => h('option', { value: v, selected: cfg.modes.chaosWhat === v ? true : null }, l)))),
-        h('div', null, h('label', null, `Mỗi ${cfg.modes.chaosEvery} vòng`), h('input', { type: 'range', min: 1, max: 6, value: cfg.modes.chaosEvery, onchange: e => { cfg.modes.chaosEvery = +e.target.value; refresh(); } }))) : null,
+      h('div', { class: 'modes' }, MODES.map(md => h('div', {
+        class: 'mode' + (md.get(cfg) ? ' on' : '') + (md.flagship ? ' flag' : ''), role: 'switch', 'aria-checked': String(!!md.get(cfg)),
+        onclick: e => {
+          const on = !md.get(cfg);
+          md.set(cfg, on);
+          e.currentTarget.classList.toggle('on', on);
+          e.currentTarget.setAttribute('aria-checked', String(on));
+          if (md.id === 'chaos') renderChaos();
+          light();
+        },
+      }, h('div', { class: 'mi' }, md.icon), h('div', null, md.flagship ? h('span', { class: 'flagship' }, '★ CHẾ ĐỘ ĐẶC SẮC') : null, h('b', null, md.name), h('small', null, md.desc)), h('div', { class: 'switch' })))),
+      chaosBox,
       !online ? h('div', { class: 'opt-grid' },
         h('div', null, h('label', null, 'Màn hình chuyền máy (nhiều người chơi)'), h('select', { onchange: e => { cfg.modes.privacy = e.target.value; save(); } },
           [['auto', 'Chỉ khi Bịt mắt'], ['on', 'Luôn luôn'], ['off', 'Không bao giờ']].map(([v, l]) => h('option', { value: v, selected: cfg.modes.privacy === v ? true : null }, l))))) : null));
@@ -298,7 +322,7 @@ export function lobbyScreen(root, opts = {}) {
     const R = cfg.rules;
     const slider = (key, label, min, max, fmt = x => x) => h('div', { class: 'rule' },
       h('label', null, label, h('span', null, fmt(R[key]))),
-      h('input', { type: 'range', min, max, value: R[key], oninput: e => { R[key] = +e.target.value; e.target.previousSibling.lastChild.textContent = fmt(R[key]); }, onchange: () => refresh() }));
+      h('input', { type: 'range', min, max, value: R[key], oninput: e => { R[key] = +e.target.value; e.target.previousSibling.lastChild.textContent = fmt(R[key]); }, onchange: () => save() }));
     left.append(h('div', { class: 'card' },
       h('h3', null, '📜 Luật chơi'),
       h('div', { class: 'rules' },
@@ -310,10 +334,12 @@ export function lobbyScreen(root, opts = {}) {
         slider('maxRoads', 'Số đường mỗi người', 8, 25),
         slider('maxSettlements', 'Số nhà mỗi người', 3, 9),
         slider('maxCities', 'Số thành phố mỗi người', 2, 8),
-        h('div', { class: 'rule' }, h('label', null, 'Bộ thẻ phát triển'), h('select', { onchange: e => { R.devDeck = e.target.value; refresh(); } },
+        h('div', { class: 'rule' }, h('label', null, 'Bộ thẻ phát triển'), h('select', { onchange: e => { R.devDeck = e.target.value; save(); } },
           Object.entries(DEV_DECKS).map(([k, d]) => h('option', { value: k, selected: R.devDeck === k ? true : null }, d.name)))),
-        h('div', { class: 'rule' }, h('label', null, 'Người đi đầu'), h('select', { onchange: e => { R.randomStart = e.target.value === '1'; refresh(); } },
+        h('div', { class: 'rule' }, h('label', null, 'Người đi đầu'), h('select', { onchange: e => { R.randomStart = e.target.value === '1'; save(); } },
           h('option', { value: '1', selected: R.randomStart ? true : null }, 'Ngẫu nhiên'), h('option', { value: '0', selected: !R.randomStart ? true : null }, 'Người đầu danh sách'))))));
+    // sprites in now: waiting for the observer's next frame showed raw emojis that then resized
+    pixelize(left);
   }
 
   function start() {
