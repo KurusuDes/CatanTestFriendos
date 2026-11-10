@@ -1,12 +1,12 @@
+// @ts-nocheck
 // Headless self-play: runs many bot-only games over every map/mode combination and
-// checks rule invariants after every single action.  Usage: node tests/sim.mjs [games]
-import { createGame, applyAction, pendingActors, victoryPoints, handSize, canBuildRoad } from '../js/engine/game.js';
-import { botAct } from '../js/engine/bot.js';
-import { defaultConfig, MODES, PLAYER_COLORS } from '../js/engine/config.js';
-import { SHAPES } from '../js/engine/board.js';
-import { RES } from '../js/engine/constants.js';
+// checks rule invariants after every single action.  Usage: pnpm sim [games]
+import { createGame, applyAction, pendingActors, victoryPoints, handSize, canBuildRoad } from '../src/engine/game.js';
+import { botAct } from '../src/engine/bot.js';
+import { defaultConfig, MODES, PLAYER_COLORS } from '../src/engine/config.js';
+import { SHAPES } from '../src/engine/board.js';
+import { RES } from '../src/engine/constants.js';
 
-const GAMES = +process.argv[2] || 200;
 const shapes = Object.keys(SHAPES).filter(k => k !== 'custom');
 
 function makeConfig(i) {
@@ -74,6 +74,7 @@ function check(s, where) {
   if (errs.length) throw new Error(`[${where}] ` + errs.join('; '));
 }
 
+export function runSim(GAMES) {
 const summary = { games: 0, finished: 0, turns: 0, byShape: {}, winnerVP: [], errors: 0 };
 for (let i = 0; i < GAMES; i++) {
   const cfg = makeConfig(i);
@@ -134,6 +135,17 @@ for (let i = 0; i < GAMES; i++) {
     if (summary.errors > 5) break;
   }
 }
+return summary;
+}
+
+export function printSummary(summary) {
 console.log(`\nPartidas: ${summary.games}, terminadas: ${summary.finished}, errores: ${summary.errors}, turnos medios: ${(summary.turns / Math.max(1, summary.games)).toFixed(1)}`);
 for (const [k, v] of Object.entries(summary.byShape)) console.log(`  ${k.padEnd(9)} ${v.done}/${v.n} terminadas, ${(v.turns / v.n).toFixed(0)} turnos`);
-process.exit(summary.errors ? 1 : 0);
+}
+
+import { fileURLToPath } from 'node:url';
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  const summary = runSim(+process.argv[2] || 200);
+  printSummary(summary);
+  process.exit(summary.errors ? 1 : 0);
+}

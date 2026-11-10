@@ -1,6 +1,7 @@
-import { createGame, applyAction, pendingActors } from '../js/engine/game.js';
-import { botAct } from '../js/engine/bot.js';
-import { defaultConfig, MODES, PLAYER_COLORS } from '../js/engine/config.js';
+// @ts-nocheck
+import { createGame, applyAction, pendingActors } from '../src/engine/game.js';
+import { botAct } from '../src/engine/bot.js';
+import { defaultConfig, MODES, PLAYER_COLORS } from '../src/engine/config.js';
 const counts = {};
 const bump = k => counts[k] = (counts[k]||0)+1;
 for (let i=0;i<150;i++){

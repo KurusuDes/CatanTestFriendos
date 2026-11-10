@@ -1,17 +1,11 @@
-// Targeted rule tests. Usage: node tests/rules.mjs
-import * as G from '../js/engine/game.js';
-import { defaultConfig } from '../js/engine/config.js';
+// @ts-nocheck
+// Targeted rule tests. Usage: pnpm test
+import * as G from '../src/engine/game.js';
+import { defaultConfig } from '../src/engine/config.js';
 
-let pass = 0, failN = 0;
-const t = (name, fn) => {
-  try {
-    fn();
-    pass++;
-  } catch (e) {
-    failN++;
-    console.log('❌', name, '\n   ', e.message);
-  }
-};
+import { test } from 'vitest';
+
+const t = (name, fn) => test(name, fn);
 const eq = (a, b, m = '') => {
   if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${m} esperado ${JSON.stringify(b)}, obtenido ${JSON.stringify(a)}`);
 };
@@ -371,6 +365,3 @@ t('historial de tiradas: quién y cuánto, como mucho 30', () => {
   eq(last.pid, 34 % 4);
   eq(last.sum, s.dice[0] + s.dice[1]);
 });
-
-console.log(`\n${pass} ok, ${failN} fallos`);
-process.exit(failN ? 1 : 0);
