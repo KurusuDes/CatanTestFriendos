@@ -386,7 +386,7 @@ export function pxURL(name, size = 20) {
   const key = render ? `${name}@${size > 22 ? 32 : 16}` : name;
   if (cache.has(key)) return cache.get(key);
   let url;
-  if (render) url = new URL(`../../assets/icons/${name}_${size > 22 ? 32 : 16}.png`, import.meta.url).href;
+  if (render) url = `${import.meta.env.BASE_URL}assets/icons/${name}_${size > 22 ? 32 : 16}.png`;
   else if (SPRITES[name]) url = iconSetName === 'pico' ? spriteURL(SPRITES_PICO[name], PAL_PICO, true) : spriteURL(SPRITES[name]);
   else url = emojiURL(name);
   cache.set(key, url);

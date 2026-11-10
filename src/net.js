@@ -57,16 +57,9 @@ export function myToken() {
 
 function loadPeer() {
   if (peerLib) return peerLib;
-  peerLib = new Promise((res, rej) => {
-    if (window.Peer) return res(window.Peer);
-    const sc = document.createElement('script');
-    sc.src = 'https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js';
-    sc.onload = () => res(window.Peer);
-    sc.onerror = () => {
-      peerLib = null;
-      rej(new Error('Không tải được PeerJS'));
-    };
-    document.head.append(sc);
+  peerLib = import('peerjs').then(m => m.Peer || m.default).catch(() => {
+    peerLib = null;
+    throw new Error('Không tải được PeerJS');
   });
   return peerLib;
 }

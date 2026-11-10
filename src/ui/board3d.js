@@ -40,7 +40,7 @@ const INR = Math.sqrt(3) / 2; // hex inradius
 const NORMALS = [0, 1, 2].map(k => [Math.cos((k * Math.PI) / 3), Math.sin((k * Math.PI) / 3)]);
 const L = { grass: 0, forest: 1, dirt: 2, rock: 3, sand: 4, snow: 5, field: 6, meadow: 7 };
 const TINT = { brick: new THREE.Color('#ffa488'), desert: new THREE.Color('#f4ece2'), back: new THREE.Color('#b99873'), unknown: new THREE.Color('#9aa39c'), gold: new THREE.Color('#f0d27a'), white: new THREE.Color('#ffffff') };
-const ASSET = p => new URL('../../assets/' + p, import.meta.url).href;
+const ASSET = p => import.meta.env.BASE_URL + 'assets/' + p;
 
 // ---------- noise ----------
 function hash2(x, y) {

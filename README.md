@@ -79,36 +79,43 @@ Một cửa sổ nhỏ chứa các trò may rủi để chơi trong lúc chờ t
 
 ## Kỹ thuật
 
-- **Trang tĩnh, không cần build:** JavaScript ES module thuần, HTML và CSS. Chạy thẳng từ GitHub Pages.
-- **Engine luật** (`js/engine/`): hàm thuần. `applyAction(state, action)` kiểm tra và áp dụng mọi nước đi, còn hiệu ứng hình ảnh được trả về dưới dạng danh sách sự kiện, nên cùng một engine chạy ván chơi một máy, ván online (trên máy chủ phòng) và các bài test.
-- **Thư viện:** [three.js](https://threejs.org/) cho bàn cờ 3D và [PeerJS](https://peerjs.com/) cho WebRTC. Cả hai tải từ CDN.
+- **Build bằng Vite:** JavaScript ES module, HTML và CSS, đóng gói bằng [Vite](https://vite.dev/) (quản lý gói bằng pnpm). GitHub Actions tự build và đưa lên GitHub Pages mỗi lần đẩy lên `main`.
+- **Engine luật** (`src/engine/`): hàm thuần. `applyAction(state, action)` kiểm tra và áp dụng mọi nước đi, còn hiệu ứng hình ảnh được trả về dưới dạng danh sách sự kiện, nên cùng một engine chạy ván chơi một máy, ván online (trên máy chủ phòng) và các bài test.
+- **Thư viện:** [three.js](https://threejs.org/) cho bàn cờ 3D và [PeerJS](https://peerjs.com/) cho WebRTC. Cả hai cài bằng pnpm và đóng gói cùng trang (PeerJS chỉ tải khi chơi online).
 - **Văn bản:** toàn bộ chữ hiển thị viết thẳng bằng tiếng Việt trong code. Lịch sử ván và thông báo lỗi là chuỗi thường, trong đó `@3` là người chơi số 3 (giao diện thay bằng tên người đó, tô theo màu của họ).
 
 | Phần | File | Chức năng |
 |---|---|---|
-| Engine luật | `js/engine/game.js`, `board.js`, `constants.js`, `config.js`, `rng.js` | Trạng thái ván, luật, sinh bản đồ, ngẫu nhiên có seed |
-| Bot | `js/engine/bot.js` | Ba mức độ khó, cộng với nút gợi ý |
-| Ứng dụng | `js/app.js`, `js/main.js` | Trạng thái ván, gửi hành động, lượt của bot, lưu ván |
-| Online | `js/net.js` | Phòng, đồng bộ do chủ phòng quyết định, kết nối lại, bỏ phiếu |
-| Màn hình ván | `js/ui/gameView.js` | Thẻ, bài trên tay, hành động, xúc xắc, giao dịch, thẻ bay |
-| Bàn cờ 3D | `js/ui/board3d.js`, `dice3d.js`, `flag.js` | Địa hình, biến thể ô, công trình, sương mù, xúc xắc 3D, cờ |
-| Góc ADHD | `js/ui/adhd.js` | Sáu trò chơi nhỏ, số dư, mở khóa, pháo hoa |
-| Giao diện khác | `js/ui/lobby.js`, `editor.js`, `pixel.js`, `sfx.js`, `help.js` | Sảnh và phòng, trình tạo bản đồ, sprite pixel, âm thanh, trợ giúp |
-| Giao diện | `css/style.css`, `css/pixel.css` | Theme pixel (bảng màu Sweetie-16), font VT323 và Tiny5 (có tiếng Việt) |
-| Tài nguyên | `assets/`, `tools/blender/` | Texture, mô hình `kit.glb` và biểu tượng, cùng các script Blender tạo ra chúng |
+| Engine luật | `src/engine/game.js`, `board.js`, `constants.js`, `config.js`, `rng.js` | Trạng thái ván, luật, sinh bản đồ, ngẫu nhiên có seed |
+| Bot | `src/engine/bot.js` | Ba mức độ khó, cộng với nút gợi ý |
+| Ứng dụng | `src/app.js`, `src/main.js` | Trạng thái ván, gửi hành động, lượt của bot, lưu ván |
+| Online | `src/net.js` | Phòng, đồng bộ do chủ phòng quyết định, kết nối lại, bỏ phiếu |
+| Màn hình ván | `src/ui/gameView.js` | Thẻ, bài trên tay, hành động, xúc xắc, giao dịch, thẻ bay |
+| Bàn cờ 3D | `src/ui/board3d.js`, `dice3d.js`, `flag.js` | Địa hình, biến thể ô, công trình, sương mù, xúc xắc 3D, cờ |
+| Góc ADHD | `src/ui/adhd.js` | Sáu trò chơi nhỏ, số dư, mở khóa, pháo hoa |
+| Giao diện khác | `src/ui/lobby.js`, `editor.js`, `pixel.js`, `sfx.js`, `help.js` | Sảnh và phòng, trình tạo bản đồ, sprite pixel, âm thanh, trợ giúp |
+| Giao diện | `src/styles/style.css`, `src/styles/pixel.css` | Theme pixel (bảng màu Sweetie-16), font VT323 và Tiny5 (có tiếng Việt) |
+| Tài nguyên | `public/assets/`, `tools/blender/` | Texture, mô hình `kit.glb` và biểu tượng, cùng các script Blender tạo ra chúng |
 | Test | `tests/` | Test luật cộng hàng trăm ván bot đấu bot có kiểm tra bất biến |
 
 ## Chạy trên máy
 
 ```bash
-python3 -m http.server 8123
-# rồi mở http://localhost:8123/
+pnpm install
+pnpm dev
+# rồi mở địa chỉ Vite in ra (mặc định http://localhost:5173/)
 ```
 
 Test engine (luật cộng 300 ván bot đấu bot kiểm tra bất biến):
 
 ```bash
-npm test
+pnpm test
+```
+
+Đóng gói bản chạy thật (kết quả nằm trong `dist/`):
+
+```bash
+pnpm build
 ```
 
 ## Giấy phép và ghi công
