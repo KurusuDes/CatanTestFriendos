@@ -9,13 +9,11 @@ export const handSize = h => RES.reduce((a, r) => a + (h[r] || 0), 0);
 export const canAfford = (h, cost) => Object.entries(cost).every(([r, n]) => (h[r] || 0) >= n);
 const resName = r => `:${r}:`;
 
-// messages (history and errors) travel as a Spanish template plus its values, and every client
-// translates them into its own language (see js/i18n.js)
-const msg = (t, p) => ({ t, p });
-
+// messages (history and errors) are plain strings; "@3" stands for player 3 and the UI shows
+// their name in their color
 class GameError extends Error {
   constructor(m) {
-    super(typeof m === 'string' ? m : m.t);
+    super(m);
     this.m = m;
   }
 }
@@ -119,10 +117,10 @@ export function createGame(configIn) {
   }
   s.setup = { queue, idx: 0, step: 'settlement', lastVid: null, blindActive: !!M.blindfold, lastRound: R.setupRounds - 1, fixing: false };
   s.current = queue[0].pid;
-  log(s, msg('¡Empieza la partida! Mapa: {n} hexágonos.', { n: board.tiles.length }));
-  if (M.flipped) log(s, '🔄 Tablero volteado: coloca tus casas sin saber qué hay debajo.');
-  if (M.blindfold) log(s, '🤫 Casas secretas: nadie ve dónde pones hasta la revelación.');
-  if (M.fog) log(s, '🌑 Niebla de guerra: solo ves lo que rodea a tus piezas.');
+  log(s, `Ván đấu bắt đầu! Bản đồ: ${board.tiles.length} ô.`);
+  if (M.flipped) log(s, '🔄 Bàn cờ bị úp: đặt nhà mà không biết bên dưới là gì.');
+  if (M.blindfold) log(s, '🤫 Nhà bí mật: không ai thấy bạn đặt ở đâu cho tới lúc lật mở.');
+  if (M.fog) log(s, '🌑 Sương mù chiến tranh: bạn chỉ thấy xung quanh công trình của mình.');
   return s;
 }
 
@@ -401,9 +399,9 @@ function updateLongestRoad(s) {
   }
   if (owner !== cur) {
     if (owner >= 0) {
-      log(s, msg('🛣️ @{p} consigue el Camino más largo ({n}).', { p: owner, n: max }), owner);
+      log(s, `🛣️ @${owner} giành Con đường dài nhất (${max}).`, owner);
       s.fx.push({ kind: 'award', what: 'road', pid: owner });
-    } else log(s, '🛣️ Nadie tiene el Camino más largo ahora.');
+    } else log(s, '🛣️ Giờ không ai giữ Con đường dài nhất.');
   }
   s.longestRoad = { owner, len: owner >= 0 ? lens[owner] : 0 };
 }
@@ -413,7 +411,7 @@ function updateLargestArmy(s, pid) {
   const la = s.largestArmy;
   if (p.knights >= 3 && la.owner !== pid && p.knights > la.count) {
     s.largestArmy = { owner: pid, count: p.knights };
-    log(s, msg('⚔️ @{p} consigue el Ejército más grande ({n}).', { p: pid, n: p.knights }), pid);
+    log(s, `⚔️ @${pid} giành Đội quân lớn nhất (${p.knights}).`, pid);
     s.fx.push({ kind: 'award', what: 'army', pid });
   } else if (la.owner === pid) la.count = p.knights;
 }
@@ -425,7 +423,7 @@ function checkWin(s) {
     s.winner = s.current;
     s.phase = 'gameOver';
     s.trade = null;
-    log(s, msg('🏆 ¡@{p} gana la partida con {n} puntos!', { p: s.current, n: vp }), s.current);
+    log(s, `🏆 @${s.current} thắng ván với ${vp} điểm!`, s.current);
     s.fx.push({ kind: 'win', pid: s.current });
   }
 }
@@ -477,7 +475,7 @@ function produce(s, sum) {
     const total = receivers.reduce((a, i) => a + gains[i][r], 0);
     if (!total) continue;
     if (total > s.bank[r] && receivers.length > 1) {
-      log(s, msg('🏦 El banco no tiene suficiente {r}: nadie lo recibe.', { r: resName(r) }));
+      log(s, `🏦 Ngân hàng không đủ ${resName(r)}: không ai được nhận.`);
       continue;
     }
     for (const i of receivers) {
@@ -524,7 +522,7 @@ function startRound(s) {
       const res = shuffle(s.rng, tiles.map(t => t.res));
       tiles.forEach((t, i) => (t.res = res[i]));
     }
-    log(s, '🌀 ¡Tierra viva! El mapa se ha reordenado.');
+    log(s, '🌀 Đất chuyển mình! Bản đồ vừa bị xáo trộn.');
     s.fx.push({ kind: 'chaos' });
   }
   if (!M.events) return;
@@ -592,7 +590,7 @@ function startRound(s) {
     }
   }
   const extra = E.res ? ` (${resName(E.res)})` : E.pid != null ? ` (@${E.pid})` : '';
-  log(s, msg('{icon} Evento de la ronda {n}: {name}{extra}.', { icon: E.icon, n: s.round, name: E.name, extra }));
+  log(s, `${E.icon} Sự kiện vòng ${s.round}: ${E.name}${extra}.`);
   s.fx.push({ kind: 'event', event: E });
 }
 
@@ -607,7 +605,7 @@ function beginTurns(s) {
     for (const [pid, vid] of s.setup.pendingRes || []) setupResources(s, pid, vid);
     s.setup.pendingRes = [];
     s.fx.push({ kind: 'flipAll' });
-    log(s, '🔄 ¡Se voltea el tablero! Ahora todos ven qué hay debajo.');
+    log(s, '🔄 Lật bàn cờ! Giờ ai cũng thấy bên dưới có gì.');
   }
   s.phase = 'roll';
   s.current = s.players[s.first].retired ? nextActive(s, s.first).pid : s.first;
@@ -615,7 +613,7 @@ function beginTurns(s) {
   s.round = 1;
   s.setup.blindActive = false;
   updateLongestRoad(s);
-  log(s, msg('🎲 Turno de @{p}.', { p: s.current }), s.current);
+  log(s, `🎲 Lượt của @${s.current}.`, s.current);
   startRound(s);
 }
 
@@ -668,7 +666,7 @@ function resolveBlind(s) {
       else p.settlementsLeft++;
       if (b.eid != null) p.roadsLeft++;
       fix.push({ pid: b.pid, round: b.round });
-      log(s, msg('💥 ¡Choque! La casa secreta de @{p} coincidía con otra. Debe reubicarla.', { p: b.pid }), b.pid);
+      log(s, `💥 Trùng chỗ! Nhà bí mật của @${b.pid} đụng nhà khác. Phải dời đi chỗ khác.`, b.pid);
     }
   }
   s.fx.push({ kind: 'blindReveal', placements: s.blind.map(b => ({ pid: b.pid, vid: b.vid, eid: b.eid, ok: accepted.includes(b) })) });
@@ -679,7 +677,7 @@ function resolveBlind(s) {
       else setupResources(s, b.pid, b.vid);
     }
   }
-  log(s, '🙈 ¡Revelación! Todas las casas iniciales ya son visibles.');
+  log(s, '🙈 Lật mở! Giờ đã thấy hết nhà đầu ván của mọi người.');
   s.blind = [];
   if (fix.length) {
     st.queue = fix;
@@ -756,11 +754,11 @@ function fogResolve(s, a, kind, okReal, okKnown, key) {
   const to = nearest(s, kind, a[key], okReal);
   if (to === null) {
     s.fx.push({ kind: 'blocked', pid: a.pid, what: kind, at: a[key] });
-    log(s, msg('🌑 @{p} tropezó con alguien en la niebla y no pudo construir.', { p: a.pid }), a.pid);
+    log(s, `🌑 @${a.pid} đụng phải ai đó trong sương mù và không xây được.`, a.pid);
     throw new Blocked();
   }
   s.fx.push({ kind: 'relocated', pid: a.pid, what: kind, from: a[key], to });
-  log(s, msg('🌑 ¡Había alguien en la niebla! La pieza de @{p} se desvió.', { p: a.pid }), a.pid);
+  log(s, `🌑 Có người trong sương mù! Công trình của @${a.pid} bị dời đi.`, a.pid);
   return { ...a, [key]: to };
 }
 
@@ -768,25 +766,25 @@ function fogResolve(s, a, kind, okReal, okKnown, key) {
 const H = {};
 
 H.placeSettlement = (s, a) => {
-  if (s.phase !== 'setup' || s.setup.step !== 'settlement') fail('No es momento de colocar un poblado.');
+  if (s.phase !== 'setup' || s.setup.step !== 'settlement') fail('Chưa phải lúc đặt nhà.');
   const st = s.setup;
   const entry = st.queue[st.idx];
-  if (entry.pid !== a.pid) fail('No es tu turno.');
+  if (entry.pid !== a.pid) fail('Chưa tới lượt bạn.');
   a = fogResolve(s, a, 'vertex', v => canSetupSettlement(s, a.pid, v), kv => canSetupSettlement(kv, a.pid, a.vid), 'vid');
-  if (!canSetupSettlement(s, a.pid, a.vid)) fail('No puedes colocar ahí (regla de distancia).');
+  if (!canSetupSettlement(s, a.pid, a.vid)) fail('Không đặt ở đó được (luật khoảng cách).');
   const p = s.players[a.pid];
   const isCity = s.config.rules.setupCity && entry.round === st.lastRound && p.citiesLeft > 0;
   const type = isCity ? 'city' : 'settlement';
   if (isCity) p.citiesLeft--;
   else {
-    if (p.settlementsLeft <= 0) fail('No te quedan poblados.');
+    if (p.settlementsLeft <= 0) fail('Bạn hết nhà rồi.');
     p.settlementsLeft--;
   }
   st.lastVid = a.vid;
   st.step = 'road';
   if (st.blindActive) {
     s.blind.push({ pid: a.pid, vid: a.vid, eid: null, round: entry.round, type });
-    log(s, isCity ? msg('🙈 @{p} colocó su ciudad en secreto.', { p: a.pid }) : msg('🙈 @{p} colocó su poblado en secreto.', { p: a.pid }), a.pid);
+    log(s, isCity ? `🙈 @${a.pid} đã bí mật đặt thành phố.` : `🙈 @${a.pid} đã bí mật đặt nhà.`, a.pid);
   } else {
     s.buildings[a.vid] = { owner: a.pid, type };
     revealAround(s, a.vid);
@@ -795,19 +793,19 @@ H.placeSettlement = (s, a) => {
       if (s.config.modes.flipped) (st.pendingRes = st.pendingRes || []).push([a.pid, a.vid]);
       else setupResources(s, a.pid, a.vid);
     }
-    log(s, isCity ? msg('🏠 @{p} coloca una ciudad.', { p: a.pid }) : msg('🏠 @{p} coloca un poblado.', { p: a.pid }), a.pid);
+    log(s, isCity ? `🏠 @${a.pid} đặt một thành phố.` : `🏠 @${a.pid} đặt một nhà.`, a.pid);
   }
   s.fx.push({ kind: 'build', what: type, pid: a.pid, at: a.vid, hidden: st.blindActive });
 };
 
 H.placeRoad = (s, a) => {
-  if (s.phase !== 'setup' || s.setup.step !== 'road') fail('No es momento de colocar un camino.');
+  if (s.phase !== 'setup' || s.setup.step !== 'road') fail('Chưa phải lúc đặt đường.');
   const st = s.setup;
-  if (st.queue[st.idx].pid !== a.pid) fail('No es tu turno.');
+  if (st.queue[st.idx].pid !== a.pid) fail('Chưa tới lượt bạn.');
   a = fogResolve(s, a, 'edge', e => canSetupRoad(s, a.pid, e), kv => canSetupRoad(kv, a.pid, a.eid), 'eid');
-  if (!canSetupRoad(s, a.pid, a.eid)) fail('El camino debe salir de tu nuevo poblado.');
+  if (!canSetupRoad(s, a.pid, a.eid)) fail('Đường phải đi ra từ nhà bạn vừa đặt.');
   const p = s.players[a.pid];
-  if (p.roadsLeft <= 0) fail('No te quedan caminos.');
+  if (p.roadsLeft <= 0) fail('Bạn hết đường rồi.');
   p.roadsLeft--;
   if (st.blindActive) {
     const b = s.blind.find(x => x.pid === a.pid && x.vid === st.lastVid && x.eid == null);
@@ -824,8 +822,8 @@ H.placeRoad = (s, a) => {
 };
 
 H.roll = (s, a) => {
-  if (s.phase !== 'roll') fail('Ahora no se tiran dados.');
-  if (a.pid !== s.current) fail('No es tu turno.');
+  if (s.phase !== 'roll') fail('Giờ chưa phải lúc tung xúc xắc.');
+  if (a.pid !== s.current) fail('Chưa tới lượt bạn.');
   const d = rollDice(s);
   const sum = d[0] + d[1];
   s.dice = d;
@@ -835,7 +833,7 @@ H.roll = (s, a) => {
   // how hard the dice were thrown (hold the button to charge it): only changes the animation
   const power = Math.round(Math.min(1, Math.max(0, +a.power || 0)) * 100) / 100;
   s.fx.push({ kind: 'dice', dice: d, power });
-  log(s, msg('🎲 @{p} saca {n}.', { p: a.pid, n: sum }), a.pid);
+  log(s, `🎲 @${a.pid} tung ra ${sum}.`, a.pid);
   if (sum !== 7) {
     produce(s, sum);
     s.phase = 'main';
@@ -843,7 +841,7 @@ H.roll = (s, a) => {
   }
   const R = s.config.rules;
   if (s.round <= R.robberGrace) {
-    log(s, '😴 El ladrón duerme durante las primeras rondas.');
+    log(s, '😴 Kẻ trộm còn ngủ trong mấy vòng đầu.');
     s.phase = 'main';
     return;
   }
@@ -858,14 +856,14 @@ H.roll = (s, a) => {
 };
 
 H.discard = (s, a) => {
-  if (s.phase !== 'discard') fail('No hay descartes pendientes.');
+  if (s.phase !== 'discard') fail('Không ai phải bỏ thẻ.');
   const need = s.pendingDiscards[a.pid];
-  if (!need) fail('No tienes que descartar.');
+  if (!need) fail('Bạn không phải bỏ thẻ.');
   const res = a.res || {};
   const total = RES.reduce((t, r) => t + (res[r] || 0), 0);
-  if (total !== need) fail(msg('Debes descartar exactamente {n} cartas.', { n: need }));
+  if (total !== need) fail(`Bạn phải bỏ đúng ${need} thẻ.`);
   const p = s.players[a.pid];
-  for (const r of RES) if ((res[r] || 0) < 0 || (res[r] || 0) > p.res[r]) fail('No tienes esas cartas.');
+  for (const r of RES) if ((res[r] || 0) < 0 || (res[r] || 0) > p.res[r]) fail('Bạn không có những thẻ đó.');
   for (const r of RES) {
     p.res[r] -= res[r] || 0;
     s.bank[r] += res[r] || 0;
@@ -873,86 +871,86 @@ H.discard = (s, a) => {
   p.stats.lost += need;
   s.fx.push({ kind: 'discard', pid: a.pid, res: Object.fromEntries(RES.map(r => [r, res[r] || 0])) });
   delete s.pendingDiscards[a.pid];
-  log(s, msg('🗑️ @{p} descarta {n} cartas.', { p: a.pid, n: need }), a.pid);
+  log(s, `🗑️ @${a.pid} bỏ ${need} thẻ.`, a.pid);
   if (!Object.keys(s.pendingDiscards).length) s.phase = s.config.rules.noRobber ? 'main' : 'robber';
 };
 
 H.moveRobber = (s, a) => {
-  if (s.phase !== 'robber') fail('No toca mover el ladrón.');
-  if (a.pid !== s.current) fail('No es tu turno.');
+  if (s.phase !== 'robber') fail('Chưa phải lúc di chuyển kẻ trộm.');
+  if (a.pid !== s.current) fail('Chưa tới lượt bạn.');
   const known = s.config.modes.fog ? viewFor(s, a.pid) : s;
-  if (!legalRobberTiles(known, a.pid).includes(a.tile)) fail('No puedes poner el ladrón ahí.');
+  if (!legalRobberTiles(known, a.pid).includes(a.tile)) fail('Không đặt kẻ trộm ở đó được.');
   const victims = stealTargets(s, a.pid, a.tile);
   let victim = a.victim;
   if (victims.length === 1 && victim == null) victim = victims[0];
   // in the fog you may not see who is there: steal from a random neighbour
   if (s.config.modes.fog && victims.length && !victims.includes(victim)) victim = pick(s.rng, victims);
-  if (victims.length && !victims.includes(victim)) fail('Elige a quién robar.');
+  if (victims.length && !victims.includes(victim)) fail('Chọn người để cướp.');
   if (!victims.length) victim = null;
   s.board.robberFrom = s.board.robber; // bots use it so they don't just send it back
   s.board.robber = a.tile;
   s.fx.push({ kind: 'robber', tile: a.tile });
-  log(s, msg('🦹 @{p} mueve el ladrón.', { p: a.pid }), a.pid);
+  log(s, `🦹 @${a.pid} di chuyển kẻ trộm.`, a.pid);
   if (victim != null) {
     const r = stealRandom(s, victim, a.pid);
     s.fx.push({ kind: 'steal', from: victim, to: a.pid, res: r });
-    log(s, msg('🫳 @{p} le roba una carta a @{v}.', { p: a.pid, v: victim }), a.pid);
+    log(s, `🫳 @${a.pid} cướp một thẻ của @${victim}.`, a.pid);
   }
   s.phase = s.robberReturn;
 };
 
 function assertMain(s, a) {
-  if (a.pid !== s.current) fail('No es tu turno.');
-  if (s.phase !== 'main') fail(s.phase === 'roll' ? 'Primero tira los dados.' : 'Termina la acción pendiente.');
+  if (a.pid !== s.current) fail('Chưa tới lượt bạn.');
+  if (s.phase !== 'main') fail(s.phase === 'roll' ? 'Tung xúc xắc trước đã.' : 'Làm nốt việc đang dở trước đã.');
 }
 
 H.build = (s, a) => {
-  if (a.pid !== s.current) fail('No es tu turno.');
+  if (a.pid !== s.current) fail('Chưa tới lượt bạn.');
   const p = s.players[a.pid];
   const free = s.phase === 'roadBuilding' && a.what === 'road';
   if (!free) assertMain(s, a);
   if (a.what === 'road') {
-    if (p.roadsLeft <= 0) fail('No te quedan caminos.');
+    if (p.roadsLeft <= 0) fail('Bạn hết đường rồi.');
     a = fogResolve(s, a, 'edge', e => canBuildRoad(s, a.pid, e), kv => canBuildRoad(kv, a.pid, a.at), 'at');
-    if (!canBuildRoad(s, a.pid, a.at)) fail('El camino debe conectar con tu red.');
-    if (!free && !canAfford(p.res, COSTS.road)) fail('Te faltan recursos.');
+    if (!canBuildRoad(s, a.pid, a.at)) fail('Đường phải nối với mạng đường của bạn.');
+    if (!free && !canAfford(p.res, COSTS.road)) fail('Bạn không đủ tài nguyên.');
     if (!free) pay(s, a.pid, COSTS.road);
     p.roadsLeft--;
     s.roads[a.at] = a.pid;
     const E = s.board.edges[a.at];
     revealAround(s, E.a);
     revealAround(s, E.b);
-    log(s, free ? msg('🛤️ @{p} construye un camino gratis.', { p: a.pid }) : msg('🛤️ @{p} construye un camino.', { p: a.pid }), a.pid);
+    log(s, free ? `🛤️ @${a.pid} làm một đoạn đường miễn phí.` : `🛤️ @${a.pid} làm một đoạn đường.`, a.pid);
     if (free) {
       s.freeRoads--;
       if (s.freeRoads <= 0 || p.roadsLeft <= 0 || !legalRoads(s, a.pid).length) s.phase = 'main';
     }
   } else if (a.what === 'settlement') {
-    if (p.settlementsLeft <= 0) fail('No te quedan poblados.');
+    if (p.settlementsLeft <= 0) fail('Bạn hết nhà rồi.');
     a = fogResolve(s, a, 'vertex', v => canBuildSettlement(s, a.pid, v), kv => canBuildSettlement(kv, a.pid, a.at), 'at');
-    if (!canBuildSettlement(s, a.pid, a.at)) fail('Ahí no se puede construir un poblado.');
-    if (!canAfford(p.res, COSTS.settlement)) fail('Te faltan recursos.');
+    if (!canBuildSettlement(s, a.pid, a.at)) fail('Không xây nhà ở đó được.');
+    if (!canAfford(p.res, COSTS.settlement)) fail('Bạn không đủ tài nguyên.');
     pay(s, a.pid, COSTS.settlement);
     p.settlementsLeft--;
     s.buildings[a.at] = { owner: a.pid, type: 'settlement' };
     revealAround(s, a.at);
-    log(s, msg('🏠 @{p} construye un poblado.', { p: a.pid }), a.pid);
+    log(s, `🏠 @${a.pid} xây một nhà.`, a.pid);
   } else if (a.what === 'city') {
-    if (p.citiesLeft <= 0) fail('No te quedan ciudades.');
-    if (!canBuildCity(s, a.pid, a.at)) fail('Solo puedes mejorar tus poblados.');
-    if (!canAfford(p.res, COSTS.city)) fail('Te faltan recursos.');
+    if (p.citiesLeft <= 0) fail('Bạn hết thành phố rồi.');
+    if (!canBuildCity(s, a.pid, a.at)) fail('Bạn chỉ nâng cấp được nhà của mình.');
+    if (!canAfford(p.res, COSTS.city)) fail('Bạn không đủ tài nguyên.');
     pay(s, a.pid, COSTS.city);
     p.citiesLeft--;
     p.settlementsLeft++;
     s.buildings[a.at].type = 'city';
-    log(s, msg('🏰 @{p} mejora a ciudad.', { p: a.pid }), a.pid);
-  } else fail('Construcción desconocida.');
+    log(s, `🏰 @${a.pid} nâng cấp lên thành phố.`, a.pid);
+  } else fail('Công trình không hợp lệ.');
   s.fx.push({ kind: 'build', what: a.what, pid: a.pid, at: a.at });
   if (a.what !== 'city') updateLongestRoad(s);
 };
 
 H.endRoadBuilding = (s, a) => {
-  if (s.phase !== 'roadBuilding' || a.pid !== s.current) fail('No estás construyendo caminos.');
+  if (s.phase !== 'roadBuilding' || a.pid !== s.current) fail('Bạn đâu có đang xây đường.');
   s.freeRoads = 0;
   s.phase = 'main';
 };
@@ -960,33 +958,33 @@ H.endRoadBuilding = (s, a) => {
 H.buyDev = (s, a) => {
   assertMain(s, a);
   const p = s.players[a.pid];
-  if (!s.devDeck.length) fail('No quedan cartas de desarrollo.');
-  if (!canAfford(p.res, COSTS.dev)) fail('Te faltan recursos.');
+  if (!s.devDeck.length) fail('Hết thẻ phát triển rồi.');
+  if (!canAfford(p.res, COSTS.dev)) fail('Bạn không đủ tài nguyên.');
   pay(s, a.pid, COSTS.dev);
   const type = s.devDeck.pop();
   p.dev.push({ type, turn: s.turn });
   s.fx.push({ kind: 'devBought', pid: a.pid, type });
-  log(s, msg('🃏 @{p} compra una carta de desarrollo.', { p: a.pid }), a.pid);
+  log(s, `🃏 @${a.pid} mua một thẻ phát triển.`, a.pid);
 };
 
 H.playDev = (s, a) => {
-  if (a.pid !== s.current) fail('No es tu turno.');
-  if (!playableDev(s, a.pid).includes(a.card)) fail('No puedes jugar esa carta ahora.');
+  if (a.pid !== s.current) fail('Chưa tới lượt bạn.');
+  if (!playableDev(s, a.pid).includes(a.card)) fail('Giờ chưa dùng thẻ đó được.');
   const p = s.players[a.pid];
   // validate parameters before mutating
   if (a.card === 'yearOfPlenty') {
     const rs = a.res || [];
-    if (rs.length !== 2 || !rs.every(r => RES.includes(r))) fail('Elige 2 recursos.');
+    if (rs.length !== 2 || !rs.every(r => RES.includes(r))) fail('Chọn 2 tài nguyên.');
     const need = {};
     rs.forEach(r => (need[r] = (need[r] || 0) + 1));
-    for (const r in need) if (s.bank[r] < need[r]) fail('El banco no tiene suficientes.');
+    for (const r in need) if (s.bank[r] < need[r]) fail('Ngân hàng không đủ.');
   }
-  if (a.card === 'monopoly' && !RES.includes(a.res)) fail('Elige un recurso.');
+  if (a.card === 'monopoly' && !RES.includes(a.res)) fail('Chọn một tài nguyên.');
   const idx = p.dev.findIndex(c => c.type === a.card && c.turn < s.turn);
   p.dev.splice(idx, 1);
   s.devPlayed = true;
   s.fx.push({ kind: 'devPlayed', pid: a.pid, card: a.card });
-  log(s, msg('{icon} @{p} juega {card}.', { icon: DEV_INFO[a.card].icon, p: a.pid, card: DEV_INFO[a.card].name }), a.pid);
+  log(s, `${DEV_INFO[a.card].icon} @${a.pid} dùng thẻ ${DEV_INFO[a.card].name}.`, a.pid);
   switch (a.card) {
     case 'knight':
       p.knights++;
@@ -1015,7 +1013,7 @@ H.playDev = (s, a) => {
       }
       p.res[a.res] += got;
       s.fx.push({ kind: 'monopoly', pid: a.pid, res: a.res, from });
-      log(s, msg('👑 @{p} se lleva {n} {r}.', { p: a.pid, n: got, r: resName(a.res) }), a.pid);
+      log(s, `👑 @${a.pid} gom được ${got} ${resName(a.res)}.`, a.pid);
       break;
     }
   }
@@ -1023,30 +1021,30 @@ H.playDev = (s, a) => {
 
 H.bankTrade = (s, a) => {
   assertMain(s, a);
-  if (!RES.includes(a.give) || !RES.includes(a.get) || a.give === a.get) fail('Intercambio inválido.');
+  if (!RES.includes(a.give) || !RES.includes(a.get) || a.give === a.get) fail('Giao dịch không hợp lệ.');
   const ratio = tradeRatio(s, a.pid, a.give);
   const p = s.players[a.pid];
-  if (p.res[a.give] < ratio) fail(msg('Necesitas {n} de ese recurso.', { n: ratio }));
-  if (s.bank[a.get] < 1) fail('El banco no tiene ese recurso.');
+  if (p.res[a.give] < ratio) fail(`Bạn cần ${ratio} thẻ loại đó.`);
+  if (s.bank[a.get] < 1) fail('Ngân hàng hết loại tài nguyên đó.');
   p.res[a.give] -= ratio;
   s.bank[a.give] += ratio;
   p.res[a.get]++;
   s.bank[a.get]--;
   s.fx.push({ kind: 'bankTrade', pid: a.pid, give: a.give, n: ratio, get: a.get });
-  log(s, msg('🏦 @{p} cambia {n}{give} por 1{get}.', { p: a.pid, n: ratio, give: resName(a.give), get: resName(a.get) }), a.pid);
+  log(s, `🏦 @${a.pid} đổi ${ratio}${resName(a.give)} lấy 1${resName(a.get)}.`, a.pid);
 };
 
 const validOffer = o => o && RES.every(r => Number.isInteger(o[r] || 0) && (o[r] || 0) >= 0);
 
 H.proposeTrade = (s, a) => {
   assertMain(s, a);
-  if (s.trade) fail('Ya hay una oferta abierta.');
-  if (!validOffer(a.give) || !validOffer(a.get)) fail('Oferta inválida.');
-  if (!handSize(a.give) || !handSize(a.get)) fail('La oferta debe dar y pedir algo.');
-  if (RES.some(r => (a.give[r] || 0) && (a.get[r] || 0))) fail('No puedes dar y pedir el mismo recurso.');
-  if (!canAfford(s.players[a.pid].res, a.give)) fail('No tienes lo que ofreces.');
+  if (s.trade) fail('Đang có một lời mời chưa xong.');
+  if (!validOffer(a.give) || !validOffer(a.get)) fail('Lời mời không hợp lệ.');
+  if (!handSize(a.give) || !handSize(a.get)) fail('Lời mời phải có cả thứ đưa và thứ nhận.');
+  if (RES.some(r => (a.give[r] || 0) && (a.get[r] || 0))) fail('Không thể đưa và đòi cùng một loại tài nguyên.');
+  if (!canAfford(s.players[a.pid].res, a.give)) fail('Bạn không có thứ mình định đưa.');
   const to = (a.to && a.to.length ? a.to : s.players.map(p => p.id)).filter(i => i !== a.pid && s.players[i] && !s.players[i].retired);
-  if (!to.length) fail('Nadie a quien ofrecer.');
+  if (!to.length) fail('Không có ai để mời.');
   const give = zeroRes(), get = zeroRes();
   for (const r of RES) {
     give[r] = a.give[r] || 0;
@@ -1056,25 +1054,25 @@ H.proposeTrade = (s, a) => {
   if (p.tradeTurn !== s.turn) p.tradeTurn = s.turn, p.tradeCount = 0;
   p.tradeCount++;
   s.trade = { id: ++s.tradeSeq, from: a.pid, give, get, to, responses: Object.fromEntries(to.map(i => [i, null])) };
-  log(s, msg('🤝 @{p} ofrece un intercambio.', { p: a.pid }), a.pid);
+  log(s, `🤝 @${a.pid} mời giao dịch.`, a.pid);
 };
 
 H.respondTrade = (s, a) => {
   const t = s.trade;
-  if (!t || !t.to.includes(a.pid)) fail('No hay oferta para ti.');
-  if (a.tradeId != null && a.tradeId !== t.id) fail('Esa oferta ya no existe.');
-  if (a.accept && !canAfford(s.players[a.pid].res, t.get)) fail('No tienes lo que te piden.');
+  if (!t || !t.to.includes(a.pid)) fail('Không có lời mời nào cho bạn.');
+  if (a.tradeId != null && a.tradeId !== t.id) fail('Lời mời đó không còn nữa.');
+  if (a.accept && !canAfford(s.players[a.pid].res, t.get)) fail('Bạn không có thứ họ cần.');
   t.responses[a.pid] = a.accept ? 'accept' : 'reject';
 };
 
 H.confirmTrade = (s, a) => {
   const t = s.trade;
-  if (!t || t.from !== a.pid) fail('No hay oferta tuya.');
-  if (t.responses[a.with] !== 'accept') fail('Ese jugador no aceptó.');
+  if (!t || t.from !== a.pid) fail('Bạn chưa đưa ra lời mời nào.');
+  if (t.responses[a.with] !== 'accept') fail('Người đó chưa đồng ý.');
   const p = s.players[a.pid], o = s.players[a.with];
   if (!canAfford(p.res, t.give) || !canAfford(o.res, t.get)) {
     s.trade = null;
-    fail('Alguien ya no tiene los recursos.');
+    fail('Có người không còn đủ tài nguyên nữa.');
   }
   for (const r of RES) {
     p.res[r] += t.get[r] - t.give[r];
@@ -1082,11 +1080,11 @@ H.confirmTrade = (s, a) => {
   }
   s.trade = null;
   s.fx.push({ kind: 'trade', a: a.pid, b: a.with, give: t.give, get: t.get });
-  log(s, msg('🤝 @{p} y @{q} intercambian.', { p: a.pid, q: a.with }), a.pid);
+  log(s, `🤝 @${a.pid} và @${a.with} trao đổi với nhau.`, a.pid);
 };
 
 H.cancelTrade = (s, a) => {
-  if (!s.trade || s.trade.from !== a.pid) fail('No hay oferta tuya.');
+  if (!s.trade || s.trade.from !== a.pid) fail('Bạn chưa đưa ra lời mời nào.');
   s.trade = null;
 };
 
@@ -1114,7 +1112,7 @@ function advanceTurn(s) {
     s.event = null;
     startRound(s);
   }
-  log(s, msg('🎲 Turno de @{p}.', { p: s.current }), s.current);
+  log(s, `🎲 Lượt của @${s.current}.`, s.current);
 }
 
 H.endTurn = (s, a) => {
@@ -1125,20 +1123,20 @@ H.endTurn = (s, a) => {
 // ---- seat management (host only: disconnections, votes) ----
 H.setController = (s, a) => {
   const p = s.players[a.pid];
-  if (p.retired) fail('Ese jugador ya se retiró.');
-  if (a.kind !== 'bot' && a.kind !== 'human') fail('Control inválido.');
+  if (p.retired) fail('Người đó đã rời ván.');
+  if (a.kind !== 'bot' && a.kind !== 'human') fail('Lệnh điều khiển không hợp lệ.');
   if (p.kind === a.kind) return;
   p.kind = a.kind;
   if (a.kind === 'bot') p.level = p.level || 'normal';
-  log(s, a.kind === 'bot' ? msg('🤖 Un bot toma el control de @{p}.', { p: a.pid }) : msg('👋 @{p} vuelve a tomar el control.', { p: a.pid }), a.pid);
+  log(s, a.kind === 'bot' ? `🤖 Bot chơi thay @${a.pid}.` : `👋 @${a.pid} đã quay lại chơi tiếp.`, a.pid);
   s.fx.push({ kind: 'controller', pid: a.pid, to: a.kind });
 };
 
 H.retirePlayer = (s, a) => {
   const pid = a.pid;
   const p = s.players[pid];
-  if (p.retired) fail('Ese jugador ya se retiró.');
-  if (s.players.filter(x => !x.retired).length <= 2) fail('Tienen que quedar al menos 2 jugadores.');
+  if (p.retired) fail('Người đó đã rời ván.');
+  if (s.players.filter(x => !x.retired).length <= 2) fail('Phải còn ít nhất 2 người chơi.');
   p.retired = true;
   // hand back to the bank, development cards leave the game
   for (const r of RES) {
@@ -1170,7 +1168,7 @@ H.retirePlayer = (s, a) => {
     s.largestArmy = top.length === 1 ? { owner: top[0].id, count: max } : { owner: -1, count: 0 };
   }
   updateLongestRoad(s);
-  log(s, msg('🚪 @{p} se retira de la partida.', { p: pid }), pid);
+  log(s, `🚪 @${pid} rời ván.`, pid);
   s.fx.push({ kind: 'retired', pid });
   // keep the game flowing
   delete s.pendingDiscards[pid];
@@ -1219,9 +1217,9 @@ export function applyAction(s, a) {
   s.fx = [];
   try {
     const h = H[a && a.type];
-    if (!h) fail('Acción desconocida.');
-    if (typeof a.pid !== 'number' || !s.players[a.pid]) fail('Jugador inválido.');
-    if (s.phase === 'gameOver') fail('La partida terminó.');
+    if (!h) fail('Hành động không hợp lệ.');
+    if (typeof a.pid !== 'number' || !s.players[a.pid]) fail('Người chơi không hợp lệ.');
+    if (s.phase === 'gameOver') fail('Ván đã kết thúc.');
     if (s.trade && a.pid === s.current && !TRADE_ACTIONS.has(a.type)) s.trade = null;
     h(s, a);
     s.actions++;

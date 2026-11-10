@@ -13,7 +13,7 @@
   --radius: 14px;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   --font: 'Nunito', system-ui, sans-serif;
-  --display: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  --display: 'Tiny5', 'Nunito', system-ui, sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }

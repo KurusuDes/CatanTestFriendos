@@ -3,7 +3,6 @@ import { h, s as S, clear, storage, toast } from './dom.js';
 import { TILE_INFO } from '../engine/constants.js';
 import { hexagon, hexCenter, hk, SHAPES } from '../engine/board.js';
 import { MAPS_KEY } from './lobby.js';
-import { t, tk } from '../i18n.js';
 
 const U = 100;
 const R = 5;
@@ -13,9 +12,9 @@ const hexPts = (cx, cy, r) => Array.from({ length: 6 }, (_, i) => {
 }).join(' ');
 
 const BRUSHES = [
-  ['random', '🎲', tk('Aleatorio')], ['wood', TILE_INFO.wood.icon, tk('Madera')], ['brick', TILE_INFO.brick.icon, tk('Arcilla')], ['sheep', TILE_INFO.sheep.icon, tk('Lana')],
-  ['wheat', TILE_INFO.wheat.icon, tk('Trigo')], ['ore', TILE_INFO.ore.icon, tk('Mineral')], ['desert', TILE_INFO.desert.icon, tk('Desierto')], ['gold', TILE_INFO.gold.icon, tk('Oro')],
-  ['erase', '🌊', tk('Mar')],
+  ['random', '🎲', 'Ngẫu nhiên'], ['wood', TILE_INFO.wood.icon, 'Gỗ'], ['brick', TILE_INFO.brick.icon, 'Gạch'], ['sheep', TILE_INFO.sheep.icon, 'Cừu'],
+  ['wheat', TILE_INFO.wheat.icon, 'Lúa'], ['ore', TILE_INFO.ore.icon, 'Đá'], ['desert', TILE_INFO.desert.icon, 'Sa mạc'], ['gold', TILE_INFO.gold.icon, 'Vàng'],
+  ['erase', '🌊', 'Biển'],
 ];
 const NUMS = [0, 2, 3, 4, 5, 6, 8, 9, 10, 11, 12];
 
@@ -90,65 +89,65 @@ export function editorScreen(root, initial) {
     const saved = storage(MAPS_KEY) || [];
     side.append(
       h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '12px' } },
-        h('button', { class: 'btn sm', onclick: () => App.go('menu') }, t('← Menú')),
-        h('h2', { style: { fontSize: '22px' } }, t('✏️ Editor de mapas'))),
-      h('p', { style: { color: 'var(--muted)', fontSize: '13px', marginTop: 0 } }, t('Pinta casillas (puedes arrastrar). "Aleatorio" se rellena equilibrado al empezar. Los números "?" también.')),
-      h('div', { class: 'section-label' }, t('Terreno')),
+        h('button', { class: 'btn sm', onclick: () => App.go('menu') }, '← Menu'),
+        h('h2', { style: { fontSize: '22px' } }, '✏️ Tạo bản đồ')),
+      h('p', { style: { color: 'var(--muted)', fontSize: '13px', marginTop: 0 } }, 'Tô các ô (có thể kéo chuột). Ô "Ngẫu nhiên" sẽ được điền cân bằng khi vào ván. Số "?" cũng vậy.'),
+      h('div', { class: 'section-label' }, 'Địa hình'),
       h('div', { class: 'brushes' }, BRUSHES.map(([k, ic, label]) => h('button', {
         class: 'brush' + (numBrush === null && brush === k ? ' on' : ''), onclick: () => { brush = k; numBrush = null; drawSide(); },
-      }, ic, h('small', null, t(label))))),
-      h('div', { class: 'section-label' }, t('Número')),
+      }, ic, h('small', null, label)))),
+      h('div', { class: 'section-label' }, 'Số'),
       h('div', { class: 'brushes' }, NUMS.map(n => h('button', {
         class: 'brush' + (numBrush === n ? ' on' : ''), style: { fontSize: '18px', fontWeight: 900, color: n === 6 || n === 8 ? '#ff6b6b' : '' },
         onclick: () => { numBrush = n; drawSide(); },
-      }, n || '?', h('small', null, n ? '' : t('auto'))))),
-      h('div', { class: 'section-label' }, t('Casillas: {n}', { n: tiles.size })),
+      }, n || '?', h('small', null, n ? '' : 'tự động')))),
+      h('div', { class: 'section-label' }, `Số ô: ${tiles.size}`),
       h('div', { class: 'chips' },
-        h('button', { class: 'btn sm', onclick: () => { tiles.clear(); drawBoard(); drawSide(); } }, t('🧹 Vaciar')),
-        ...['classic', 'extended', 'ring', 'star'].map(k => h('button', { class: 'btn sm', onclick: () => { load({ name, tiles: SHAPES[k].gen().map(([q, r]) => ({ q, r })) }); drawBoard(); drawSide(); } }, t(SHAPES[k].name)))),
-      h('div', { class: 'section-label' }, t('Nombre')),
+        h('button', { class: 'btn sm', onclick: () => { tiles.clear(); drawBoard(); drawSide(); } }, '🧹 Xóa trắng'),
+        ...['classic', 'extended', 'ring', 'star'].map(k => h('button', { class: 'btn sm', onclick: () => { load({ name, tiles: SHAPES[k].gen().map(([q, r]) => ({ q, r })) }); drawBoard(); drawSide(); } }, SHAPES[k].name))),
+      h('div', { class: 'section-label' }, 'Tên'),
       h('input', { type: 'text', value: name, maxlength: 24, onchange: e => { name = e.target.value.trim() || 'Mi mapa'; } }),
       h('div', { style: { display: 'grid', gap: '8px', marginTop: '12px' } },
-        h('button', { class: 'btn primary', onclick: () => saveMap(true) }, t('▶️ Guardar y jugar')),
-        h('button', { class: 'btn', onclick: () => saveMap(false) }, t('💾 Guardar')),
+        h('button', { class: 'btn primary', onclick: () => saveMap(true) }, '▶️ Lưu và chơi'),
+        h('button', { class: 'btn', onclick: () => saveMap(false) }, '💾 Lưu'),
         h('button', {
           class: 'btn', onclick: async () => {
             const code = encodeMap(current());
             try {
               await navigator.clipboard.writeText(code);
-              toast(t('📋 Código copiado. ¡Pásaselo a tus amigos!'), 'good');
+              toast('📋 Đã sao chép mã. Gửi cho bạn bè đi!', 'good');
             } catch {
-              prompt(t('Copia este código:'), code);
+              prompt('Sao chép mã này:', code);
             }
           },
-        }, t('📤 Exportar código')),
+        }, '📤 Xuất mã'),
         h('button', {
           class: 'btn', onclick: () => {
-            const code = prompt(t('Pega el código del mapa:'));
+            const code = prompt('Dán mã bản đồ:');
             if (!code) return;
             try {
               load(decodeMap(code));
               drawBoard();
               drawSide();
-              toast(t('✅ Mapa importado'), 'good');
+              toast('✅ Đã nhập bản đồ', 'good');
             } catch {
-              toast(t('Código inválido'), 'error');
+              toast('Mã không hợp lệ', 'error');
             }
           },
-        }, t('📥 Importar código'))),
-      saved.length ? h('div', null, h('div', { class: 'section-label' }, t('Mis mapas')),
+        }, '📥 Nhập mã')),
+      saved.length ? h('div', null, h('div', { class: 'section-label' }, 'Bản đồ của tôi'),
         saved.map((m, i) => h('div', { style: { display: 'flex', gap: '6px', marginBottom: '6px' } },
           h('button', { class: 'btn sm', style: { flex: 1, justifyContent: 'flex-start' }, onclick: () => { load(m); drawBoard(); drawSide(); } }, `✏️ ${m.name} (${m.tiles.length})`),
-          h('button', { class: 'btn sm ghost', title: t('Borrar'), onclick: () => { if (!confirm(t('¿Borrar "{name}"?', { name: m.name }))) return; saved.splice(i, 1); storage(MAPS_KEY, saved); drawSide(); } }, '🗑️')))) : null);
+          h('button', { class: 'btn sm ghost', title: 'Xóa', onclick: () => { if (!confirm(`Xóa "${m.name}"?`)) return; saved.splice(i, 1); storage(MAPS_KEY, saved); drawSide(); } }, '🗑️')))) : null);
   }
 
   function saveMap(play) {
     const m = current();
-    if (m.tiles.length < 7) return toast(t('El mapa necesita al menos 7 casillas'), 'error');
+    if (m.tiles.length < 7) return toast('Bản đồ cần ít nhất 7 ô', 'error');
     const saved = (storage(MAPS_KEY) || []).filter(x => x.name !== m.name);
     saved.push(m);
     storage(MAPS_KEY, saved);
-    toast(t('💾 "{name}" guardado', { name: m.name }), 'good');
+    toast(`💾 Đã lưu "${m.name}"`, 'good');
     if (play) {
       const cfg = storage('katanittes.lastConfig');
       if (cfg) {

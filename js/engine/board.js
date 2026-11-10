@@ -117,35 +117,35 @@ export function islands(rng, n, k) {
 }
 
 export const SHAPES = {
-  classic: { name: 'Clásico', desc: 'El tablero de siempre: 19 hexágonos.', gen: () => hexagon(2) },
-  mini: { name: 'Mini', desc: '14 hexágonos. Duelo rápido para 2-3.', gen: () => rows([2, 3, 4, 3, 2]) },
-  extended: { name: 'Extendido', desc: '30 hexágonos, pensado para 5-6 jugadores.', gen: () => rows([3, 4, 5, 6, 5, 4, 3]) },
-  big: { name: 'Grande', desc: '37 hexágonos para partidas largas.', gen: () => hexagon(3) },
-  huge: { name: 'Gigante', desc: '61 hexágonos. Un continente entero.', gen: () => hexagon(4) },
+  classic: { name: 'Cổ điển', desc: 'Bàn cờ quen thuộc: 19 ô.', gen: () => hexagon(2) },
+  mini: { name: 'Mini', desc: '14 ô. Đấu nhanh cho 2-3 người.', gen: () => rows([2, 3, 4, 3, 2]) },
+  extended: { name: 'Mở rộng', desc: '30 ô, dành cho 5-6 người.', gen: () => rows([3, 4, 5, 6, 5, 4, 3]) },
+  big: { name: 'Lớn', desc: '37 ô, cho những ván dài.', gen: () => hexagon(3) },
+  huge: { name: 'Khổng lồ', desc: '61 ô. Nguyên cả một lục địa.', gen: () => hexagon(4) },
   ring: {
-    name: 'Anillo del Lago', desc: 'Un anillo de tierra alrededor de un lago central con puertos.',
+    name: 'Vòng Hồ', desc: 'Một vòng đất bao quanh hồ ở giữa, có cảng.',
     gen: () => hexagon(3).filter(h => hexDist(h, [0, 0]) > 1),
   },
   star: {
-    name: 'Estrella', desc: 'Hexágono con seis puntas: peleas en las esquinas.',
+    name: 'Ngôi sao', desc: 'Lục giác sáu cánh: tranh giành ở các mũi.',
     gen: () => [...hexagon(2), ...DIRS.map(([q, r]) => [q * 3, r * 3]), ...DIRS.map(([q, r], i) => {
       const [q2, r2] = DIRS[(i + 1) % 6];
       return [q * 2 + q2, r * 2 + r2];
     })].filter((h, i, arr) => arr.findIndex(o => o[0] === h[0] && o[1] === h[1]) === i),
   },
   kingdoms: {
-    name: 'Dos Reinos', desc: 'Dos mitades unidas por dos puentes de tierra.',
+    name: 'Hai Vương Quốc', desc: 'Hai nửa nối với nhau bằng hai dải đất.',
     gen: () => hexagon(3).filter(([q, r]) => r !== 0 || q === -1 || q === 1),
   },
   islands: {
-    name: 'Archipiélago', desc: 'Islas separadas por el mar. Elige bien dónde empiezas.', random: true,
+    name: 'Quần đảo', desc: 'Các đảo cách nhau bởi biển. Hãy chọn kỹ chỗ bắt đầu.', random: true,
     gen: (rng, m, np) => islands(rng, m.size || 26, np > 4 ? 4 : 3),
   },
   pangea: {
-    name: 'Pangea aleatoria', desc: 'Un continente con forma aleatoria. Tamaño configurable.', random: true,
+    name: 'Lục địa ngẫu nhiên', desc: 'Một lục địa có hình dạng ngẫu nhiên. Tùy chỉnh được kích thước.', random: true,
     gen: (rng, m) => blob(rng, m.size || 24),
   },
-  custom: { name: 'Personalizado', desc: 'Un mapa hecho en el editor.', gen: () => hexagon(2) },
+  custom: { name: 'Tự tạo', desc: 'Bản đồ làm bằng trình chỉnh sửa.', gen: () => hexagon(2) },
 };
 
 // ---------- resources & numbers ----------

@@ -1,13 +1,13 @@
 export const RES = ['wood', 'brick', 'sheep', 'wheat', 'ore'];
 
 export const TILE_INFO = {
-  wood: { name: 'Madera', icon: '🌲', color: '#3d8b3d', dark: '#23602a' },
-  brick: { name: 'Arcilla', icon: '🧱', color: '#c9643a', dark: '#8f3d1d' },
-  sheep: { name: 'Lana', icon: '🐑', color: '#9ccc65', dark: '#5f8f2f' },
-  wheat: { name: 'Trigo', icon: '🌾', color: '#f0c541', dark: '#b88a12' },
-  ore: { name: 'Mineral', icon: '⛰️', color: '#8d93a3', dark: '#555b6b' },
-  desert: { name: 'Desierto', icon: '🌵', color: '#e6d197', dark: '#b39b5c' },
-  gold: { name: 'Oro', icon: '💰', color: '#ffb300', dark: '#b37400' },
+  wood: { name: 'Gỗ', icon: '🌲', color: '#3d8b3d', dark: '#23602a' },
+  brick: { name: 'Gạch', icon: '🧱', color: '#c9643a', dark: '#8f3d1d' },
+  sheep: { name: 'Cừu', icon: '🐑', color: '#9ccc65', dark: '#5f8f2f' },
+  wheat: { name: 'Lúa', icon: '🌾', color: '#f0c541', dark: '#b88a12' },
+  ore: { name: 'Đá', icon: '⛰️', color: '#8d93a3', dark: '#555b6b' },
+  desert: { name: 'Sa mạc', icon: '🌵', color: '#e6d197', dark: '#b39b5c' },
+  gold: { name: 'Vàng', icon: '💰', color: '#ffb300', dark: '#b37400' },
 };
 
 export const COSTS = {
@@ -18,32 +18,32 @@ export const COSTS = {
 };
 
 export const DEV_INFO = {
-  knight: { name: 'Caballero', icon: '⚔️', desc: 'Mueve el ladrón y roba una carta.' },
-  roadBuilding: { name: 'Construir caminos', icon: '🛤️', desc: 'Construye 2 caminos gratis.' },
-  yearOfPlenty: { name: 'Año de abundancia', icon: '🎁', desc: 'Toma 2 recursos del banco.' },
-  monopoly: { name: 'Monopolio', icon: '👑', desc: 'Todos te dan un recurso.' },
-  vp: { name: 'Punto de victoria', icon: '🏆', desc: '+1 punto (oculto).' },
+  knight: { name: 'Hiệp sĩ', icon: '⚔️', desc: 'Di chuyển kẻ trộm và cướp một thẻ.' },
+  roadBuilding: { name: 'Xây đường', icon: '🛤️', desc: 'Xây 2 đoạn đường miễn phí.' },
+  yearOfPlenty: { name: 'Năm bội thu', icon: '🎁', desc: 'Lấy 2 tài nguyên từ ngân hàng.' },
+  monopoly: { name: 'Độc quyền', icon: '👑', desc: 'Mọi người đưa bạn một loại tài nguyên.' },
+  vp: { name: 'Điểm chiến thắng', icon: '🏆', desc: '+1 điểm (giấu kín).' },
 };
 
 export const DEV_DECKS = {
-  normal: { name: 'Normal', knight: 14, vp: 5, roadBuilding: 2, yearOfPlenty: 2, monopoly: 2 },
-  war: { name: 'Guerra (muchos caballeros)', knight: 24, vp: 3, roadBuilding: 1, yearOfPlenty: 1, monopoly: 1 },
-  progress: { name: 'Progreso (muchas cartas de progreso)', knight: 10, vp: 5, roadBuilding: 5, yearOfPlenty: 5, monopoly: 4 },
-  none: { name: 'Sin cartas de desarrollo', knight: 0, vp: 0, roadBuilding: 0, yearOfPlenty: 0, monopoly: 0 },
+  normal: { name: 'Bình thường', knight: 14, vp: 5, roadBuilding: 2, yearOfPlenty: 2, monopoly: 2 },
+  war: { name: 'Chiến tranh (nhiều hiệp sĩ)', knight: 24, vp: 3, roadBuilding: 1, yearOfPlenty: 1, monopoly: 1 },
+  progress: { name: 'Tiến bộ (nhiều thẻ tiến bộ)', knight: 10, vp: 5, roadBuilding: 5, yearOfPlenty: 5, monopoly: 4 },
+  none: { name: 'Không có thẻ phát triển', knight: 0, vp: 0, roadBuilding: 0, yearOfPlenty: 0, monopoly: 0 },
 };
 
 export const EVENTS = [
-  { id: 'bonanza', name: 'Cosecha abundante', icon: '🌟', desc: 'Esta ronda la producción es doble.' },
-  { id: 'drought', name: 'Sequía', icon: '☀️', desc: 'Un recurso no se produce esta ronda.' },
-  { id: 'fairTrade', name: 'Comercio justo', icon: '⚖️', desc: 'El banco cambia 3:1 esta ronda.' },
-  { id: 'blackMarket', name: 'Mercado negro', icon: '🕶️', desc: 'Un recurso se cambia 2:1 esta ronda.' },
-  { id: 'earthquake', name: 'Terremoto', icon: '🌋', desc: 'Dos fichas de número se intercambian.' },
-  { id: 'storm', name: 'Tormenta', icon: '🌪️', desc: 'El ladrón sale volando a otra casilla.' },
-  { id: 'gift', name: 'Regalo del rey', icon: '🎁', desc: 'Todos reciben 1 recurso al azar.' },
-  { id: 'plague', name: 'Plaga', icon: '🦠', desc: 'Quien tenga 6+ cartas pierde 1 al azar.' },
-  { id: 'tax', name: 'Impuestos', icon: '💸', desc: 'El líder paga 1 carta al banco.' },
-  { id: 'rebellion', name: 'Rebelión', icon: '✊', desc: 'El que va último recibe 2 recursos.' },
-  { id: 'calm', name: 'Calma', icon: '🍃', desc: 'No pasa nada... por ahora.' },
+  { id: 'bonanza', name: 'Được mùa', icon: '🌟', desc: 'Vòng này sản lượng gấp đôi.' },
+  { id: 'drought', name: 'Hạn hán', icon: '☀️', desc: 'Vòng này có một tài nguyên không được sản xuất.' },
+  { id: 'fairTrade', name: 'Buôn bán sòng phẳng', icon: '⚖️', desc: 'Vòng này ngân hàng đổi 3:1.' },
+  { id: 'blackMarket', name: 'Chợ đen', icon: '🕶️', desc: 'Vòng này có một tài nguyên được đổi 2:1.' },
+  { id: 'earthquake', name: 'Động đất', icon: '🌋', desc: 'Hai ô số đổi chỗ cho nhau.' },
+  { id: 'storm', name: 'Bão', icon: '🌪️', desc: 'Kẻ trộm bay sang ô khác.' },
+  { id: 'gift', name: 'Quà của vua', icon: '🎁', desc: 'Ai cũng nhận 1 tài nguyên ngẫu nhiên.' },
+  { id: 'plague', name: 'Dịch bệnh', icon: '🦠', desc: 'Ai có từ 6 thẻ trở lên mất ngẫu nhiên 1 thẻ.' },
+  { id: 'tax', name: 'Thu thuế', icon: '💸', desc: 'Người dẫn đầu nộp 1 thẻ cho ngân hàng.' },
+  { id: 'rebellion', name: 'Nổi dậy', icon: '✊', desc: 'Người xếp cuối được nhận 2 tài nguyên.' },
+  { id: 'calm', name: 'Yên bình', icon: '🍃', desc: 'Chưa có gì xảy ra... tạm thời thôi.' },
 ];
 
 export const pips = n => (n ? 6 - Math.abs(7 - n) : 0);

@@ -1,5 +1,4 @@
 import { TILE_INFO } from '../engine/constants.js';
-import { t } from '../i18n.js';
 
 export function h(tag, props, ...children) {
   const el = document.createElement(tag);
@@ -70,7 +69,7 @@ export function rich(msg, players) {
     if (m[1] != null) {
       const p = players[+m[1]];
       frag.append(h('b', { class: 'pname', style: { '--pc': p ? p.color : '#fff' } }, p ? p.name : '?'));
-    } else frag.append(h('span', { class: 'ico', title: t(TILE_INFO[m[2]].name) }, TILE_INFO[m[2]].icon));
+    } else frag.append(h('span', { class: 'ico', title: TILE_INFO[m[2]].name }, TILE_INFO[m[2]].icon));
     last = re.lastIndex;
   }
   if (last < msg.length) frag.append(msg.slice(last));
@@ -83,27 +82,37 @@ export function toast(msg, kind = 'info', ms = 2600) {
     toastBox = h('div', { class: 'toasts' });
     document.body.append(toastBox);
   }
-  const t = h('div', { class: 'toast ' + kind }, typeof msg === 'string' ? msg : msg);
+  const t = h('div', { class: 'toast ' + kind }, msg);
   toastBox.append(t);
   setTimeout(() => t.classList.add('out'), ms);
   setTimeout(() => t.remove(), ms + 400);
 }
 
-// The game used to save under 'kchudites.*' with bots named after it: move everything to
-// 'katanittes.*' once (saved games, settings, rooms) and rename those bots inside the saves.
-const OLD_BOTS = { Kchudo: 'Leñadora', 'La Kchuda': 'Sir Ladrillo', Chuchito: 'El Banquero' };
+// Old saves: the game used to save under 'kchudites.*', and later in several languages with the
+// bots named in Spanish. Once: move everything to 'katanittes.*', give the old bots their
+// Vietnamese names, drop the language choice, and drop saved games whose history is still in the
+// old translatable format ({ t, p } messages), which the game no longer reads.
+const OLD_BOTS = {
+  Kchudo: 'Cô Tiều', 'La Kchuda': 'Ngài Gạch', Chuchito: 'Ông Ngân Hàng',
+  Leñadora: 'Cô Tiều', 'Sir Ladrillo': 'Ngài Gạch', 'El Banquero': 'Ông Ngân Hàng', 'Don Trigo': 'Chú Lúa',
+  Ovejita: 'Bé Cừu', Mineralman: 'Người Đá', 'Doña Arcilla': 'Bà Đất Sét', Ladronzuelo: 'Trộm Vặt', Tú: 'Bạn',
+};
 (function migrateStorage() {
   for (const box of ['localStorage', 'sessionStorage']) {
     try {
       const s = window[box];
+      if (s.getItem('katanittes.vi')) continue;
       for (const k of Object.keys(s)) {
-        if (!k.startsWith('kchudites.')) continue;
-        const nk = 'katanittes.' + k.slice(10);
+        if (!k.startsWith('kchudites.') && !k.startsWith('katanittes.')) continue;
+        const nk = 'katanittes.' + k.replace(/^\w+\./, '');
         let v = s.getItem(k);
-        for (const [a, b] of Object.entries(OLD_BOTS)) v = v.split(`"${a}"`).join(`"${b}"`);
-        if (s.getItem(nk) == null) s.setItem(nk, v);
-        s.removeItem(k);
+        if (nk === 'katanittes.lang' || v.includes('"msg":{"t":')) v = null;
+        else for (const [a, b] of Object.entries(OLD_BOTS)) v = v.split(`"${a}"`).join(`"${b}"`);
+        if (k !== nk) s.removeItem(k);
+        if (v == null) s.removeItem(nk);
+        else if (k === nk || s.getItem(nk) == null) s.setItem(nk, v);
       }
+      s.setItem('katanittes.vi', '1');
     } catch {}
   }
 })();

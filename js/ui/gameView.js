@@ -9,16 +9,13 @@ import { showHelp } from './help.js';
 import { flagImg } from './flag.js';
 import { iconSet, setIconSet, ICON_SETS, pxIcon, pixelize } from './pixel.js';
 import { mountAdhd, updateAdhd, adhdButton, celebrate, disposeAdhd } from './adhd.js';
-import { t, tx, tk } from '../i18n.js';
 
 let ui = null;
 
 const PHASE_TEXT = {
-  setup: tk('Colocación inicial'), roll: tk('Tirar dados'), main: tk('Construir y comerciar'), discard: tk('Descartar'),
-  robber: tk('Mover el ladrón'), roadBuilding: tk('Caminos gratis'), gameOver: tk('Fin de la partida'),
+  setup: 'Đặt nhà đầu ván', roll: 'Tung xúc xắc', main: 'Xây dựng và giao dịch', discard: 'Bỏ thẻ',
+  robber: 'Di chuyển kẻ trộm', roadBuilding: 'Xây đường miễn phí', gameOver: 'Kết thúc ván',
 };
-// a translated sentence whose {slots} are filled with elements (word order differs between languages)
-const slots = (s, parts) => s.split(/\{(\w+)\}/).map((x, i) => (i % 2 ? parts[x] : x)).filter(x => x !== '');
 const costIcons = c => Object.entries(c).map(([r, n]) => TILE_INFO[r].icon.repeat(n)).join('');
 const resLine = o => RES.filter(r => o[r]).map(r => `${o[r]}${TILE_INFO[r].icon}`).join(' ');
 
@@ -42,15 +39,15 @@ export function gameScreen(root) {
     h('div', { class: 'brand' }, 'Katan', h('i', null, 'ittes')),
     els.turn, els.event, els.dice,
     h('div', { class: 'top-actions' },
-      h('button', { class: 'btn sm', title: t('Ayuda'), onclick: () => showHelp() }, '❔'),
-      h('button', { class: 'btn sm', title: t('Menú'), onclick: () => openMenu() }, '☰')));
-  els.topView = h('button', { class: 'btn', title: t('Vista desde arriba'), onclick: () => toggleTopView() }, '🗺️');
+      h('button', { class: 'btn sm', title: 'Trợ giúp', onclick: () => showHelp() }, '❔'),
+      h('button', { class: 'btn sm', title: 'Menu', onclick: () => openMenu() }, '☰')));
+  els.topView = h('button', { class: 'btn', title: 'Nhìn từ trên xuống', onclick: () => toggleTopView() }, '🗺️');
   boardWrap.append(els.banner, els.offer, els.rolls,
     h('div', { class: 'zoom-ctrl' },
       els.topView,
-      h('button', { class: 'btn', title: t('Acercar'), onclick: () => ui.board && ui.board.setZoom(ui.board.zoom * 1.25) }, '+'),
-      h('button', { class: 'btn', title: t('Alejar'), onclick: () => ui.board && ui.board.setZoom(ui.board.zoom / 1.25) }, '−'),
-      h('button', { class: 'btn', title: t('Centrar'), onclick: () => ui.board && ui.board.resetView() }, '⤢')));
+      h('button', { class: 'btn', title: 'Phóng to', onclick: () => ui.board && ui.board.setZoom(ui.board.zoom * 1.25) }, '+'),
+      h('button', { class: 'btn', title: 'Thu nhỏ', onclick: () => ui.board && ui.board.setZoom(ui.board.zoom / 1.25) }, '−'),
+      h('button', { class: 'btn', title: 'Căn giữa', onclick: () => ui.board && ui.board.resetView() }, '⤢')));
   root.append(h('div', { class: 'game screen' },
     topbar,
     h('main', { class: 'game-main' }, boardWrap, h('aside', { class: 'side' }, els.players, els.bank, els.log)),
@@ -102,7 +99,7 @@ export function gameScreen(root) {
 
 // ---------------- board (3D only; the flat 2D map is just a fallback without WebGL) ----------------
 async function mountBoard(u) {
-  const loading = h('div', { class: 'board-loading jit' }, t('🏝️ Levantando la isla...'));
+  const loading = h('div', { class: 'board-loading jit' }, '🏝️ Đang dựng đảo...');
   u.boardWrap.append(loading);
   try {
     const { Board3D } = await import('./board3d.js');
@@ -122,7 +119,7 @@ async function mountBoard(u) {
   } catch (e) {
     console.error(e);
     if (ui !== u) return;
-    toast(t('No se pudo cargar el mapa 3D (¿sin conexión o WebGL?): uso el plano'), 'error', 4000);
+    toast('Không tải được bản đồ 3D (mất mạng hoặc thiếu WebGL?): chuyển sang bản đồ phẳng', 'error', 4000);
     u.board = new BoardView(u.boardWrap);
   }
   loading.remove();
@@ -196,8 +193,8 @@ function handleFx(st) {
       case 'steal':
         // only the two involved see which card it was
         flyCards([f.res], f.from, f.to, v, { hidden: f.from !== v && f.to !== v });
-        if (f.from === v) toast(h('span', null, rich(t('🫳 @{to} te robó {res}', { to: f.to, res: TILE_INFO[f.res].icon }), st.players)), 'error');
-        else if (f.to === v) toast(h('span', null, rich(t('🫳 Le robaste a @{from}: {res}', { from: f.from, res: TILE_INFO[f.res].icon }), st.players)), 'good');
+        if (f.from === v) toast(h('span', null, rich(`🫳 @${f.to} cướp của bạn ${TILE_INFO[f.res].icon}`, st.players)), 'error');
+        else if (f.to === v) toast(h('span', null, rich(`🫳 Bạn cướp của @${f.from}: ${TILE_INFO[f.res].icon}`, st.players)), 'good');
         if (host && st.players[f.from].kind === 'bot' && Math.random() < 0.45) botEmote(f.from, ['😡', '😤', '💀', '😭']);
         break;
       case 'robber':
@@ -205,17 +202,17 @@ function handleFx(st) {
         break;
       case 'event': {
         const def = EVENTS.find(e => e.id === f.event.id);
-        announce(f.event.icon, t(f.event.name), def ? t(def.desc) : '');
+        announce(f.event.icon, f.event.name, def ? def.desc : '');
         play.event();
         break;
       }
       case 'chaos':
-        announce('🌀', t('¡Tierra viva!'), t('El mapa se ha reordenado'));
+        announce('🌀', 'Đất chuyển mình!', 'Bản đồ vừa bị xáo trộn');
         play.event();
         break;
       case 'blindReveal': {
         const bad = f.placements.filter(p => !p.ok).length;
-        announce('🙈', t('¡REVELACIÓN!'), bad ? (bad > 1 ? t('{n} choques: toca reubicar', { n: bad }) : t('{n} choque: toca reubicar', { n: bad })) : t('Nadie chocó. ¡Qué suerte!'));
+        announce('🙈', 'LẬT MỞ!', bad ? `${bad} chỗ bị trùng: phải dời nhà` : 'Không ai trùng chỗ. May ghê!');
         play.reveal();
         break;
       }
@@ -224,7 +221,7 @@ function handleFx(st) {
         ui.pulseAt = Date.now();
         break;
       case 'award':
-        toast(rich(f.what === 'road' ? t('🛣️ Camino más largo: @{pid}', { pid: f.pid }) : t('⚔️ Ejército más grande: @{pid}', { pid: f.pid }), st.players), 'good');
+        toast(rich(f.what === 'road' ? `🛣️ Con đường dài nhất: @${f.pid}` : `⚔️ Đội quân lớn nhất: @${f.pid}`, st.players), 'good');
         break;
       case 'trade':
         flyCards(spread(f.give), f.a, f.b, v);
@@ -244,7 +241,7 @@ function handleFx(st) {
         f.from.forEach(([o, n], i) => flyCards(Array(n).fill(f.res), o, f.pid, v, { delay: i * 200 }));
         break;
       case 'devBought':
-        if (f.pid === v) toast(t('🃏 Compraste: {icon} {card}', { icon: DEV_INFO[f.type].icon, card: t(DEV_INFO[f.type].name) }), 'good');
+        if (f.pid === v) toast(`🃏 Bạn mua được: ${DEV_INFO[f.type].icon} ${DEV_INFO[f.type].name}`, 'good');
         break;
       case 'win':
         play.win();
@@ -257,14 +254,14 @@ function handleFx(st) {
       case 'flipAll':
         ui.flipAt = Date.now();
         ui.flipPending = true;
-        announce('🙈', t('¡SE VOLTEA EL TABLERO!'), t('Ahora todos ven qué hay debajo'));
+        announce('🙈', 'LẬT BÀN CỜ!', 'Giờ ai cũng thấy bên dưới có gì');
         play.reveal();
         break;
       case 'relocated':
-        if (f.pid === v) toast(t('🌑 ¡Había alguien en la niebla! Tu pieza se desvió al hueco libre más cercano.'), 'error', 3500);
+        if (f.pid === v) toast('🌑 Có người trong sương mù! Công trình của bạn bị dời sang chỗ trống gần nhất.', 'error', 3500);
         break;
       case 'blocked':
-        if (f.pid === v) toast(t('🌑 ¡Te topaste con alguien en la niebla! No había sitio: no pagaste nada.'), 'error', 3500);
+        if (f.pid === v) toast('🌑 Bạn đụng phải ai đó trong sương mù! Không còn chỗ trống: bạn không mất gì.', 'error', 3500);
         break;
     }
   }
@@ -375,10 +372,10 @@ function botEmote(pid, options) {
 
 function sendEmote(e) {
   const v = App.viewer;
-  if (v == null || v < 0) return toast(t('Solo los jugadores pueden reaccionar'), 'error');
+  if (v == null || v < 0) return toast('Chỉ người chơi mới thả cảm xúc được', 'error');
   const now = Date.now();
   ui.sent = (ui.sent || []).filter(t => now - t < 4000);
-  if (ui.sent.length >= 5) return toast(t('Más despacio 😅'), 'error', 1500);
+  if (ui.sent.length >= 5) return toast('Từ từ thôi 😅', 'error', 1500);
   ui.sent.push(now);
   App.emote(v, e);
 }
@@ -430,11 +427,11 @@ const CHARGE_DEAD = 180, CHARGE_FULL = 1100; // ms: a tap throws at once; full p
 function rollButton(v) {
   return h('button', {
     class: 'btn primary big roll-btn',
-    title: t('Toca para tirar · mantén pulsado para cargar fuerza'),
+    title: 'Chạm để tung · nhấn giữ để lấy đà',
     onpointerdown: e => startCharge(e, v),
     onclick: e => e.detail === 0 && throwDice(v, 0), // keyboard (Enter / Space)
     oncontextmenu: e => e.preventDefault(), // long press on a phone
-  }, h('i', { class: 'roll-fill' }), h('span', null, t('🎲 Tirar dados')));
+  }, h('i', { class: 'roll-fill' }), h('span', null, '🎲 Tung xúc xắc'));
 }
 
 function chargePower(c, now = performance.now()) {
@@ -515,8 +512,8 @@ function renderPass(st, v, locked) {
     h('div', null,
       h('div', { class: 'eye' }, '🙈'),
       h('div', { class: 'big', style: { color: p.color } }, p.name),
-      h('p', { style: { color: '#bbb', fontWeight: 700, fontSize: '18px' } }, t('Pásale el dispositivo. Los demás, ¡no miren!')),
-      h('button', { class: 'btn primary big' }, t('Soy yo, mostrar')))));
+      h('p', { style: { color: '#bbb', fontWeight: 700, fontSize: '18px' } }, 'Đưa máy cho người này. Những người khác, không nhìn nhé!'),
+      h('button', { class: 'btn primary big' }, 'Là tôi, hiện ra'))));
 }
 
 function dieFace(n, red) {
@@ -532,7 +529,7 @@ function renderRolls(st) {
   const key = log.length + ':' + log.map(r => r.sum).join(',');
   if (el.dataset.key === key) return;
   el.dataset.key = key;
-  clear(el).append(h('span', { class: 'roll-log-head', title: t('Últimas tiradas') }, '🎲'),
+  clear(el).append(h('span', { class: 'roll-log-head', title: 'Các lần tung gần đây' }, '🎲'),
     ...log.slice(-12).reverse().map((r, i) => {
       const p = st.players[r.pid];
       return h('b', { class: 'roll-chip' + (r.sum === 7 ? ' seven' : '') + (i === 0 ? ' newest' : ''), style: { '--pc': p ? p.color : '#94b0c2' }, title: p ? `${p.name}: ${r.sum}` : String(r.sum) }, r.sum);
@@ -545,7 +542,7 @@ function toggleTopView() {
   if (!b || !b.setTopView) return;
   b.setTopView(!b.top);
   ui.els.topView.classList.toggle('active', !!b.top);
-  ui.els.topView.title = b.top ? t('Volver a la vista inclinada') : t('Vista desde arriba');
+  ui.els.topView.title = b.top ? 'Về góc nhìn nghiêng' : 'Nhìn từ trên xuống';
 }
 
 function renderTop(st) {
@@ -554,12 +551,12 @@ function renderTop(st) {
   clear(e.turn).append(
     h('span', { class: 'turn-dot', style: { background: cur.color } }),
     h('span', null, st.phase === 'gameOver' ? `🏆 ${st.players[st.winner].name}` : cur.name),
-    h('span', { class: 'phase-tag' }, `· ${t(PHASE_TEXT[st.phase])}${st.round ? ` · ${t('Ronda {n}', { n: st.round })}` : ''}`));
+    h('span', { class: 'phase-tag' }, `· ${PHASE_TEXT[st.phase]}${st.round ? ` · Vòng ${st.round}` : ''}`));
   clear(e.event);
   if (st.event) {
     const def = EVENTS.find(x => x.id === st.event.id);
     const extra = st.event.res ? ' ' + TILE_INFO[st.event.res].icon : '';
-    e.event.append(h('div', { class: 'event-badge', title: def ? t(def.desc) : '' }, st.event.icon, ' ', t(st.event.name), extra));
+    e.event.append(h('div', { class: 'event-badge', title: def ? def.desc : '' }, st.event.icon, ' ', st.event.name, extra));
   }
   clear(e.dice);
   if (st.dice) {
@@ -608,33 +605,33 @@ function robberPick(st, v, tile) {
     return;
   }
   openModal(() => h('div', null,
-    h('h2', null, t('🫳 ¿A quién le robas?')),
+    h('h2', null, '🫳 Bạn muốn cướp của ai?'),
     h('div', { class: 'chips' }, victims.map(pid => {
       const p = App.state.players[pid];
       return h('button', { class: 'btn', style: { borderColor: p.color }, onclick: () => { closeModal(); App.dispatch({ type: 'moveRobber', pid: v, tile, victim: pid }); } },
-        h('span', { class: 'turn-dot', style: { background: p.color } }), t('{name} ({n} cartas)', { name: p.name, n: G.handSize(p.res) }));
+        h('span', { class: 'turn-dot', style: { background: p.color } }), `${p.name} (${G.handSize(p.res)} thẻ)`);
     })),
-    h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: closeModal }, t('Cancelar')))));
+    h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: closeModal }, 'Hủy'))));
 }
 
 function bannerText(st, v, inter) {
   const cur = st.players[st.current];
-  if (st.phase === 'gameOver') return t('🏆 ¡{name} gana!', { name: st.players[st.winner].name });
+  if (st.phase === 'gameOver') return `🏆 ${st.players[st.winner].name} thắng!`;
   if (st.phase === 'setup') {
     const who = st.players[G.pendingActors(st)[0]];
-    const blind = st.setup.blindActive ? t('🙈 En secreto: ') : st.setup.fixing ? t('💥 Reubica: ') : '';
-    if (who.id !== v) return `${blind}${t('{name} está colocando...', { name: who.name })}`;
-    return `${blind}${st.setup.step === 'settlement' ? (st.config.rules.setupCity && st.setup.queue[st.setup.idx].round === st.setup.lastRound ? t('Coloca tu ciudad') : t('Coloca tu poblado')) : t('Coloca tu camino')}`;
+    const blind = st.setup.blindActive ? '🙈 Bí mật: ' : st.setup.fixing ? '💥 Dời nhà: ' : '';
+    if (who.id !== v) return `${blind}${who.name} đang đặt nhà...`;
+    return `${blind}${st.setup.step === 'settlement' ? (st.config.rules.setupCity && st.setup.queue[st.setup.idx].round === st.setup.lastRound ? 'Đặt thành phố của bạn' : 'Đặt nhà của bạn') : 'Đặt đường của bạn'}`;
   }
   if (st.phase === 'discard') {
     const n = Object.keys(st.pendingDiscards).length;
-    return n > 1 ? t('🗑️ ¡Salió 7! Descartando ({n} pendientes)', { n }) : t('🗑️ ¡Salió 7! Descartando ({n} pendiente)', { n });
+    return `🗑️ Ra 7! Đang bỏ thẻ (còn ${n} người)`;
   }
-  if (st.current !== v) return st.trade ? t('🤝 {name} ofrece un intercambio', { name: cur.name }) : t('Turno de {name}', { name: cur.name });
-  if (st.phase === 'robber') return t('🦹 Elige dónde poner el ladrón');
-  if (st.phase === 'roadBuilding') return st.freeRoads > 1 ? t('🛤️ Coloca {n} caminos gratis', { n: st.freeRoads }) : t('🛤️ Coloca {n} camino gratis', { n: st.freeRoads });
-  if (st.phase === 'roll') return t('🎲 ¡Tu turno! Tira los dados');
-  if (inter) return { road: t('Elige dónde construir el camino (Esc para cancelar)'), settlement: t('Elige dónde construir el poblado (Esc para cancelar)'), city: t('Elige qué poblado mejorar (Esc para cancelar)') }[inter.kind];
+  if (st.current !== v) return st.trade ? `🤝 ${cur.name} mời giao dịch` : `Lượt của ${cur.name}`;
+  if (st.phase === 'robber') return '🦹 Chọn chỗ đặt kẻ trộm';
+  if (st.phase === 'roadBuilding') return `🛤️ Đặt ${st.freeRoads} đoạn đường miễn phí`;
+  if (st.phase === 'roll') return '🎲 Tới lượt bạn! Tung xúc xắc đi';
+  if (inter) return { road: 'Chọn chỗ làm đường (Esc để hủy)', settlement: 'Chọn chỗ xây nhà (Esc để hủy)', city: 'Chọn nhà để nâng cấp (Esc để hủy)' }[inter.kind];
   return '';
 }
 
@@ -678,20 +675,20 @@ function renderPlayers(st, v) {
     const all = G.victoryPoints(st, p.id, true);
     const me = p.id === v;
     const conn = online && p.kind === 'human' ? App.net.presence(p.id) : undefined;
-    const tag = p.retired ? t('retirado') : p.kind === 'bot' ? (p.remote ? t('bot sustituto') : { easy: t('bot fácil'), normal: t('bot normal'), hard: t('bot difícil') }[p.level] || t('bot')): me ? t('tú') : '';
+    const tag = p.retired ? 'đã rời' : p.kind === 'bot' ? (p.remote ? 'bot thay thế' : { easy: 'bot dễ', normal: 'bot thường', hard: 'bot khó' }[p.level] || 'bot'): me ? 'bạn' : '';
     const card = h('div', { class: 'pcard' + (st.current === p.id ? ' current' : '') + (st.winner === p.id ? ' winner' : '') + (p.retired ? ' retired' : ''), style: { '--pc': p.color } },
       h('div', { class: 'top' },
         h('div', { class: 'avatar' }, p.flag ? flagImg(p.flag, 30) : p.kind === 'bot' ? '🤖' : p.name.slice(0, 1).toUpperCase()),
-        h('div', { class: 'name' }, p.name, tag && h('small', null, tag), conn === false ? h('span', { class: 'conn off', title: t('Desconectado') }, ' 🔌') : null),
-        acting.has(p.id) && st.phase !== 'gameOver' ? h('span', { class: 'acting-dot', title: t('Actuando') }) : null,
-        h('div', { class: 'vp', title: t('Puntos de victoria') }, pub, (me || st.phase === 'gameOver') && all > pub ? h('small', null, ` +${all - pub}`) : null)),
+        h('div', { class: 'name' }, p.name, tag && h('small', null, tag), conn === false ? h('span', { class: 'conn off', title: 'Mất kết nối' }, ' 🔌') : null),
+        acting.has(p.id) && st.phase !== 'gameOver' ? h('span', { class: 'acting-dot', title: 'Đang đi' }) : null,
+        h('div', { class: 'vp', title: 'Điểm chiến thắng' }, pub, (me || st.phase === 'gameOver') && all > pub ? h('small', null, ` +${all - pub}`) : null)),
       h('div', { class: 'stats' },
-        h('span', { title: t('Cartas de recurso') }, `🂠 ${G.handSize(p.res)}`),
-        h('span', { title: t('Cartas de desarrollo') }, `🃏 ${p.dev.length}`),
-        h('span', { title: t('Caballeros jugados') }, `⚔️ ${p.knights}`),
-        h('span', { title: t('Camino más largo propio') }, `🛣️ ${p.roadLen}`),
-        st.longestRoad.owner === p.id ? h('span', { class: 'award', title: t('Camino más largo (+2)') }, t('🏅Camino')) : null,
-        st.largestArmy.owner === p.id ? h('span', { class: 'award', title: t('Ejército más grande (+2)') }, t('🏅Ejército')) : null,
+        h('span', { title: 'Thẻ tài nguyên' }, `🂠 ${G.handSize(p.res)}`),
+        h('span', { title: 'Thẻ phát triển' }, `🃏 ${p.dev.length}`),
+        h('span', { title: 'Hiệp sĩ đã dùng' }, `⚔️ ${p.knights}`),
+        h('span', { title: 'Đường dài nhất của bạn' }, `🛣️ ${p.roadLen}`),
+        st.longestRoad.owner === p.id ? h('span', { class: 'award', title: 'Con đường dài nhất (+2)' }, '🏅Đường') : null,
+        st.largestArmy.owner === p.id ? h('span', { class: 'award', title: 'Đội quân lớn nhất (+2)' }, '🏅Quân đội') : null,
         st.pendingDiscards[p.id] ? h('span', { style: { color: 'var(--red)' } }, `🗑️ ${st.pendingDiscards[p.id]}`) : null));
     const g = ui.gains.filter(x => x.pid === p.id);
     if (g.length) card.append(h('div', { class: 'gainfx' }, g.map(x => x.text).join(' ')));
@@ -699,22 +696,22 @@ function renderPlayers(st, v) {
     if (said) card.append(h('div', { class: 'pc-emote' + (ONLY_EMOJI.test(said.e) ? ' big' : ''), style: { animationDelay: `-${now - said.at}ms` } }, said.e));
     box.append(card);
   }
-  clear(ui.els.bank).append(h('span', null, '🏦'), ...RES.map(r => h('span', { title: t(TILE_INFO[r].name) }, `${TILE_INFO[r].icon}${st.bank[r]}`)), h('span', { title: t('Cartas de desarrollo restantes') }, `🃏${st.devDeck.length}`),
-    h('span', { title: t('Meta') },`🏆 ${st.config.rules.vpTarget}`));
+  clear(ui.els.bank).append(h('span', null, '🏦'), ...RES.map(r => h('span', { title: TILE_INFO[r].name }, `${TILE_INFO[r].icon}${st.bank[r]}`)), h('span', { title: 'Thẻ phát triển còn lại' }, `🃏${st.devDeck.length}`),
+    h('span', { title: 'Mục tiêu' },`🏆 ${st.config.rules.vpTarget}`));
 }
 
 function renderLog(st) {
   const box = ui.els.log;
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
   clear(box);
-  for (const l of st.log.slice(-120)) box.append(h('div', null, rich(tx(l.msg), st.players)));
+  for (const l of st.log.slice(-120)) box.append(h('div', null, rich(l.msg, st.players)));
   if (atBottom || !ui.logInit) box.scrollTop = box.scrollHeight;
   ui.logInit = true;
 }
 
 function resCard(r, n, bump) {
   const info = TILE_INFO[r];
-  return h('div', { class: 'rcard' + (n ? '' : ' zero') + (bump ? ' bump' : ''), style: { background: `linear-gradient(160deg, ${info.color}, ${info.dark})` }, title: t(info.name) }, info.icon, h('b', null, n));
+  return h('div', { class: 'rcard' + (n ? '' : ' zero') + (bump ? ' bump' : ''), style: { background: `linear-gradient(160deg, ${info.color}, ${info.dark})` }, title: info.name }, info.icon, h('b', null, n));
 }
 
 function renderActions(st, v, locked) {
@@ -725,18 +722,18 @@ function renderActions(st, v, locked) {
 
 function fillActions(bar, st, v, locked) {
   if (v < 0) {
-    bar.append(h('div', { class: 'waiting' }, t('👀 Modo espectador: los bots juegan solos.')), speedControl());
+    bar.append(h('div', { class: 'waiting' }, '👀 Chế độ xem: các bot tự chơi với nhau.'), speedControl());
     return;
   }
   if (locked) {
-    bar.append(h('div', { class: 'waiting' }, t('🙈 Esperando que el jugador mire su pantalla...')));
+    bar.append(h('div', { class: 'waiting' }, '🙈 Đang chờ người chơi nhìn màn hình...'));
     return;
   }
   const p = st.players[v];
   const bump = ui.bumpRes || new Set();
   ui.bumpRes = null;
   bar.append(h('div', { class: 'hand' }, RES.map(r => resCard(r, p.res[r], bump.has(r)))));
-  bar.append(h('button', { class: 'btn emote-toggle', title: t('Reaccionar con un emoji'), onclick: e => { e.stopPropagation(); toggleEmotes(e.currentTarget); } }, '😀'));
+  bar.append(h('button', { class: 'btn emote-toggle', title: 'Thả cảm xúc', onclick: e => { e.stopPropagation(); toggleEmotes(e.currentTarget); } }, '😀'));
   bar.append(adhdButton());
 
   const playable = new Set(st.current === v ? G.playableDev(st, v) : []);
@@ -749,7 +746,7 @@ function fillActions(bar, st, v, locked) {
       const fresh = cards.every(c => c.turn >= st.turn);
       return h('div', {
         class: 'dcard' + (can ? ' playable' : '') + (fresh && type !== 'vp' ? ' new' : ''),
-        title: `${t(info.name)}: ${t(info.desc)}${fresh && type !== 'vp' ? ` ${t('(recién comprada: podrás jugarla el próximo turno)')}` : ''}`,
+        title: `${info.name}: ${info.desc}${fresh && type !== 'vp' ? ' (vừa mua: lượt sau mới dùng được)' : ''}`,
         onclick: () => can && playDev(st, v, type),
       }, info.icon, h('b', null, `×${cards.length}`));
     })));
@@ -758,13 +755,13 @@ function fillActions(bar, st, v, locked) {
   bar.append(acts);
   const myTurn = st.current === v;
   if (st.phase === 'gameOver') {
-    acts.append(h('button', { class: 'btn primary', onclick: () => openGameOver(App.state) }, t('🏆 Ver resultados')));
+    acts.append(h('button', { class: 'btn primary', onclick: () => openGameOver(App.state) }, '🏆 Xem kết quả'));
     return;
   }
   if (st.phase === 'setup' || !myTurn) {
-    if (st.phase === 'discard' && st.pendingDiscards[v]) acts.append(h('button', { class: 'btn pink', onclick: () => render(App.state) }, t('🗑️ Descarta {n}', { n: st.pendingDiscards[v] })));
+    if (st.phase === 'discard' && st.pendingDiscards[v]) acts.append(h('button', { class: 'btn pink', onclick: () => render(App.state) }, `🗑️ Bỏ ${st.pendingDiscards[v]} thẻ`));
     else {
-      acts.append(h('div', { class: 'waiting' }, st.phase === 'setup' && G.pendingActors(st)[0] === v ? t('👆 Toca el tablero') : t('⏳ Esperando a {name}...', { name: st.players[G.pendingActors(st)[0]].name })));
+      acts.append(h('div', { class: 'waiting' }, st.phase === 'setup' && G.pendingActors(st)[0] === v ? '👆 Chạm vào bàn cờ' : `⏳ Đang chờ ${st.players[G.pendingActors(st)[0]].name}...`));
       if (st.phase !== 'setup') acts.append(affordPreview(st, v));
     }
     return;
@@ -774,11 +771,11 @@ function fillActions(bar, st, v, locked) {
     return;
   }
   if (st.phase === 'robber') {
-    acts.append(h('div', { class: 'waiting' }, t('🦹 Toca una casilla del tablero')));
+    acts.append(h('div', { class: 'waiting' }, '🦹 Chạm vào một ô trên bàn cờ'));
     return;
   }
   if (st.phase === 'roadBuilding') {
-    acts.append(h('button', { class: 'btn', onclick: () => App.dispatch({ type: 'endRoadBuilding', pid: v }) }, t('Terminar caminos')));
+    acts.append(h('button', { class: 'btn', onclick: () => App.dispatch({ type: 'endRoadBuilding', pid: v }) }, 'Xong phần làm đường'));
     return;
   }
   if (st.phase !== 'main') return;
@@ -786,21 +783,21 @@ function fillActions(bar, st, v, locked) {
     const ok = left > 0 && G.canAfford(p.res, COSTS[what]) && legalFn().length > 0;
     return h('button', {
       class: 'btn' + (ui.pick === what ? ' active' : ''), disabled: !ok,
-      title: t('{label} — cuesta {cost} (quedan {left})', { label, cost: costIcons(COSTS[what]), left }),
+      title: `${label} — giá ${costIcons(COSTS[what])} (còn ${left})`,
       onclick: e => { e.stopPropagation(); ui.pick = ui.pick === what ? null : what; render(App.state); },
     }, h('span', { class: 'bicon' }, icon), h('span', null, label, h('span', { class: 'cost' }, costIcons(COSTS[what]))));
   };
   acts.append(
-    buildBtn('road', t('Camino'), '🛤️', p.roadsLeft, () => G.legalRoads(st, v)),
-    buildBtn('settlement', t('Poblado'), '🏠', p.settlementsLeft, () => G.legalSettlements(st, v)),
-    buildBtn('city', t('Ciudad'), '🏰', p.citiesLeft, () => G.legalCities(st, v)),
+    buildBtn('road', 'Đường', '🛤️', p.roadsLeft, () => G.legalRoads(st, v)),
+    buildBtn('settlement', 'Nhà', '🏠', p.settlementsLeft, () => G.legalSettlements(st, v)),
+    buildBtn('city', 'Thành phố', '🏰', p.citiesLeft, () => G.legalCities(st, v)),
     h('button', {
-      class: 'btn', disabled: !st.devDeck.length || !G.canAfford(p.res, COSTS.dev), title: t('Carta de desarrollo — cuesta {cost}', { cost: costIcons(COSTS.dev) }),
+      class: 'btn', disabled: !st.devDeck.length || !G.canAfford(p.res, COSTS.dev), title: `Thẻ phát triển — giá ${costIcons(COSTS.dev)}`,
       onclick: () => App.dispatch({ type: 'buyDev', pid: v }),
-    }, h('span', { class: 'bicon' }, '🃏'), h('span', null, t('Carta'), h('span', { class: 'cost' }, costIcons(COSTS.dev)))),
-    h('button', { class: 'btn', disabled: !!st.trade, onclick: () => openTrade(v) }, t('🤝 Comerciar')),
-    h('button', { class: 'btn sm ghost', title: t('Pista'), onclick: () => showHint(st, v) }, '💡'),
-    h('button', { class: 'btn green', onclick: () => App.dispatch({ type: 'endTurn', pid: v }) }, t('✅ Terminar')));
+    }, h('span', { class: 'bicon' }, '🃏'), h('span', null, 'Thẻ', h('span', { class: 'cost' }, costIcons(COSTS.dev)))),
+    h('button', { class: 'btn', disabled: !!st.trade, onclick: () => openTrade(v) }, '🤝 Giao dịch'),
+    h('button', { class: 'btn sm ghost', title: 'Gợi ý', onclick: () => showHint(st, v) }, '💡'),
+    h('button', { class: 'btn green', onclick: () => App.dispatch({ type: 'endTurn', pid: v }) }, '✅ Kết thúc'));
 }
 
 // out of turn: what your hand already pays for, so you can plan while the others play
@@ -808,14 +805,14 @@ function affordPreview(real, v) {
   const st = G.viewFor(real, v); // fog: only count spots you can actually see
   const p = st.players[v];
   const items = [
-    ['road', '🛤️', t('Camino'), p.roadsLeft > 0 && G.legalRoads(st, v).length > 0],
-    ['settlement', '🏠', t('Poblado'), p.settlementsLeft > 0 && G.legalSettlements(st, v).length > 0],
-    ['city', '🏰', t('Ciudad'), p.citiesLeft > 0 && G.legalCities(st, v).length > 0],
-    ['dev', '🃏', t('Carta'), st.devDeck.length > 0],
+    ['road', '🛤️', 'Đường', p.roadsLeft > 0 && G.legalRoads(st, v).length > 0],
+    ['settlement', '🏠', 'Nhà', p.settlementsLeft > 0 && G.legalSettlements(st, v).length > 0],
+    ['city', '🏰', 'Thành phố', p.citiesLeft > 0 && G.legalCities(st, v).length > 0],
+    ['dev', '🃏', 'Thẻ', st.devDeck.length > 0],
   ];
   return h('div', { class: 'afford' }, items.map(([what, icon, label, room]) => {
     const ok = G.canAfford(p.res, COSTS[what]);
-    const tip = ok ? (room ? t('Ya puedes pagar: {label}. Constrúyelo en tu turno.', { label }) : t('Puedes pagarlo, pero ahora no hay dónde: {label}.', { label })) : t('{label}: te falta {cost}', { label, cost: missing(p.res, COSTS[what]) });
+    const tip = ok ? (room ? `Bạn đã đủ tài nguyên: ${label}. Xây vào lượt của bạn nhé.` : `Bạn đủ tiền, nhưng giờ chưa có chỗ: ${label}.`) : `${label}: bạn còn thiếu ${missing(p.res, COSTS[what])}`;
     return h('div', { class: 'afford-item' + (ok && room ? ' ok' : ok ? ' half' : ''), title: tip },
       h('span', { class: 'bicon' }, icon), h('span', null, label, h('span', { class: 'cost' }, costIcons(COSTS[what]))), ok && room ? h('b', { class: 'tick' }, '✓') : null);
   }));
@@ -828,20 +825,20 @@ function missing(res, cost) {
 function speedControl() {
   const opts = [[1400, '🐢'], [650, '▶️'], [250, '⏩'], [60, '⚡']];
   return h('div', { class: 'chips', style: { marginLeft: 'auto' } }, opts.map(([ms, l]) => h('button', {
-    class: 'chip' + (App.speed === ms ? ' on' : ''), title: t('Velocidad de los bots'), onclick: () => { App.setSpeed(ms); render(App.state); App.scheduleBots(); },
+    class: 'chip' + (App.speed === ms ? ' on' : ''), title: 'Tốc độ của bot', onclick: () => { App.setSpeed(ms); render(App.state); App.scheduleBots(); },
   }, l)));
 }
 
 function describe(a, st) {
-  if (!a) return t('Nada que hacer ahora.');
+  if (!a) return 'Giờ không có gì để làm.';
   switch (a.type) {
-    case 'roll': return t('Tira los dados.');
-    case 'build': return { road: t('🛤️ Construye un camino (resaltado).'), settlement: t('🏠 Construye un poblado (resaltado).'), city: t('🏰 Mejora un poblado a ciudad.') }[a.what];
-    case 'buyDev': return t('🃏 Compra una carta de desarrollo.');
-    case 'bankTrade': return t('🏦 Cambia {give} por {get} con el banco.', { give: TILE_INFO[a.give].icon, get: TILE_INFO[a.get].icon });
-    case 'proposeTrade': return t('🤝 Ofrece {give} por {get} a los demás.', { give: resLine(a.give), get: resLine(a.get) });
-    case 'playDev': return t('Juega {icon} {card}.', { icon: DEV_INFO[a.card].icon, card: t(DEV_INFO[a.card].name) });
-    case 'endTurn': return t('✅ Termina el turno: no hay nada mejor.');
+    case 'roll': return 'Tung xúc xắc đi.';
+    case 'build': return { road: '🛤️ Làm một đoạn đường (chỗ được tô sáng).', settlement: '🏠 Xây một nhà (chỗ được tô sáng).', city: '🏰 Nâng cấp một nhà lên thành phố.' }[a.what];
+    case 'buyDev': return '🃏 Mua một thẻ phát triển.';
+    case 'bankTrade': return `🏦 Đổi ${TILE_INFO[a.give].icon} lấy ${TILE_INFO[a.get].icon} với ngân hàng.`;
+    case 'proposeTrade': return `🤝 Mời người khác đổi ${resLine(a.give)} lấy ${resLine(a.get)}.`;
+    case 'playDev': return `Dùng ${DEV_INFO[a.card].icon} ${DEV_INFO[a.card].name}.`;
+    case 'endTurn': return '✅ Kết thúc lượt: không còn nước nào hay hơn.';
     default: return a.type;
   }
 }
@@ -861,22 +858,22 @@ function playDev(st, v, type) {
     return;
   }
   if (type === 'monopoly') {
-    openModal(() => h('div', null, h('h2', null, t('👑 Monopolio')), h('p', null, t('Todos los jugadores te darán todas sus cartas de este recurso.')),
-      h('div', { class: 'respick' }, RES.map(r => h('button', { class: 'btn', onclick: () => { closeModal(); App.dispatch({ type: 'playDev', pid: v, card: 'monopoly', res: r }); } }, TILE_INFO[r].icon, h('small', null, t(TILE_INFO[r].name))))),
-      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: closeModal }, t('Cancelar')))));
+    openModal(() => h('div', null, h('h2', null, '👑 Độc quyền'), h('p', null, 'Mọi người chơi phải đưa bạn toàn bộ thẻ loại này.'),
+      h('div', { class: 'respick' }, RES.map(r => h('button', { class: 'btn', onclick: () => { closeModal(); App.dispatch({ type: 'playDev', pid: v, card: 'monopoly', res: r }); } }, TILE_INFO[r].icon, h('small', null, TILE_INFO[r].name)))),
+      h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: closeModal }, 'Hủy'))));
     return;
   }
   if (type === 'yearOfPlenty') {
     ui.draft = [];
     openModal(() => {
       const d = ui.draft;
-      return h('div', null, h('h2', null, t('🎁 Año de abundancia')), h('p', null, t('Elige 2 recursos del banco (pueden repetirse).')),
-        h('div', { class: 'respick' }, RES.map(r => h('button', { class: 'btn', disabled: d.length >= 2 || App.state.bank[r] <= d.filter(x => x === r).length, onclick: () => { d.push(r); renderModal(App.state); } }, TILE_INFO[r].icon, h('small', null, t('banco {n}', { n: App.state.bank[r] }))))),
-        h('p', { class: 'res-inline' }, t('Elegidos: {list}', { list: d.map(r => TILE_INFO[r].icon).join(' ') || '—' })),
+      return h('div', null, h('h2', null, '🎁 Năm bội thu'), h('p', null, 'Chọn 2 tài nguyên từ ngân hàng (được chọn trùng).'),
+        h('div', { class: 'respick' }, RES.map(r => h('button', { class: 'btn', disabled: d.length >= 2 || App.state.bank[r] <= d.filter(x => x === r).length, onclick: () => { d.push(r); renderModal(App.state); } }, TILE_INFO[r].icon, h('small', null, `ngân hàng còn ${App.state.bank[r]}`)))),
+        h('p', { class: 'res-inline' }, `Đã chọn: ${d.map(r => TILE_INFO[r].icon).join(' ') || '—'}`),
         h('div', { class: 'row' },
-          h('button', { class: 'btn ghost', onclick: () => { ui.draft = []; renderModal(App.state); } }, t('Borrar')),
-          h('button', { class: 'btn ghost', onclick: closeModal }, t('Cancelar')),
-          h('button', { class: 'btn primary', disabled: d.length !== 2, onclick: () => { closeModal(); App.dispatch({ type: 'playDev', pid: v, card: 'yearOfPlenty', res: d }); } }, t('Tomar'))));
+          h('button', { class: 'btn ghost', onclick: () => { ui.draft = []; renderModal(App.state); } }, 'Xóa'),
+          h('button', { class: 'btn ghost', onclick: closeModal }, 'Hủy'),
+          h('button', { class: 'btn primary', disabled: d.length !== 2, onclick: () => { closeModal(); App.dispatch({ type: 'playDev', pid: v, card: 'yearOfPlenty', res: d }); } }, 'Lấy')));
     });
   }
 }
@@ -891,7 +888,7 @@ function stepper(label, obj, r, max) {
   return h('div', { class: 'stepper' },
     h('div', { class: 'ic' }, TILE_INFO[r].icon),
     h('div', { class: 'n' }, obj[r]),
-    max != null ? h('div', { class: 'have' }, t('tienes {n}', { n: max })) : null,
+    max != null ? h('div', { class: 'have' }, `bạn có ${max}`) : null,
     h('div', { class: 'ctl' },
       h('button', { class: 'btn sm', disabled: obj[r] <= 0, onclick: () => { obj[r]--; renderModal(App.state); } }, '−'),
       h('button', { class: 'btn sm', disabled: max != null && obj[r] >= max, onclick: () => { obj[r]++; renderModal(App.state); } }, '+')));
@@ -901,43 +898,43 @@ function tradeModal(st, v) {
   const d = ui.draft;
   const p = st.players[v];
   const tabs = h('div', { class: 'tabs' },
-    h('button', { class: 'btn sm' + (d.tab === 'bank' ? ' active' : ''), onclick: () => { d.tab = 'bank'; renderModal(App.state); } }, t('🏦 Banco y puertos')),
-    h('button', { class: 'btn sm' + (d.tab === 'players' ? ' active' : ''), onclick: () => { d.tab = 'players'; renderModal(App.state); } }, t('🤝 Jugadores')));
+    h('button', { class: 'btn sm' + (d.tab === 'bank' ? ' active' : ''), onclick: () => { d.tab = 'bank'; renderModal(App.state); } }, '🏦 Ngân hàng và cảng'),
+    h('button', { class: 'btn sm' + (d.tab === 'players' ? ' active' : ''), onclick: () => { d.tab = 'players'; renderModal(App.state); } }, '🤝 Người chơi'));
   if (d.tab === 'bank') {
     const ratio = r => G.tradeRatio(st, v, r);
-    return h('div', null, h('h2', null, t('Comerciar')), tabs,
-      h('div', { class: 'section-label' }, t('Das')),
+    return h('div', null, h('h2', null, 'Giao dịch'), tabs,
+      h('div', { class: 'section-label' }, 'Bạn đưa'),
       h('div', { class: 'respick' }, RES.map(r => h('button', {
         class: 'btn' + (d.bankGive === r ? ' active' : ''), disabled: p.res[r] < ratio(r),
         onclick: () => { d.bankGive = r; renderModal(App.state); },
-      }, TILE_INFO[r].icon, h('small', null, t('{ratio}:1 · tienes {n}', { ratio: ratio(r), n: p.res[r] }))))),
-      h('div', { class: 'section-label' }, t('Recibes')),
+      }, TILE_INFO[r].icon, h('small', null, `${ratio(r)}:1 · bạn có ${p.res[r]}`)))),
+      h('div', { class: 'section-label' }, 'Bạn nhận'),
       h('div', { class: 'respick' }, RES.map(r => h('button', {
         class: 'btn' + (d.bankGet === r ? ' active' : ''), disabled: r === d.bankGive || st.bank[r] < 1,
         onclick: () => { d.bankGet = r; renderModal(App.state); },
-      }, TILE_INFO[r].icon, h('small', null, t('banco {n}', { n: st.bank[r] }))))),
+      }, TILE_INFO[r].icon, h('small', null, `ngân hàng còn ${st.bank[r]}`)))),
       h('div', { class: 'row' },
-        h('button', { class: 'btn ghost', onclick: closeModal }, t('Cerrar')),
+        h('button', { class: 'btn ghost', onclick: closeModal }, 'Đóng'),
         h('button', {
           class: 'btn primary', disabled: !d.bankGive || !d.bankGet || d.bankGive === d.bankGet || p.res[d.bankGive] < ratio(d.bankGive),
           onclick: () => { App.dispatch({ type: 'bankTrade', pid: v, give: d.bankGive, get: d.bankGet }); if (App.state.players[v].res[d.bankGive] < ratio(d.bankGive)) d.bankGive = null; renderModal(App.state); },
-        }, d.bankGive ? t('Cambiar {n}{give} → 1{get}', { n: ratio(d.bankGive), give: TILE_INFO[d.bankGive].icon, get: d.bankGet ? TILE_INFO[d.bankGet].icon : '?' }) : t('Cambiar'))));
+        }, d.bankGive ? `Đổi ${ratio(d.bankGive)}${TILE_INFO[d.bankGive].icon} → 1${d.bankGet ? TILE_INFO[d.bankGet].icon : '?'}` : 'Đổi')));
   }
   const others = st.players.filter(o => o.id !== v);
   const valid = G.handSize(d.give) > 0 && G.handSize(d.get) > 0 && d.to.length && G.canAfford(p.res, d.give) && !RES.some(r => d.give[r] && d.get[r]);
-  return h('div', null, h('h2', null, t('Comerciar')), tabs,
-    h('div', { class: 'section-label' }, t('Das')),
+  return h('div', null, h('h2', null, 'Giao dịch'), tabs,
+    h('div', { class: 'section-label' }, 'Bạn đưa'),
     h('div', { class: 'steppers' }, RES.map(r => stepper('das', d.give, r, p.res[r]))),
-    h('div', { class: 'section-label' }, t('Pides')),
+    h('div', { class: 'section-label' }, 'Bạn nhận'),
     h('div', { class: 'steppers' }, RES.map(r => stepper('pides', d.get, r, null))),
-    h('div', { class: 'section-label' }, t('Ofrecer a')),
+    h('div', { class: 'section-label' }, 'Mời'),
     h('div', { class: 'chips' }, others.map(o => h('button', {
       class: 'chip' + (d.to.includes(o.id) ? ' on' : ''),
       onclick: () => { d.to = d.to.includes(o.id) ? d.to.filter(x => x !== o.id) : [...d.to, o.id]; renderModal(App.state); },
     }, `${o.kind === 'bot' ? '🤖 ' : ''}${o.name} (${G.handSize(o.res)})`))),
     h('div', { class: 'row' },
-      h('button', { class: 'btn ghost', onclick: closeModal }, t('Cerrar')),
-      h('button', { class: 'btn primary', disabled: !valid, onclick: () => { closeModal(); App.dispatch({ type: 'proposeTrade', pid: v, give: d.give, get: d.get, to: d.to }); } }, t('Enviar oferta'))));
+      h('button', { class: 'btn ghost', onclick: closeModal }, 'Đóng'),
+      h('button', { class: 'btn primary', disabled: !valid, onclick: () => { closeModal(); App.dispatch({ type: 'proposeTrade', pid: v, give: d.give, get: d.get, to: d.to }); } }, 'Gửi lời mời')));
 }
 
 // same trick as the modals: one frame per offer, so answers coming in don't replay its pop-in
@@ -966,7 +963,7 @@ function offerPanel(st, v, locked) {
   const pendingMe = tr.to.filter(pid => mine.includes(pid) && tr.responses[pid] == null);
   if (!iAmProposer && !pendingMe.length && !(v >= 0 && tr.to.includes(v))) return null;
   const panel = h('div', { class: 'offer', 'data-trade': tr.id },
-    h('div', { class: 'line' }, h('span', { class: 'turn-dot', style: { background: from.color } }), ...slots(t('{name} da {give} y pide {get}'), { name: from.name, give: h('span', { class: 'res-inline' }, resLine(tr.give)), get: h('span', { class: 'res-inline' }, resLine(tr.get)) })));
+    h('div', { class: 'line' }, h('span', { class: 'turn-dot', style: { background: from.color } }), from.name, ' đưa ', h('span', { class: 'res-inline' }, resLine(tr.give)), ' và muốn nhận ', h('span', { class: 'res-inline' }, resLine(tr.get))));
   const resp = h('div', { class: 'resp' });
   for (const pid of tr.to) {
     const o = st.players[pid];
@@ -974,8 +971,8 @@ function offerPanel(st, v, locked) {
     if (r == null && mine.includes(pid) && !iAmProposer) {
       const can = G.canAfford(o.res, tr.get);
       resp.append(h('span', { class: 'tag' }, o.name, ':'),
-        h('button', { class: 'btn sm green', disabled: !can, title: can ? '' : t('No tienes lo que piden'), onclick: () => App.dispatch({ type: 'respondTrade', pid, accept: true, tradeId: tr.id }) }, t('✓ Acepto')),
-        h('button', { class: 'btn sm', onclick: () => App.dispatch({ type: 'respondTrade', pid, accept: false, tradeId: tr.id }) }, t('✗ No')));
+        h('button', { class: 'btn sm green', disabled: !can, title: can ? '' : 'Bạn không có thứ họ cần', onclick: () => App.dispatch({ type: 'respondTrade', pid, accept: true, tradeId: tr.id }) }, '✓ Đồng ý'),
+        h('button', { class: 'btn sm', onclick: () => App.dispatch({ type: 'respondTrade', pid, accept: false, tradeId: tr.id }) }, '✗ Không'));
     } else if (r == null && mine.includes(pid) && iAmProposer && !App.isOnline()) {
       // hotseat: another human at the table answers from here
       const can = G.canAfford(o.res, tr.get);
@@ -984,10 +981,10 @@ function offerPanel(st, v, locked) {
         h('button', { class: 'btn sm', onclick: () => App.dispatch({ type: 'respondTrade', pid, accept: false, tradeId: tr.id }) }, '✗'));
     } else {
       resp.append(h('span', { class: 'tag' + (r === 'accept' ? ' ok' : r === 'reject' ? ' no' : '') }, `${o.name} ${r === 'accept' ? '✓' : r === 'reject' ? '✗' : '…'}`));
-      if (r === 'accept' && iAmProposer) resp.append(h('button', { class: 'btn sm primary', onclick: () => App.dispatch({ type: 'confirmTrade', pid: tr.from, with: pid }) }, t('Cambiar con {name}', { name: o.name })));
+      if (r === 'accept' && iAmProposer) resp.append(h('button', { class: 'btn sm primary', onclick: () => App.dispatch({ type: 'confirmTrade', pid: tr.from, with: pid }) }, `Đổi với ${o.name}`));
     }
   }
-  if (iAmProposer) resp.append(h('button', { class: 'btn sm ghost', onclick: () => App.dispatch({ type: 'cancelTrade', pid: tr.from }) }, t('Cancelar oferta')));
+  if (iAmProposer) resp.append(h('button', { class: 'btn sm ghost', onclick: () => App.dispatch({ type: 'cancelTrade', pid: tr.from }) }, 'Rút lời mời'));
   panel.append(resp);
   return panel;
 }
@@ -1030,19 +1027,19 @@ function modalContent(st, v) {
     const net = App.net;
     if (net.role === 'client' && net.reconnecting)
       return { kind: 'reconnect', center: true, body: h('div', null,
-        h('h2', { class: 'jit' }, t('📡 Reconectando...')),
-        h('p', null, t('Se perdió la señal con el anfitrión. Tu asiento te espera: sigo intentando volver a la sala.')),
-        h('div', { class: 'row', style: { justifyContent: 'center' } }, h('button', { class: 'btn ghost', onclick: () => App.leaveGame() }, t('Salir al menú')))) };
+        h('h2', { class: 'jit' }, '📡 Đang kết nối lại...'),
+        h('p', null, 'Mất tín hiệu với chủ phòng. Ghế của bạn vẫn được giữ: đang thử vào lại phòng.'),
+        h('div', { class: 'row', style: { justifyContent: 'center' } }, h('button', { class: 'btn ghost', onclick: () => App.leaveGame() }, 'Về menu'))) };
     const vote = net.currentVote();
     if (vote && vote.voters.includes(App.mySeat)) {
       const mine = vote.votes[App.mySeat];
       const count = k => Object.values(vote.votes).filter(x => x === k).length;
       const opt = (k, label, cls) => h('button', { class: 'btn ' + cls + (mine === k ? ' active' : ''), disabled: !!mine, onclick: () => { net.sendVote(k); } }, `${label} (${count(k)})`);
       return { kind: 'vote' + vote.id, center: true, body: h('div', null,
-        h('h2', null, t('🔌 {name} se desconectó', { name: vote.name })),
-        h('p', null, mine ? t('Votaste. Esperando al resto ({n}/{total})... {s}s', { n: Object.keys(vote.votes).length, total: vote.voters.length, s: vote.left }) : t('¿Qué hacemos? Decide la mayoría. Si vuelve antes, recupera su asiento. {s}s', { s: vote.left })),
+        h('h2', null, `🔌 ${vote.name} bị mất kết nối`),
+        h('p', null, mine ? `Bạn đã bỏ phiếu. Đang chờ những người khác (${Object.keys(vote.votes).length}/${vote.voters.length})... ${vote.left}s` : `Làm gì bây giờ? Số đông quyết định. Nếu người đó quay lại trước, họ được giữ ghế. ${vote.left}s`),
         h('div', { class: 'row', style: { justifyContent: 'center' } },
-          opt('wait', t('⏳ Esperar'), ''), opt('bot', t('🤖 Que juegue un bot'), 'green'), opt('remove', t('🚪 Retirarlo'), 'pink'))) };
+          opt('wait', '⏳ Chờ', ''), opt('bot', '🤖 Để bot chơi thay', 'green'), opt('remove', '🚪 Cho rời ván', 'pink'))) };
     }
   }
   // forced modals
@@ -1069,12 +1066,12 @@ function discardModal(st, v) {
   const p = st.players[v];
   const n = G.handSize(d);
   return h('div', null,
-    h('h2', null, t('🗑️ {name}: descarta {n}', { name: p.name, n: need })),
-    h('p', null, t('¡Salió un 7 y tienes más de {limit} cartas! Elige {n} para devolver al banco.', { limit: st.config.rules.handLimit, n: need })),
+    h('h2', null, `🗑️ ${p.name}: bỏ ${need} thẻ`),
+    h('p', null, `Ra 7 mà bạn có hơn ${st.config.rules.handLimit} thẻ! Chọn ${need} thẻ trả lại ngân hàng.`),
     h('div', { class: 'steppers' }, RES.map(r => stepper('desc', d, r, p.res[r]))),
     h('div', { class: 'row' },
       h('span', { class: 'pill' }, `${n} / ${need}`),
-      h('button', { class: 'btn primary', disabled: n !== need, onclick: () => { const res = { ...d }; ui.discard = null; App.dispatch({ type: 'discard', pid: v, res }); } }, t('Descartar'))));
+      h('button', { class: 'btn primary', disabled: n !== need, onclick: () => { const res = { ...d }; ui.discard = null; App.dispatch({ type: 'discard', pid: v, res }); } }, 'Bỏ thẻ')));
 }
 
 export function openGameOver(st) {
@@ -1083,9 +1080,9 @@ export function openGameOver(st) {
   const w = st.players[st.winner];
   const maxRoll = Math.max(1, ...st.stats.rolls);
   openModal(() => h('div', null,
-    h('div', { class: 'winner-hero' }, h('div', { class: 'trophy' }, '🏆'), h('h2', { style: { color: w.color } }, t('¡{name} gana!', { name: w.name })), h('p', null, t('En {rounds} rondas ({turns} turnos).', { rounds: st.round, turns: st.turn }))),
+    h('div', { class: 'winner-hero' }, h('div', { class: 'trophy' }, '🏆'), h('h2', { style: { color: w.color } }, `${w.name} thắng!`), h('p', null, `Sau ${st.round} vòng (${st.turn} lượt).`)),
     h('table', { class: 'score-table' },
-      h('tr', null, [t('Jugador'), t('PV'), '🏠', '🏰', '🏆🃏', '⚔️', '🛣️', t('Robó'), t('Ganó')].map(x => h('th', null, x))),
+      h('tr', null, ['Người chơi', 'Điểm', '🏠', '🏰', '🏆🃏', '⚔️', '🛣️', 'Cướp được', 'Nhận được'].map(x => h('th', null, x))),
       ranking.map(p => {
         const bs = Object.values(st.buildings).filter(b => b.owner === p.id);
         return h('tr', null,
@@ -1099,32 +1096,32 @@ export function openGameOver(st) {
           h('td', null, p.stats.stolen),
           h('td', null, p.stats.gained));
       })),
-    h('div', { class: 'section-label' }, t('Dados de la partida')),
+    h('div', { class: 'section-label' }, 'Xúc xắc của ván'),
     h('div', { class: 'hist' }, st.stats.rolls.slice(2).map((n, i) => h('div', { class: i + 2 === 7 ? 's' : '', style: { height: (n / maxRoll) * 100 + '%' } }, h('em', null, n || ''), h('span', null, i + 2)))),
     h('div', { class: 'row', style: { marginTop: '28px' } },
-      h('button', { class: 'btn ghost', onclick: closeModal }, t('Ver tablero')),
-      h('button', { class: 'btn', onclick: () => { closeModal(); App.leaveGame(); } }, t('🏠 Menú')),
-      !App.isClient() ? h('button', { class: 'btn primary', onclick: () => { closeModal(); App.rematch(); } }, t('🔁 Revancha')) : null)));
+      h('button', { class: 'btn ghost', onclick: closeModal }, 'Xem bàn cờ'),
+      h('button', { class: 'btn', onclick: () => { closeModal(); App.leaveGame(); } }, '🏠 Menu'),
+      !App.isClient() ? h('button', { class: 'btn primary', onclick: () => { closeModal(); App.rematch(); } }, '🔁 Phục thù') : null)));
 }
 
 function openMenu() {
   openModal(() => h('div', null,
-    h('h2', null, t('☰ Menú')),
+    h('h2', null, '☰ Menu'),
     h('div', { style: { display: 'grid', gap: '10px' } },
-      ui.board3d ? h('div', null, h('div', { class: 'section-label' }, t('Gráficos 3D')), h('div', { class: 'gfx-row' },
-        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_TILT() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ tiltShift: !ui.board3d.constructor.SETTINGS_TILT() }); renderModal(App.state); } }, t('📷 Tilt-shift')),
-        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ pixel: ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? 1 : 3 }); renderModal(App.state); } }, t('👾 Filtro pixel')),
-        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_AO() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ ao: !ui.board3d.constructor.SETTINGS_AO() }); renderModal(App.state); } }, t('🌑 Oclusión ambiental')),
-        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_Q() === 'high' ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ quality: ui.board3d.constructor.SETTINGS_Q() === 'high' ? 'low' : 'high' }); toast(t('Calidad cambiada: se aplica al recargar el mapa')); renderModal(App.state); } }, t('✨ Alta calidad')),
-        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_OUTLINE() ? ' on' : ''), title: t('Contorno fino del color de cada jugador, visible a través de montañas y árboles'), onclick: () => { ui.board3d.setGraphics({ outline: !ui.board3d.constructor.SETTINGS_OUTLINE() }); renderModal(App.state); } }, t('🔲 Contorno de piezas')))) : null,
-      h('div', null, h('div', { class: 'section-label' }, t('Iconos de recursos')), h('div', { class: 'gfx-row' },
-        ICON_SETS.map(k => [k, { render: t('🧊 3D (Blender)'), pico: t('🆕 Pixel PICO'), classic: t('🕹️ Clásicos') }[k]]).map(([k, l]) => h('button', { class: 'chip' + (iconSet() === k ? ' on' : ''), onclick: () => { setIconSet(k); if (ui.board3d) ui.board3d.staticKey = ''; render(App.state); } }, l)))),
-      h('button', { class: 'btn', onclick: () => { closeModal(); showHelp(); } }, t('📖 Cómo se juega')),
-      h('button', { class: 'btn', onclick: () => { const on = App.toggleSound(); toast(on ? t('🔊 Sonido activado') : t('🔇 Sonido desactivado')); } }, t('🔊 Sonido on/off')),
-      h('div', null, h('div', { class: 'section-label' }, t('Velocidad de los bots')), speedControl()),
-      h('div', { class: 'section-label' }, t('Partida')),
-      h('div', { class: 'pill' }, t('Semilla: {seed}', { seed: App.state.config.seed })),
-      !App.isClient() ? h('button', { class: 'btn', onclick: () => { closeModal(); App.rematch(); } }, t('🔁 Nueva partida con la misma configuración')) : null,
-      h('button', { class: 'btn pink', onclick: () => { closeModal(); App.leaveGame(); } }, App.isOnline() ? t('🚪 Salir de la sala') : t('💾 Guardar y salir al menú'))),
-    h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: closeModal }, t('Cerrar')))));
+      ui.board3d ? h('div', null, h('div', { class: 'section-label' }, 'Đồ họa 3D'), h('div', { class: 'gfx-row' },
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_TILT() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ tiltShift: !ui.board3d.constructor.SETTINGS_TILT() }); renderModal(App.state); } }, '📷 Hiệu ứng mô hình'),
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ pixel: ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? 1 : 3 }); renderModal(App.state); } }, '👾 Bộ lọc pixel'),
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_AO() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ ao: !ui.board3d.constructor.SETTINGS_AO() }); renderModal(App.state); } }, '🌑 Đổ bóng môi trường'),
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_Q() === 'high' ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ quality: ui.board3d.constructor.SETTINGS_Q() === 'high' ? 'low' : 'high' }); toast('Đã đổi chất lượng: áp dụng khi tải lại bản đồ'); renderModal(App.state); } }, '✨ Chất lượng cao'),
+        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_OUTLINE() ? ' on' : ''), title: 'Viền mảnh theo màu từng người chơi, nhìn xuyên qua núi và cây', onclick: () => { ui.board3d.setGraphics({ outline: !ui.board3d.constructor.SETTINGS_OUTLINE() }); renderModal(App.state); } }, '🔲 Viền công trình'))) : null,
+      h('div', null, h('div', { class: 'section-label' }, 'Biểu tượng tài nguyên'), h('div', { class: 'gfx-row' },
+        ICON_SETS.map(k => [k, { render: '🧊 3D (Blender)', pico: '🆕 Pixel PICO', classic: '🕹️ Cổ điển' }[k]]).map(([k, l]) => h('button', { class: 'chip' + (iconSet() === k ? ' on' : ''), onclick: () => { setIconSet(k); if (ui.board3d) ui.board3d.staticKey = ''; render(App.state); } }, l)))),
+      h('button', { class: 'btn', onclick: () => { closeModal(); showHelp(); } }, '📖 Cách chơi'),
+      h('button', { class: 'btn', onclick: () => { const on = App.toggleSound(); toast(on ? '🔊 Đã bật âm thanh' : '🔇 Đã tắt âm thanh'); } }, '🔊 Bật/tắt âm thanh'),
+      h('div', null, h('div', { class: 'section-label' }, 'Tốc độ của bot'), speedControl()),
+      h('div', { class: 'section-label' }, 'Ván chơi'),
+      h('div', { class: 'pill' }, `Mã sinh bản đồ: ${App.state.config.seed}`),
+      !App.isClient() ? h('button', { class: 'btn', onclick: () => { closeModal(); App.rematch(); } }, '🔁 Ván mới với cài đặt cũ') : null,
+      h('button', { class: 'btn pink', onclick: () => { closeModal(); App.leaveGame(); } }, App.isOnline() ? '🚪 Rời phòng' : '💾 Lưu và về menu')),
+    h('div', { class: 'row' }, h('button', { class: 'btn ghost', onclick: closeModal }, 'Đóng'))));
 }

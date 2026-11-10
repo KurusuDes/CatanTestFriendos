@@ -10,7 +10,6 @@ import { h, clear, toast, storage } from './dom.js';
 import { pxURL } from './pixel.js';
 import { play } from './sfx.js';
 import { pendingActors } from '../engine/game.js';
-import { t } from '../i18n.js';
 
 const KEY = 'katanittes.adhd.v2';
 const START = 100;
@@ -49,7 +48,7 @@ export function disposeAdhd() {
 export function adhdButton() {
   return h('button', {
     class: 'btn adhd-toggle' + (A && A.visible ? ' on' : ''),
-    title: t('ADHD: minijuegos mientras esperas'),
+    title: 'ADHD: trò chơi nhỏ trong lúc chờ',
     onclick: e => {
       e.stopPropagation();
       toggleAdhd();
@@ -145,7 +144,7 @@ function build() {
   A.win.append(
     h('div', { class: 'adhd-head' },
       h('span', { class: 'adhd-title' }, '🧠 ADHD'), A.money, h('div', { class: 'adhd-prog' }, A.bar), A.goal, A.wins,
-      h('button', { class: 'btn sm adhd-min', title: t('Minimizar'), onclick: toggleAdhd }, '—')),
+      h('button', { class: 'btn sm adhd-min', title: 'Thu gọn', onclick: toggleAdhd }, '—')),
     A.grid);
   for (let i = 0; i < A.w.level; i++) addGame(i, false);
   refresh();
@@ -212,7 +211,7 @@ function bust() {
   saveNow();
   build();
   play.bad();
-  toast(t('💸 ¡Quebraste! De vuelta al Plinko con $100'), 'error', 3000);
+  toast('💸 Cháy túi rồi! Quay lại Plinko với $100', 'error', 3000);
 }
 
 function win() {
@@ -257,7 +256,7 @@ function text(g, s, x, y, color, size = 8) {
 function betButton(get, set) {
   const b = h('button', {
     class: 'btn sm nopx',
-    title: t('Cambiar apuesta'),
+    title: 'Đổi mức cược',
     onclick: () => {
       set(BETS[(BETS.indexOf(get()) + 1) % BETS.length]);
       b.textContent = fmt(get());
@@ -284,7 +283,7 @@ function autoButton() {
       return a.on && now >= a.at;
     },
   };
-  a.el = h('button', { class: 'btn sm', style: { display: 'none' }, onclick: () => a.set(!a.on) }, t('Auto'));
+  a.el = h('button', { class: 'btn sm', style: { display: 'none' }, onclick: () => a.set(!a.on) }, 'Tự động');
   return a;
 }
 
@@ -303,7 +302,7 @@ function plinko(K) {
   const auto = autoButton();
   const el = cell('Plinko', cv,
     h('div', { class: 'adhd-bins nopx' }, MULT.map(m => h('span', null, m < 1 ? String(m).slice(1) : m))),
-    h('div', { class: 'adhd-row' }, h('button', { class: 'btn sm primary', onclick: drop }, t('Soltar $1')), auto.el));
+    h('div', { class: 'adhd-row' }, h('button', { class: 'btn sm primary', onclick: drop }, 'Thả $1'), auto.el));
 
   function drop() {
     if (balls.length >= 40) return;
@@ -374,16 +373,16 @@ function slots(K) {
   const pos = [0, 2, 4];
   let bet = 10, spin = null;
   const auto = autoButton();
-  const note = h('div', { class: 'adhd-note nopx' }, t('Par x2 · Trío x5 a x30'));
-  const el = cell(t('Tragamonedas'), cv,
-    h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), h('button', { class: 'btn sm primary', onclick: () => go() }, t('Girar')), auto.el), note);
+  const note = h('div', { class: 'adhd-note nopx' }, 'Đôi x2 · Bộ ba x5 tới x30');
+  const el = cell('Máy đánh bạc', cv,
+    h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), h('button', { class: 'btn sm primary', onclick: () => go() }, 'Xoay'), auto.el), note);
   const ease = t => 1 + 1.8 * (t - 1) ** 3 + 0.8 * (t - 1) ** 2; // stops with a little bounce
 
   function go(byAuto) {
     if (spin) return;
     if (!K.spend(bet)) {
       auto.set(false);
-      return byAuto || toast(t('No te alcanza'), 'error', 1500);
+      return byAuto || toast('Không đủ tài nguyên', 'error', 1500);
     }
     const res = [rnd(N), rnd(N), rnd(N)];
     spin = {
@@ -402,7 +401,7 @@ function slots(K) {
     auto.at = performance.now() + 450;
     const [a, b, c] = s.res;
     const m = a === b && b === c ? TRIO[a] : a === b || b === c || a === c ? 2 : 0;
-    note.textContent = m ? `x${m} → +${fmt(s.bet * m)}` : t('Nada...');
+    note.textContent = m ? `x${m} → +${fmt(s.bet * m)}` : 'Chẳng có gì...';
     if (!m) return K.done();
     m >= 5 ? play.event() : play.gain();
     K.pay(s.bet * m);
@@ -462,9 +461,9 @@ function sheep(K) {
   const [cv, g] = canvas(W, H);
   let bet = 10, race = null, last = null, pick = 0;
   const auto = autoButton();
-  const note = h('div', { class: 'adhd-note nopx' }, t('¿Cuál llega primero?'));
-  const picks = PAY.map((m, i) => h('button', { class: 'btn sm', style: { boxShadow: `inset 0 -4px 0 ${SCARF[i]}` }, title: t('Oveja {n}', { n: i + 1 }), onclick: () => go(i) }, 'x' + m));
-  const el = cell(t('Carrera de ovejas'), cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), auto.el), h('div', { class: 'adhd-row adhd-picks' }, picks), note);
+  const note = h('div', { class: 'adhd-note nopx' }, 'Con nào về đích trước?');
+  const picks = PAY.map((m, i) => h('button', { class: 'btn sm', style: { boxShadow: `inset 0 -4px 0 ${SCARF[i]}` }, title: `Cừu ${i + 1}`, onclick: () => go(i) }, 'x' + m));
+  const el = cell('Đua cừu', cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), auto.el), h('div', { class: 'adhd-row adhd-picks' }, picks), note);
   // each sheep finishes at its own time (the winner first) and wobbles on the way, so it looks close
   const at = (r, i, now) => {
     const u = Math.min(1, (now - r.t0) / r.T[i]);
@@ -475,14 +474,14 @@ function sheep(K) {
     if (race) return;
     if (!K.spend(bet)) {
       auto.set(false);
-      return byAuto || toast(t('No te alcanza'), 'error', 1500);
+      return byAuto || toast('Không đủ tài nguyên', 'error', 1500);
     }
     pick = i;
     let r = Math.random(), win = 0;
     while (win < 3 && (r -= ODDS[win]) > 0) win++;
     const T = SCARF.map((_, j) => (j === win ? 2400 : 2400 * (1.03 + Math.random() * 0.22)));
     race = { pick: i, win, bet, t0: performance.now(), T, wob: T.map(() => 0.05 + Math.random() * 0.07), k: T.map(() => 2 + rnd(3)) };
-    note.textContent = t('¡Arrancan!');
+    note.textContent = 'Xuất phát!';
     play.click();
   }
   function end() {
@@ -491,11 +490,11 @@ function sheep(K) {
     last = r;
     auto.at = performance.now() + 700;
     if (r.pick !== r.win) {
-      note.textContent = t('Ganó la {n}: -{bet}', { n: r.win + 1, bet: fmt(r.bet) });
+      note.textContent = `Cừu ${r.win + 1} thắng: -${fmt(r.bet)}`;
       play.bad();
       return K.done();
     }
-    note.textContent = t('¡Ganó tu oveja! x{m} → +{won}', { m: PAY[r.win], won: fmt(round(r.bet * PAY[r.win])) });
+    note.textContent = `Cừu của bạn thắng! x${PAY[r.win]} → +${fmt(round(r.bet * PAY[r.win]))}`;
     PAY[r.win] >= 5 ? play.event() : play.gain();
     K.pay(round(r.bet * PAY[r.win]));
   }
@@ -560,9 +559,9 @@ function mine(K) {
   };
   const [cv, g] = canvas(W, H);
   let bet = 10, run = null, last = null, hover = -1;
-  const btn = h('button', { class: 'btn sm primary', onclick: act }, t('Entrar'));
-  const note = h('div', { class: 'adhd-note nopx' }, t('Pica piedra, no despiertes al ladrón'));
-  const el = cell(t('La mina'), cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), btn), note);
+  const btn = h('button', { class: 'btn sm primary', onclick: act }, 'Vào');
+  const note = h('div', { class: 'adhd-note nopx' }, 'Đập đá, đừng đánh thức kẻ trộm');
+  const el = cell('Khu mỏ', cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), btn), note);
   cv.style.cursor = 'pointer';
   const cellAt = e => {
     const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W - OX, y = ((e.clientY - r.top) / r.height) * H - OY;
@@ -575,19 +574,19 @@ function mine(K) {
 
   function setBtn() {
     const k = run ? run.dug.size : 0;
-    btn.textContent = !run ? t('Entrar') : k ? t('Cobrar {money}', { money: fmt(round(run.bet * mult(k))) }) : t('Pica una');
+    btn.textContent = !run ? 'Vào' : k ? `Nhận ${fmt(round(run.bet * mult(k)))}` : 'Đập một viên';
     btn.classList.toggle('primary', !run);
     btn.classList.toggle('green', !!run && k > 0);
     btn.disabled = !!run && !k;
   }
   function act() {
     if (run) return run.dug.size && cash();
-    if (!K.spend(bet)) return toast(t('No te alcanza'), 'error', 1500);
+    if (!K.spend(bet)) return toast('Không đủ tài nguyên', 'error', 1500);
     const bad = new Set();
     while (bad.size < ROBBERS) bad.add(rnd(CELLS));
     run = { bet, bad, dug: new Set() };
     last = null;
-    note.textContent = t('Siguiente piedra: x{m}', { m: mult(1) });
+    note.textContent = `Viên tiếp theo: x${mult(1)}`;
     setBtn();
   }
   function dig(i) {
@@ -595,7 +594,7 @@ function mine(K) {
     if (run.bad.has(i)) {
       last = { ...run, hit: i, t: performance.now() };
       run = null;
-      note.textContent = t('¡El ladrón! Perdiste {bet}', { bet: fmt(last.bet) });
+      note.textContent = `Kẻ trộm kìa! Bạn mất ${fmt(last.bet)}`;
       play.boom();
       setBtn();
       return K.done();
@@ -603,14 +602,14 @@ function mine(K) {
     run.dug.add(i);
     play.click();
     if (run.dug.size === CELLS - ROBBERS) return cash();
-    note.textContent = t('x{m} · siguiente: x{next}', { m: mult(run.dug.size), next: mult(run.dug.size + 1) });
+    note.textContent = `x${mult(run.dug.size)} · tiếp theo: x${mult(run.dug.size + 1)}`;
     setBtn();
   }
   function cash() {
     const r = run, m = mult(r.dug.size), won = round(r.bet * m);
     run = null;
     last = { ...r, t: performance.now() };
-    note.textContent = t('Saliste con x{m} → {won}', { m, won: fmt(won) });
+    note.textContent = `Bạn thoát ở x${m} → ${fmt(won)}`;
     m >= 3 ? play.event() : play.gain();
     setBtn();
     K.pay(won);
@@ -677,14 +676,14 @@ function rocket(K) {
   let bet = 10, fly = null, last = null, ghost = null, V = 2.5;
   // the chart zooms out as the rocket climbs, so it never leaves the screen
   const px = m => 5 + (m / V) * 74, py = m => H - 6 - (m / V) ** 1.25 * (H - 16);
-  const btn = h('button', { class: 'btn sm primary', onclick: act }, t('Despegar'));
-  const note = h('div', { class: 'adhd-note nopx' }, t('Puede llegar a x10… casi nunca'));
-  const el = cell(t('Cohete'), cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), btn), note);
+  const btn = h('button', { class: 'btn sm primary', onclick: act }, 'Cất cánh');
+  const note = h('div', { class: 'adhd-note nopx' }, 'Có thể lên tới x10… hiếm lắm');
+  const el = cell('Tên lửa', cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), btn), note);
 
   const at = (f, now) => mAt((now - f.t0) / 1000);
   const cut = m => Math.floor(m * 100) / 100;
   function setBtn(flying) {
-    btn.textContent = flying ? t('Retirar') : t('Despegar');
+    btn.textContent = flying ? 'Rút' : 'Cất cánh';
     btn.classList.toggle('primary', !flying);
     btn.classList.toggle('green', flying);
   }
@@ -692,11 +691,11 @@ function rocket(K) {
   function act() {
     const now = performance.now();
     if (fly) return resolve(now);
-    if (!K.spend(bet)) return toast(t('No te alcanza'), 'error', 1500);
+    if (!K.spend(bet)) return toast('Không đủ tài nguyên', 'error', 1500);
     fly = { bet, t0: now, crash: crashAt() };
     last = ghost = null;
     setBtn(true);
-    note.textContent = t('¡Retírate a tiempo!');
+    note.textContent = 'Rút kịp lúc nhé!';
   }
   function cashout(now, moon) {
     const f = fly, m = moon ? MAX : cut(at(f, now)), won = round(f.bet * m);
@@ -705,7 +704,7 @@ function rocket(K) {
     // the rest of the flight goes on without you
     if (!moon) ghost = { t0: f.t0, crash: f.crash, end: 0 };
     setBtn(false);
-    note.textContent = moon ? t('🌕 ¡Llegaste a la Luna! x10 → {won}', { won: fmt(won) }) : t('Retiraste en x{m} → {won}', { m: m.toFixed(2), won: fmt(won) });
+    note.textContent = moon ? `🌕 Bạn lên tới Mặt Trăng! x10 → ${fmt(won)}` : `Bạn rút ở x${m.toFixed(2)} → ${fmt(won)}`;
     moon ? play.event() : play.gain();
     K.pay(won);
   }
@@ -714,7 +713,7 @@ function rocket(K) {
     fly = null;
     last = { m: f.crash, ok: false, t: now, parts: sparks() };
     setBtn(false);
-    note.textContent = t('¡Boom en x{m}!', { m: f.crash.toFixed(2) });
+    note.textContent = `Nổ ở x${f.crash.toFixed(2)}!`;
     play.boom();
     K.done();
   }
@@ -748,7 +747,7 @@ function rocket(K) {
       if (ghost && !ghost.end && at(ghost, now) >= ghost.crash) {
         ghost.end = now;
         ghost.parts = sparks();
-        note.textContent += ghost.crash >= MAX ? t(' · ¡llegaba a la Luna! 🌕') : t(' · llegaba a x{m}', { m: ghost.crash.toFixed(2) });
+        note.textContent += ghost.crash >= MAX ? ' · lẽ ra đã lên tới Mặt Trăng! 🌕' : ` · lẽ ra đã tới x${ghost.crash.toFixed(2)}`;
       }
       const gm = ghost && (ghost.end ? ghost.crash : at(ghost, now));
       const top = fly ? at(fly, now) : Math.max(last ? last.m : 0, gm || 0);
@@ -803,12 +802,12 @@ function coin(K) {
       lab.textContent = fmt(bet);
     },
   });
-  const note = h('div', { class: 'adhd-note nopx' }, t('Doble o nada'));
-  const el = cell(t('Moneda'), cv,
+  const note = h('div', { class: 'adhd-note nopx' }, 'Gấp đôi hoặc trắng tay');
+  const el = cell('Tung đồng xu', cv,
     h('div', { class: 'adhd-row' }, slider, lab, auto.el),
     h('div', { class: 'adhd-row' },
-      h('button', { class: 'btn sm primary', onclick: () => go(0) }, t('👑 Cara')),
-      h('button', { class: 'btn sm primary', onclick: () => go(1) }, t('🌾 Cruz'))),
+      h('button', { class: 'btn sm primary', onclick: () => go(0) }, '👑 Ngửa'),
+      h('button', { class: 'btn sm primary', onclick: () => go(1) }, '🌾 Sấp')),
     note);
   const ease = t => 1 - (1 - t) ** 3;
 
@@ -828,11 +827,11 @@ function coin(K) {
     face = f.res;
     auto.at = performance.now() + 500;
     if (f.side !== f.res) {
-      note.textContent = f.res ? t('Salió cruz: -{bet}', { bet: fmt(f.bet) }) : t('Salió cara: -{bet}', { bet: fmt(f.bet) });
+      note.textContent = f.res ? `Ra sấp: -${fmt(f.bet)}` : `Ra ngửa: -${fmt(f.bet)}`;
       play.bad();
       return K.done();
     }
-    note.textContent = f.res ? t('¡Salió cruz! +{bet}', { bet: fmt(f.bet) }) : t('¡Salió cara! +{bet}', { bet: fmt(f.bet) });
+    note.textContent = f.res ? `Ra sấp! +${fmt(f.bet)}` : `Ra ngửa! +${fmt(f.bet)}`;
     play.gain();
     K.pay(f.bet * 2);
   }
@@ -899,11 +898,9 @@ function nextCheer() {
   const { seat, n } = cheers.shift(), p = st.players[seat];
   if (!p) return nextCheer();
   const queued = cheers.filter(c => st.players[c.seat]).map(c => st.players[c.seat].name);
-  // one whole sentence to translate; the name goes in bold where {name} sits
-  const [pre, post = ''] = t('🎆 ¡{name} venció el ADHD! 🧠').split('{name}');
   const band = h('div', { class: 'adhd-band', style: { '--pc': p.color } },
-    h('div', null, pre, h('b', null, p.name), post, n > 1 ? h('span', { class: 'adhd-band-n' }, ` ×${n}`) : null),
-    queued.length ? h('small', { class: 'nopx' }, t('Después: {names}', { names: queued.join(', ') })) : null);
+    h('div', null, '🎆 ', h('b', null, p.name), ' đã chinh phục ADHD! 🧠', n > 1 ? h('span', { class: 'adhd-band-n' }, ` ×${n}`) : null),
+    queued.length ? h('small', { class: 'nopx' }, `Tiếp theo: ${queued.join(', ')}`) : null);
   document.body.append(band);
   setTimeout(() => band.remove(), 5200);
   play.win();

@@ -30,7 +30,7 @@ No se incluyen en el repositorio; se cargan desde CDN en tiempo de ejecución.
 |---|---|---|
 | [three.js](https://github.com/mrdoob/three.js) 0.170.0 | Motor 3D del tablero y los dados | MIT |
 | [PeerJS](https://github.com/peers/peerjs) 1.5.4 | Conexión P2P (WebRTC) del modo online | MIT |
-| [Fredoka](https://fonts.google.com/specimen/Fredoka), [Nunito](https://fonts.google.com/specimen/Nunito), [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans), [Silkscreen](https://fonts.google.com/specimen/Silkscreen) (Google Fonts) | Tipografías de la interfaz | SIL Open Font License 1.1 |
+| [Fredoka](https://fonts.google.com/specimen/Fredoka), [Nunito](https://fonts.google.com/specimen/Nunito), [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans), [Silkscreen](https://fonts.google.com/specimen/Silkscreen), [Tiny5](https://fonts.google.com/specimen/Tiny5), [VT323](https://fonts.google.com/specimen/VT323) (Google Fonts) | Tipografías de la interfaz | SIL Open Font License 1.1 |
 
 El modo online usa el servidor de señalización público de PeerJS para emparejar a los jugadores;
 las partidas en sí viajan directamente entre navegadores.

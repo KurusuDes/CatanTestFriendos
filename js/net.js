@@ -10,7 +10,6 @@
 import { App } from './app.js';
 import { applyAction, createGame } from './engine/game.js';
 import { toast, storage } from './ui/dom.js';
-import { t, tk, tx } from './i18n.js';
 
 const PREFIX = 'kchx-v1-';
 export const HOST_SESSION = 'katanittes.hostSession';
@@ -65,7 +64,7 @@ function loadPeer() {
     sc.onload = () => res(window.Peer);
     sc.onerror = () => {
       peerLib = null;
-      rej(new Error(t('No se pudo cargar PeerJS')));
+      rej(new Error('Không tải được PeerJS'));
     };
     document.head.append(sc);
   });
@@ -109,7 +108,7 @@ export class Net {
     // room settings (host) / what the waiting room shows (guest)
     this.capacity = 4;
     this.open = true;
-    this.hostInfo = { name: t('Anfitrión'), flag: null, color: '#e53935' };
+    this.hostInfo = { name: 'Chủ phòng', flag: null, color: '#e53935' };
     this.lobby = null;
   }
 
@@ -147,7 +146,7 @@ export class Net {
       } catch {}
     }, 150);
     this.guests = this.guests.filter(x => x !== g);
-    toast(t('👢 {name} fue expulsado de la sala', { name: g.name }));
+    toast(`👢 ${g.name} đã bị đuổi khỏi phòng`);
     this.pushLobby();
     this.onChange();
   }
@@ -182,7 +181,7 @@ export class Net {
             if (!this.peer) {
               p.destroy();
               rej(e);
-            } else if (e.type !== 'peer-unavailable') toast(t('Red: {type}', { type: e.type }), 'error');
+            } else if (e.type !== 'peer-unavailable') toast(`Mạng: ${e.type}`, 'error');
           });
         });
         break;
@@ -195,7 +194,7 @@ export class Net {
         if (attempt >= (reopening ? 24 : 3)) throw e;
       }
     }
-    if (!this.peer) throw new Error(t('No se pudo abrir la sala'));
+    if (!this.peer) throw new Error('Không mở được phòng');
     clearInterval(this.hb);
     this.hb = setInterval(() => {
       const now = Date.now();
@@ -240,8 +239,8 @@ export class Net {
       const st = App.state;
       if (g.seat == null || !st) return;
       const a = msg.action;
-      if (!a || ADMIN.has(a.type) || a.pid !== g.seat) return conn.send({ type: 'error', msg: tk('Esa acción no es tuya.') });
-      if (st.players[g.seat].retired) return conn.send({ type: 'error', msg: tk('Te retiraron de la partida.') });
+      if (!a || ADMIN.has(a.type) || a.pid !== g.seat) return conn.send({ type: 'error', msg: 'Đó không phải lượt của bạn.' });
+      if (st.players[g.seat].retired) return conn.send({ type: 'error', msg: 'Bạn đã bị cho rời ván.' });
       if (a.type === 'adhdWin') {
         // beating the arcade takes minutes: a burst of wins is someone spamming the fireworks
         const now = Date.now();
@@ -278,7 +277,7 @@ export class Net {
 
   hello(conn, msg) {
     const token = String(msg.token || '').slice(0, 40);
-    const name = String(msg.name || t('Amigo')).slice(0, 16);
+    const name = String(msg.name || 'Bạn bè').slice(0, 16);
     let g = token && this.guests.find(x => x.token === token);
     const inGame = App.state && App.state.phase !== 'gameOver';
     if (g) {
@@ -294,12 +293,12 @@ export class Net {
       g.sentStatic = false;
       g.leaving = false;
       if (!inGame) Object.assign(g, { name, flag: msg.flag || g.flag, color: msg.color || g.color });
-      toast(inGame ? t('🟢 {name} volvió a la sala', { name: g.name }) : t('🟢 {name} entró a la sala', { name: g.name }), 'good');
+      toast(inGame ? `🟢 ${g.name} đã quay lại phòng` : `🟢 ${g.name} đã vào phòng`, 'good');
       this.cancelVote(g.seat);
       clearTimeout(this.timers.get(g.seat));
       if (inGame && g.seat != null) {
         const p = App.state.players[g.seat];
-        if (p.retired) conn.send({ type: 'error', msg: tk('La mesa votó retirarte de esta partida. Puedes mirar.') });
+        if (p.retired) conn.send({ type: 'error', msg: 'Cả bàn đã bỏ phiếu cho bạn rời ván này. Bạn vẫn có thể xem.' });
         else if (p.kind === 'bot' && g.replaced) {
           g.replaced = false;
           applyAction(App.state, { type: 'setController', pid: g.seat, kind: 'human' });
@@ -310,14 +309,14 @@ export class Net {
       const refuse = (why, text) => {
         conn.send({ type: 'refused', msg: text });
         if (this.onRefused) this.onRefused(why, name);
-        else toast(t('🚪 {name} intentó entrar: {why}', { name, why: text }), 'error', 6000);
+        else toast(`🚪 ${name} định vào: ${text}`, 'error', 6000);
       };
-      if (inGame) return refuse('started', tk('La partida ya empezó.'));
-      if (!this.open) return refuse('closed', tk('🔒 La sala está cerrada: el anfitrión no acepta más jugadores.'));
-      if (this.guests.filter(x => x.connected).length >= this.capacity - 1) return refuse('full', { t: tk('La sala está llena ({n} jugadores).'), p: { n: this.capacity } });
+      if (inGame) return refuse('started', 'Ván đã bắt đầu rồi.');
+      if (!this.open) return refuse('closed', '🔒 Phòng đã đóng: chủ phòng không nhận thêm người.');
+      if (this.guests.filter(x => x.connected).length >= this.capacity - 1) return refuse('full', `Phòng đã đầy (${this.capacity} người).`);
       g = { token, name, flag: msg.flag || null, color: msg.color || null, conn, seat: null, connected: true, lastPong: Date.now() };
       this.guests.push(g);
-      toast(t('🟢 {name} entró a la sala', { name }), 'good');
+      toast(`🟢 ${name} đã vào phòng`, 'good');
     }
     conn.send({ type: 'welcome', code: this.code });
     if (App.state && g.seat != null) App.changed();
@@ -336,10 +335,10 @@ export class Net {
     const inGame = App.state && App.state.phase !== 'gameOver';
     if (!inGame) {
       if (g.seat == null) this.guests = this.guests.filter(x => x !== g);
-      toast(t('🔌 {name} salió de la sala', { name: g.name }), 'error');
+      toast(`🔌 ${g.name} đã rời phòng`, 'error');
       this.pushLobby();
     } else {
-      toast(t('🔌 {name} se desconectó', { name: g.name }), 'error');
+      toast(`🔌 ${g.name} bị mất kết nối`, 'error');
       const p = App.state.players[g.seat];
       if (p && !p.retired && p.kind === 'human') this.timers.set(g.seat, setTimeout(() => this.startVote(g.seat), now ? 0 : GRACE_MS));
     }
@@ -406,7 +405,7 @@ export class Net {
     const st = App.state;
     const g = this.guestBySeat(v.seat);
     const name = v.name;
-    const said = { wait: t('🗳️ La mesa decidió ⏳ esperar ({name})', { name }), bot: t('🗳️ La mesa decidió 🤖 que juegue un bot ({name})', { name }), remove: t('🗳️ La mesa decidió 🚪 retirarlo ({name})', { name }) }[result];
+    const said = { wait: `🗳️ Cả bàn quyết định ⏳ chờ (${name})`, bot: `🗳️ Cả bàn quyết định 🤖 để bot chơi thay (${name})`, remove: `🗳️ Cả bàn quyết định 🚪 cho rời ván (${name})` }[result];
     toast(said, 'good', 4000);
     if (result === 'remove') {
       const r = applyAction(st, { type: 'retirePlayer', pid: v.seat });
@@ -502,7 +501,7 @@ export class Net {
 
   static async reopen() {
     const s = storage(HOST_SESSION);
-    if (!s) throw new Error(t('No hay sala guardada'));
+    if (!s) throw new Error('Không có phòng nào được lưu');
     const net = new Net();
     App.net = net;
     await net.host(s.code);
@@ -543,8 +542,8 @@ export class Net {
         p.on('open', res);
         p.on('error', e => {
           if (e.type === 'peer-unavailable') {
-            if (first && !this.everConnected) rej(new Error(t('No existe una sala con ese código')));
-          } else if (!this.everConnected && first) rej(new Error(t('Error de red: {type}', { type: e.type })));
+            if (first && !this.everConnected) rej(new Error('Không có phòng nào mang mã này'));
+          } else if (!this.everConnected && first) rej(new Error(`Lỗi mạng: ${e.type}`));
         });
         p.on('disconnected', () => this.active && !p.destroyed && setTimeout(() => p.reconnect(), 1500));
       });
@@ -552,7 +551,7 @@ export class Net {
     return new Promise((res, rej) => {
       const c = this.peer.connect(PREFIX + this.code, { reliable: true });
       const timer = setTimeout(() => {
-        if (first && !this.everConnected) rej(new Error(t('La sala existe pero no se pudo conectar: tu red bloquea la conexión directa. Prueba con otra wifi o con datos móviles.')));
+        if (first && !this.everConnected) rej(new Error('Phòng có tồn tại nhưng không kết nối được: mạng của bạn chặn kết nối trực tiếp. Hãy thử wifi khác hoặc dữ liệu di động.'));
         else {
           try {
             c.close();
@@ -595,14 +594,14 @@ export class Net {
     if (!this.reconnecting) {
       this.reconnecting = true;
       this.retryUntil = Date.now() + 10 * 60000;
-      toast(t('📡 Se perdió la conexión. Reconectando...'), 'error', 4000);
+      toast('📡 Mất kết nối. Đang kết nối lại...', 'error', 4000);
       this.onStatus('reconnecting');
       if (App.onMeta) App.onMeta();
     }
     if (Date.now() > this.retryUntil) {
       this.reconnecting = false;
       this.onStatus('closed');
-      toast(t('🔌 No se pudo volver a la sala'), 'error', 6000);
+      toast('🔌 Không quay lại phòng được', 'error', 6000);
       return;
     }
     clearTimeout(this.retryTimer);
@@ -621,14 +620,14 @@ export class Net {
       this.lobby = msg.lobby;
       if (App.onLobby) App.onLobby();
     } else if (msg.type === 'refused' || msg.type === 'kicked' || msg.type === 'closed') {
-      const text = msg.type === 'refused' ? tx(msg.msg) : msg.type === 'kicked' ? t('👢 El anfitrión te sacó de la sala.') : t('🚪 El anfitrión cerró la sala.');
+      const text = msg.type === 'refused' ? msg.msg : msg.type === 'kicked' ? '👢 Chủ phòng đã mời bạn ra khỏi phòng.' : '🚪 Chủ phòng đã đóng phòng.';
       toast(text, 'error', 6000);
       storage(GUEST_SESSION, null);
       this.close();
       if (App.net === this) App.net = null;
       if (App.screen === 'game') App.leaveGame();
       else App.go('online');
-    } else if (msg.type === 'error') toast(tx(msg.msg), 'error', 5000);
+    } else if (msg.type === 'error') toast(msg.msg, 'error', 5000);
     else if (msg.type === 'init') {
       this.static = msg.board;
       this.config = msg.config;
@@ -678,7 +677,7 @@ export class Net {
 
   sendAction(a) {
     if (this.conn && this.conn.open) this.conn.send({ type: 'action', action: a });
-    else toast(t('Sin conexión con el anfitrión: reconectando...'), 'error');
+    else toast('Mất kết nối với chủ phòng: đang kết nối lại...', 'error');
   }
 
   // ================= both =================

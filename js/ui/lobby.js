@@ -7,7 +7,6 @@ import { DEV_DECKS, TILE_INFO } from '../engine/constants.js';
 import { createGame } from '../engine/game.js';
 import { newSeed } from '../engine/rng.js';
 import { openFlagEditor, flagImg, patternFlag, validFlag, myKingdom, saveMyKingdom } from './flag.js';
-import { t } from '../i18n.js';
 
 const CFG_KEY = 'katanittes.lastConfig';
 export const MAPS_KEY = 'katanittes.maps';
@@ -42,12 +41,7 @@ function loadConfig() {
   return { ...base, ...saved, map: { ...base.map, ...saved.map }, rules: { ...base.rules, ...saved.rules }, modes: { ...base.modes, ...saved.modes }, seed: newSeed() };
 }
 
-// a fresh setup with the local player's default name in the chosen language
-function localConfig() {
-  const c = defaultConfig();
-  if (c.players[0].name === 'Tú') c.players[0].name = t('Tú');
-  return c;
-}
+const localConfig = defaultConfig;
 
 export function lobbyScreen(root, opts = {}) {
   const online = opts.online === 'host';
@@ -69,14 +63,14 @@ export function lobbyScreen(root, opts = {}) {
 
   root.append(h('div', { class: 'lobby screen' },
     h('div', { class: 'lobby-head' },
-      h('button', { class: 'btn', onclick: () => { if (online && App.net) { if (App.net.guests.some(g => g.connected) && !confirm(t('¿Salir? La sala se cerrará para tus amigos.'))) return; App.net.closeRoom(); } App.net = null; App.go('menu'); } }, t('← Menú')),
-      h('h2', null, online ? t('🌐 Sala online') : t('🎮 Nueva partida')),
-      h('button', { class: 'btn sm', onclick: () => { cfg = localConfig(); if (online) cfg.players.forEach((p, i) => { if (i && p.kind === 'human') p.kind = 'remote'; }); refresh(); } }, t('↺ Restablecer'))),
+      h('button', { class: 'btn', onclick: () => { if (online && App.net) { if (App.net.guests.some(g => g.connected) && !confirm('Thoát? Phòng sẽ đóng với bạn bè của bạn.')) return; App.net.closeRoom(); } App.net = null; App.go('menu'); } }, '← Menu'),
+      h('h2', null, online ? '🌐 Phòng online' : '🎮 Ván mới'),
+      h('button', { class: 'btn sm', onclick: () => { cfg = localConfig(); if (online) cfg.players.forEach((p, i) => { if (i && p.kind === 'human') p.kind = 'remote'; }); refresh(); } }, '↺ Đặt lại')),
     h('div', { class: 'lobby-grid' }, left,
       h('div', { class: 'preview-card' }, onlineBox, h('div', { class: 'card' },
-        h('h3', null, t('🗺️ Vista previa '), h('small', null, t('así será tu mapa'))),
+        h('h3', null, '🗺️ Xem trước ', h('small', null, 'bản đồ của bạn sẽ trông thế này')),
         previewBox, previewMeta)))),
-    h('div', { class: 'start-bar' }, h('button', { class: 'btn primary big', id: 'startBtn', onclick: start }, online ? t('🚀 Empezar partida online') : t('🚀 ¡A jugar!'))));
+    h('div', { class: 'start-bar' }, h('button', { class: 'btn primary big', id: 'startBtn', onclick: start }, online ? '🚀 Bắt đầu ván online' : '🚀 Chơi thôi!')));
 
   function save() {
     storage(CFG_KEY, cfg);
@@ -102,10 +96,10 @@ export function lobbyScreen(root, opts = {}) {
     const counts = {};
     for (const t of st.board.tiles) counts[t.res] = (counts[t.res] || 0) + 1;
     clear(previewMeta).append(
-      h('span', { class: 'pill' }, t('{n} hexágonos', { n: land })),
-      h('span', { class: 'pill' }, t('{n} puertos', { n: st.board.ports.length })),
+      h('span', { class: 'pill' }, `${land} ô`),
+      h('span', { class: 'pill' }, `${st.board.ports.length} cảng`),
       ...Object.entries(counts).map(([r, n]) => h('span', { class: 'pill' }, `${TILE_INFO[r].icon}${n}`)),
-      h('button', { class: 'btn sm', onclick: () => { cfg.seed = newSeed(); renderPreview(); } }, t('🎲 Otro mapa')));
+      h('button', { class: 'btn sm', onclick: () => { cfg.seed = newSeed(); renderPreview(); } }, '🎲 Bản đồ khác'));
   }
 
   // ---------- the online room (host) ----------
@@ -116,7 +110,7 @@ export function lobbyScreen(root, opts = {}) {
     while (cfg.players.length < n) {
       const k = cfg.players.length;
       const color = PLAYER_COLORS.find(c => !cfg.players.some(p => p.color === c)) || PLAYER_COLORS[k % PLAYER_COLORS.length];
-      cfg.players.push({ name: t('Amigo {n}', { n: k }), kind: 'remote', level: 'normal', color, flag: patternFlag(color, k) });
+      cfg.players.push({ name: `Bạn ${k}`, kind: 'remote', level: 'normal', color, flag: patternFlag(color, k) });
     }
     while (cfg.players.length > n) cfg.players.pop();
     if (n > 4 && ['classic', 'mini'].includes(cfg.map.shape)) cfg.map.shape = 'extended';
@@ -128,7 +122,7 @@ export function lobbyScreen(root, opts = {}) {
       await navigator.clipboard.writeText(text);
       toast(msg, 'good');
     } catch {
-      prompt(t('Cópialo desde aquí:'), text);
+      prompt('Sao chép từ đây:', text);
     }
   }
   function renderOnline() {
@@ -143,24 +137,24 @@ export function lobbyScreen(root, opts = {}) {
     const remoteSeats = cfg.players.filter(p => p.kind === 'remote').length;
     const link = location.origin + location.pathname + '?sala=' + net.code;
     onlineBox.append(h('div', { class: 'card room-card' },
-      h('h3', null, t('🌐 Tu sala '), h('span', { class: 'room-state ' + (net.open ? 'on' : 'off') }, net.open ? t('abierta') : t('cerrada'))),
-      net.code ? h('div', { class: 'room-code' }, net.code) : h('p', null, t('Creando sala...')),
+      h('h3', null, '🌐 Phòng của bạn ', h('span', { class: 'room-state ' + (net.open ? 'on' : 'off') }, net.open ? 'đang mở' : 'đã đóng')),
+      net.code ? h('div', { class: 'room-code' }, net.code) : h('p', null, 'Đang tạo phòng...'),
       h('div', { class: 'chips room-share' },
-        h('button', { class: 'btn sm', onclick: () => copy(link, t('🔗 Enlace copiado: pásaselo a tus amigos')) }, t('🔗 Copiar enlace')),
-        h('button', { class: 'btn sm', onclick: () => copy(net.code, t('📋 Código copiado')) }, t('📋 Código')),
-        navigator.share ? h('button', { class: 'btn sm', onclick: () => navigator.share({ title: 'Katanittes', text: t('¡Únete a mi sala de Katanittes!'), url: link }).catch(() => {}) }, t('📤 Compartir')) : null),
-      h('div', { class: 'section-label' }, t('Tamaño de la sala')),
-      h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (cfg.players.length === n ? ' on' : ''), title: t('{n} jugadores', { n }), onclick: () => setCapacity(n) }, n))),
+        h('button', { class: 'btn sm', onclick: () => copy(link, '🔗 Đã sao chép link: gửi cho bạn bè đi') }, '🔗 Sao chép link'),
+        h('button', { class: 'btn sm', onclick: () => copy(net.code, '📋 Đã sao chép mã') }, '📋 Mã'),
+        navigator.share ? h('button', { class: 'btn sm', onclick: () => navigator.share({ title: 'Katanittes', text: 'Vào phòng Katanittes của mình chơi nhé!', url: link }).catch(() => {}) }, '📤 Chia sẻ') : null),
+      h('div', { class: 'section-label' }, 'Sức chứa phòng'),
+      h('div', { class: 'cap-row' }, [2, 3, 4, 5, 6, 7, 8].map(n => h('button', { class: 'cap' + (cfg.players.length === n ? ' on' : ''), title: `${n} người chơi`, onclick: () => setCapacity(n) }, n))),
       h('div', { class: 'gfx-row room-toggles' },
-        h('button', { class: 'chip' + (net.open ? ' on' : ''), onclick: () => { net.open = !net.open; renderOnline(); } }, net.open ? t('🟢 Aceptando jugadores') : t('🔒 No entra nadie más')),
-        h('button', { class: 'chip' + (fillBots ? ' on' : ''), onclick: () => { fillBots = !fillBots; renderOnline(); } }, t('🤖 Huecos vacíos: bots'))),
-      h('div', { class: 'section-label' }, t('En la sala {n} / {max}', { n: guests.length + 1, max: cfg.players.length })),
+        h('button', { class: 'chip' + (net.open ? ' on' : ''), onclick: () => { net.open = !net.open; renderOnline(); } }, net.open ? '🟢 Đang nhận người' : '🔒 Không nhận thêm ai'),
+        h('button', { class: 'chip' + (fillBots ? ' on' : ''), onclick: () => { fillBots = !fillBots; renderOnline(); } }, '🤖 Ghế trống: bot chơi')),
+      h('div', { class: 'section-label' }, `Trong phòng ${guests.length + 1} / ${cfg.players.length}`),
       h('div', { class: 'guest-list' },
-        h('div', { class: 'guest host' }, flagImg(cfg.players[0].flag, 20), h('b', null, cfg.players[0].name), h('span', { class: 'tag ok' }, t('👑 tú'))),
-        guests.map(g => h('div', { class: 'guest' }, flagImg(g.flag, 20), h('b', null, g.name), h('span', { class: 'tag ok' }, t('conectado')),
-          h('button', { class: 'btn sm ghost kick', title: t('Expulsar'), onclick: () => { if (confirm(t('¿Expulsar a {name} de la sala?', { name: g.name }))) net.kick(g.token); } }, '👢'))),
-        Array.from({ length: Math.max(0, remoteSeats - guests.length) }, () => h('div', { class: 'guest empty' }, h('span', { class: 'dots' }, '⏳'), fillBots ? t('libre (si nadie entra, juega un bot)') : t('esperando a un amigo')))),
-      h('button', { class: 'btn pink sm close-room', onclick: () => { if (confirm(t('¿Cerrar la sala? Tus amigos saldrán.'))) { net.closeRoom(); App.net = null; App.go('menu'); } } }, t('✖ Cerrar sala'))));
+        h('div', { class: 'guest host' }, flagImg(cfg.players[0].flag, 20), h('b', null, cfg.players[0].name), h('span', { class: 'tag ok' }, '👑 bạn')),
+        guests.map(g => h('div', { class: 'guest' }, flagImg(g.flag, 20), h('b', null, g.name), h('span', { class: 'tag ok' }, 'đã kết nối'),
+          h('button', { class: 'btn sm ghost kick', title: 'Đuổi', onclick: () => { if (confirm(`Đuổi ${g.name} khỏi phòng?`)) net.kick(g.token); } }, '👢'))),
+        Array.from({ length: Math.max(0, remoteSeats - guests.length) }, () => h('div', { class: 'guest empty' }, h('span', { class: 'dots' }, '⏳'), fillBots ? 'trống (nếu không ai vào, bot sẽ chơi)' : 'đang chờ bạn bè'))),
+      h('button', { class: 'btn pink sm close-room', onclick: () => { if (confirm('Đóng phòng? Bạn bè của bạn sẽ bị đưa ra ngoài.')) { net.closeRoom(); App.net = null; App.go('menu'); } } }, '✖ Đóng phòng')));
   }
 
   function guestFor(i) {
@@ -171,14 +165,14 @@ export function lobbyScreen(root, opts = {}) {
 
   function playerRows() {
     const kinds = online
-      ? [['remote', t('🌐 Amigo')], ['bot:easy', t('🤖 Bot fácil')], ['bot:normal', t('🤖 Bot normal')], ['bot:hard', t('🤖 Bot difícil')]]
-      : [['human', t('🧑 Humano')], ['bot:easy', t('🤖 Bot fácil')], ['bot:normal', t('🤖 Bot normal')], ['bot:hard', t('🤖 Bot difícil')]];
+      ? [['remote', '🌐 Bạn bè'], ['bot:easy', '🤖 Bot dễ'], ['bot:normal', '🤖 Bot thường'], ['bot:hard', '🤖 Bot khó']]
+      : [['human', '🧑 Người'], ['bot:easy', '🤖 Bot dễ'], ['bot:normal', '🤖 Bot thường'], ['bot:hard', '🤖 Bot khó']];
     return cfg.players.map((p, i) => {
       const val = p.kind === 'bot' ? `bot:${p.level || 'normal'}` : p.kind;
       const hostSeat = online && i === 0;
       return h('div', { class: 'player-row' },
         h('div', {
-          class: 'swatch', style: { background: p.color }, title: t('Cambiar color'),
+          class: 'swatch', style: { background: p.color }, title: 'Đổi màu',
           onclick: () => {
             const used = new Set(cfg.players.map(x => x.color));
             let k = PLAYER_COLORS.indexOf(p.color);
@@ -191,33 +185,33 @@ export function lobbyScreen(root, opts = {}) {
           },
         }),
         p.kind === 'remote'
-          ? h('div', { class: 'btn sm flag-btn', title: t('Cada amigo pinta su propia bandera') }, guestFor(i) ? flagImg(guestFor(i).flag, 26) : '🌐')
+          ? h('div', { class: 'btn sm flag-btn', title: 'Mỗi người tự vẽ lá cờ của mình' }, guestFor(i) ? flagImg(guestFor(i).flag, 26) : '🌐')
           : h('button', {
-            class: 'btn sm flag-btn', title: t('Bandera y color del castillo'),
+            class: 'btn sm flag-btn', title: 'Cờ và màu lâu đài',
             onclick: () => openFlagEditor({
               flag: p.flag, color: p.color, name: p.name,
               onSave: ({ flag, color }) => {
                 p.flag = flag;
                 p.color = color;
                 const twin = cfg.players.find(o => o !== p && o.color.toLowerCase() === color.toLowerCase());
-                if (twin) toast(t('⚠️ {name} ya usa ese color de castillo: cambia uno para distinguirlos', { name: twin.name }), 'error', 4000);
+                if (twin) toast(`⚠️ ${twin.name} đã dùng màu lâu đài này: đổi một người để dễ phân biệt`, 'error', 4000);
                 if (p.kind === 'human' && i === 0) saveMyKingdom({ name: p.name, flag, color });
                 refresh();
               },
             }),
           }, flagImg(p.flag, 26)),
-        p.kind === 'remote' ? h('div', { class: 'seat-name' + (guestFor(i) ? ' taken' : '') }, guestFor(i) ? guestFor(i).name : t('Asiento libre para un amigo')) : h('input', { type: 'text', value: p.name, maxlength: 16, onchange: e => { p.name = e.target.value.trim() || t('Jugador {n}', { n: i + 1 }); if (p.kind === 'human' && i === 0) saveMyKingdom({ name: p.name, flag: p.flag, color: p.color }); save(); } }),
-        hostSeat ? h('div', { class: 'pill' }, t('👑 Tú (anfitrión)')) : h('select', {
+        p.kind === 'remote' ? h('div', { class: 'seat-name' + (guestFor(i) ? ' taken' : '') }, guestFor(i) ? guestFor(i).name : 'Ghế trống chờ bạn bè') : h('input', { type: 'text', value: p.name, maxlength: 16, onchange: e => { p.name = e.target.value.trim() || `Người chơi ${i + 1}`; if (p.kind === 'human' && i === 0) saveMyKingdom({ name: p.name, flag: p.flag, color: p.color }); save(); } }),
+        hostSeat ? h('div', { class: 'pill' }, '👑 Bạn (chủ phòng)') : h('select', {
           onchange: e => {
             const [k, l] = e.target.value.split(':');
             p.kind = k;
             if (l) p.level = l;
             if (k === 'bot' && !BOT_NAMES.includes(p.name)) p.name = BOT_NAMES.find(n => !cfg.players.some(x => x.name === n)) || p.name;
-            if (k !== 'bot' && BOT_NAMES.includes(p.name)) p.name = k === 'remote' ? t('Amigo {n}', { n: i }) : t('Jugador {n}', { n: i + 1 });
+            if (k !== 'bot' && BOT_NAMES.includes(p.name)) p.name = k === 'remote' ? `Khách ${i}` : `Người chơi ${i + 1}`;
             refresh();
           },
         }, kinds.map(([k, l]) => h('option', { value: k, selected: k === val ? true : null }, l))),
-        h('button', { class: 'btn sm ghost', disabled: cfg.players.length <= 2 || hostSeat, title: t('Quitar'), onclick: () => { cfg.players.splice(i, 1); refresh(); } }, '✕'));
+        h('button', { class: 'btn sm ghost', disabled: cfg.players.length <= 2 || hostSeat, title: 'Bỏ', onclick: () => { cfg.players.splice(i, 1); refresh(); } }, '✕'));
     });
   }
 
@@ -225,7 +219,7 @@ export function lobbyScreen(root, opts = {}) {
     clear(left);
     // players
     left.append(h('div', { class: 'card' },
-      h('h3', null, t('👥 Jugadores '), h('small', null, `${cfg.players.length}/8`)),
+      h('h3', null, '👥 Người chơi ', h('small', null, `${cfg.players.length}/8`)),
       playerRows(),
       h('button', {
         class: 'btn sm', disabled: cfg.players.length >= 8,
@@ -236,26 +230,26 @@ export function lobbyScreen(root, opts = {}) {
           if (cfg.players.length > 4 && ['classic', 'mini'].includes(cfg.map.shape)) cfg.map.shape = 'extended';
           if (cfg.players.length > 6 && ['classic', 'mini', 'extended', 'ring', 'star'].includes(cfg.map.shape)) {
             cfg.map.shape = 'big';
-            toast(t('🗺️ Con 7-8 jugadores cambio al mapa Grande'));
+            toast('🗺️ Có 7-8 người thì đổi sang bản đồ Lớn');
           }
           refresh();
         },
-      }, t('+ Añadir jugador'))));
+      }, '+ Thêm người chơi')));
 
     // presets
     left.append(h('div', { class: 'card' },
-      h('h3', null, t('⚡ Modos rápidos '), h('small', null, t('aplica una combinación'))),
+      h('h3', null, '⚡ Chơi nhanh ', h('small', null, 'áp dụng một bộ cài sẵn')),
       h('div', { class: 'chips' }, PRESETS.map(p => h('button', {
-        class: 'chip', title: t(p.desc),
+        class: 'chip', title: p.desc,
         onclick: () => {
           const players = cfg.players;
           cfg = localConfig();
           cfg.players = players;
           p.apply(cfg);
           refresh();
-          toast(`${p.icon} ${t(p.name)}: ${t(p.desc)}`);
+          toast(`${p.icon} ${p.name}: ${p.desc}`);
         },
-      }, `${p.icon} ${t(p.name)}`)))));
+      }, `${p.icon} ${p.name}`)))));
 
     // map
     const customs = storage(MAPS_KEY) || [];
@@ -263,42 +257,42 @@ export function lobbyScreen(root, opts = {}) {
     const sel = (k, v) => h('select', { onchange: e => { m[k] = isNaN(+e.target.value) || e.target.value === '' ? e.target.value : +e.target.value; refresh(); } },
       v.map(([val, label]) => h('option', { value: val, selected: String(m[k]) === String(val) ? true : null }, label)));
     left.append(h('div', { class: 'card' },
-      h('h3', null, t('🗺️ Mapa')),
+      h('h3', null, '🗺️ Bản đồ'),
       h('div', { class: 'maps' },
         Object.entries(SHAPES).filter(([k]) => k !== 'custom').map(([k, sh]) => h('div', {
-          class: 'map-card' + (m.shape === k ? ' on' : ''), title: t(sh.desc),
+          class: 'map-card' + (m.shape === k ? ' on' : ''), title: sh.desc,
           onclick: () => { m.shape = k; m.custom = null; cfg.seed = newSeed(); refresh(); },
-        }, h('div', { class: 'mini' }, miniMap(k)), h('b', null, t(sh.name)))),
+        }, h('div', { class: 'mini' }, miniMap(k)), h('b', null, sh.name))),
         customs.map((c, i) => h('div', {
-          class: 'map-card' + (m.shape === 'custom' && m.custom && m.custom.name === c.name ? ' on' : ''), title: t('Mapa personalizado'),
+          class: 'map-card' + (m.shape === 'custom' && m.custom && m.custom.name === c.name ? ' on' : ''), title: 'Bản đồ tự tạo',
           onclick: () => { m.shape = 'custom'; m.custom = c; refresh(); },
         }, h('div', { class: 'mini' }, miniMap('custom', c)), h('b', null, '✏️ ' + c.name))),
-        h('div', { class: 'map-card', onclick: () => App.go('editor') }, h('div', { class: 'mini', style: { display: 'grid', placeItems: 'center', fontSize: '38px' } }, '➕'), h('b', null, t('Crear mapa')))),
-      h('p', { style: { color: 'var(--muted)', fontSize: '13px', margin: '10px 0 0' } }, t((SHAPES[m.shape] || SHAPES.custom).desc)),
+        h('div', { class: 'map-card', onclick: () => App.go('editor') }, h('div', { class: 'mini', style: { display: 'grid', placeItems: 'center', fontSize: '38px' } }, '➕'), h('b', null, 'Tạo bản đồ'))),
+      h('p', { style: { color: 'var(--muted)', fontSize: '13px', margin: '10px 0 0' } }, (SHAPES[m.shape] || SHAPES.custom).desc),
       h('div', { class: 'opt-grid' },
-        (SHAPES[m.shape] || {}).random ? h('div', null, h('label', null, t('Tamaño: {n} hexágonos', { n: m.size })), h('input', { type: 'range', min: 12, max: 60, value: m.size, onchange: e => { m.size = +e.target.value; refresh(); } })) : null,
-        h('div', null, h('label', null, t('Recursos')), sel('resources', [['balanced', t('Equilibrados')], ['chaos', t('Caóticos')]])),
-        h('div', null, h('label', null, t('Números')), sel('numbers', [['balanced', t('Sin 6/8 juntos')], ['random', t('Totalmente al azar')]])),
-        h('div', null, h('label', null, t('Desiertos')), sel('deserts', [['auto', t('Automático')], [0, '0'], [1, '1'], [2, '2'], [3, '3']])),
-        h('div', null, h('label', null, t('Casillas de oro 💰')), sel('gold', [[0, '0'], [1, '1'], [2, '2'], [3, '3'], [4, '4']])),
-        h('div', null, h('label', null, t('Puertos')), sel('ports', [['none', t('Ninguno')], ['few', t('Pocos')], ['normal', t('Normal')], ['many', t('Muchos')]]))),
-      m.gold ? h('p', { style: { color: 'var(--muted)', fontSize: '12px' } }, t('💰 El oro te da el recurso que menos tienes.')) : null));
+        (SHAPES[m.shape] || {}).random ? h('div', null, h('label', null, `Kích thước: ${m.size} ô`), h('input', { type: 'range', min: 12, max: 60, value: m.size, onchange: e => { m.size = +e.target.value; refresh(); } })) : null,
+        h('div', null, h('label', null, 'Tài nguyên'), sel('resources', [['balanced', 'Cân bằng'], ['chaos', 'Hỗn loạn']])),
+        h('div', null, h('label', null, 'Số'), sel('numbers', [['balanced', 'Không để 6 và 8 cạnh nhau'], ['random', 'Hoàn toàn ngẫu nhiên']])),
+        h('div', null, h('label', null, 'Sa mạc'), sel('deserts', [['auto', 'Tự động'], [0, '0'], [1, '1'], [2, '2'], [3, '3']])),
+        h('div', null, h('label', null, 'Ô vàng 💰'), sel('gold', [[0, '0'], [1, '1'], [2, '2'], [3, '3'], [4, '4']])),
+        h('div', null, h('label', null, 'Cảng'), sel('ports', [['none', 'Không có'], ['few', 'Ít'], ['normal', 'Bình thường'], ['many', 'Nhiều']]))),
+      m.gold ? h('p', { style: { color: 'var(--muted)', fontSize: '12px' } }, '💰 Ô vàng cho bạn loại tài nguyên bạn đang ít nhất.') : null));
 
     // modes
     left.append(h('div', { class: 'card' },
-      h('h3', null, t('🎭 Modos de juego '), h('small', null, t('combínalos como quieras'))),
+      h('h3', null, '🎭 Chế độ chơi ', h('small', null, 'kết hợp tùy thích')),
       h('div', { class: 'modes' }, MODES.map(md => {
         const on = md.get(cfg);
         return h('div', { class: 'mode' + (on ? ' on' : '') + (md.flagship ? ' flag' : ''), onclick: () => { md.set(cfg, !on); refresh(); } },
-          h('div', { class: 'mi' }, md.icon), h('div', null, md.flagship ? h('span', { class: 'flagship' }, t('★ MODO INSIGNIA')) : null, h('b', null, t(md.name)), h('small', null, t(md.desc))), h('div', { class: 'switch' }));
+          h('div', { class: 'mi' }, md.icon), h('div', null, md.flagship ? h('span', { class: 'flagship' }, '★ CHẾ ĐỘ ĐẶC SẮC') : null, h('b', null, md.name), h('small', null, md.desc)), h('div', { class: 'switch' }));
       })),
       cfg.modes.chaosEvery ? h('div', { class: 'opt-grid' },
-        h('div', null, h('label', null, t('Tierra viva: qué se baraja')), h('select', { onchange: e => { cfg.modes.chaosWhat = e.target.value; refresh(); } },
-          [['numbers', t('Números')], ['resources', t('Recursos')], ['both', t('Ambos')]].map(([v, l]) => h('option', { value: v, selected: cfg.modes.chaosWhat === v ? true : null }, l)))),
-        h('div', null, h('label', null, t('Cada {n} rondas', { n: cfg.modes.chaosEvery })), h('input', { type: 'range', min: 1, max: 6, value: cfg.modes.chaosEvery, onchange: e => { cfg.modes.chaosEvery = +e.target.value; refresh(); } }))) : null,
+        h('div', null, h('label', null, 'Đất chuyển mình: xáo trộn gì'), h('select', { onchange: e => { cfg.modes.chaosWhat = e.target.value; refresh(); } },
+          [['numbers', 'Số'], ['resources', 'Tài nguyên'], ['both', 'Cả hai']].map(([v, l]) => h('option', { value: v, selected: cfg.modes.chaosWhat === v ? true : null }, l)))),
+        h('div', null, h('label', null, `Mỗi ${cfg.modes.chaosEvery} vòng`), h('input', { type: 'range', min: 1, max: 6, value: cfg.modes.chaosEvery, onchange: e => { cfg.modes.chaosEvery = +e.target.value; refresh(); } }))) : null,
       !online ? h('div', { class: 'opt-grid' },
-        h('div', null, h('label', null, t('Pantalla de pase (varios humanos)')), h('select', { onchange: e => { cfg.modes.privacy = e.target.value; save(); } },
-          [['auto', t('Solo en Blindfold')], ['on', t('Siempre')], ['off', t('Nunca')]].map(([v, l]) => h('option', { value: v, selected: cfg.modes.privacy === v ? true : null }, l))))) : null));
+        h('div', null, h('label', null, 'Màn hình chuyền máy (nhiều người chơi)'), h('select', { onchange: e => { cfg.modes.privacy = e.target.value; save(); } },
+          [['auto', 'Chỉ khi Bịt mắt'], ['on', 'Luôn luôn'], ['off', 'Không bao giờ']].map(([v, l]) => h('option', { value: v, selected: cfg.modes.privacy === v ? true : null }, l))))) : null));
 
     // rules
     const R = cfg.rules;
@@ -306,31 +300,31 @@ export function lobbyScreen(root, opts = {}) {
       h('label', null, label, h('span', null, fmt(R[key]))),
       h('input', { type: 'range', min, max, value: R[key], oninput: e => { R[key] = +e.target.value; e.target.previousSibling.lastChild.textContent = fmt(R[key]); }, onchange: () => refresh() }));
     left.append(h('div', { class: 'card' },
-      h('h3', null, t('📜 Reglas')),
+      h('h3', null, '📜 Luật chơi'),
       h('div', { class: 'rules' },
-        slider('vpTarget', t('Puntos para ganar'), 4, 20),
-        slider('handLimit', t('Límite de mano con 7'), 4, 15),
-        slider('setupRounds', t('Colocaciones iniciales'), 1, 3),
-        slider('startBonus', t('Bonus inicial (de cada recurso)'), 0, 3),
-        slider('robberGrace', t('Rondas sin ladrón'), 0, 5),
-        slider('maxRoads', t('Caminos por jugador'), 8, 25),
-        slider('maxSettlements', t('Poblados por jugador'), 3, 9),
-        slider('maxCities', t('Ciudades por jugador'), 2, 8),
-        h('div', { class: 'rule' }, h('label', null, t('Mazo de desarrollo')), h('select', { onchange: e => { R.devDeck = e.target.value; refresh(); } },
-          Object.entries(DEV_DECKS).map(([k, d]) => h('option', { value: k, selected: R.devDeck === k ? true : null }, t(d.name))))),
-        h('div', { class: 'rule' }, h('label', null, t('Primer jugador')), h('select', { onchange: e => { R.randomStart = e.target.value === '1'; refresh(); } },
-          h('option', { value: '1', selected: R.randomStart ? true : null }, t('Al azar')), h('option', { value: '0', selected: !R.randomStart ? true : null }, t('El primero de la lista')))))));
+        slider('vpTarget', 'Điểm để thắng', 4, 20),
+        slider('handLimit', 'Giới hạn thẻ khi ra 7', 4, 15),
+        slider('setupRounds', 'Lượt đặt đầu ván', 1, 3),
+        slider('startBonus', 'Quà khởi đầu (mỗi loại tài nguyên)', 0, 3),
+        slider('robberGrace', 'Số vòng không có kẻ trộm', 0, 5),
+        slider('maxRoads', 'Số đường mỗi người', 8, 25),
+        slider('maxSettlements', 'Số nhà mỗi người', 3, 9),
+        slider('maxCities', 'Số thành phố mỗi người', 2, 8),
+        h('div', { class: 'rule' }, h('label', null, 'Bộ thẻ phát triển'), h('select', { onchange: e => { R.devDeck = e.target.value; refresh(); } },
+          Object.entries(DEV_DECKS).map(([k, d]) => h('option', { value: k, selected: R.devDeck === k ? true : null }, d.name)))),
+        h('div', { class: 'rule' }, h('label', null, 'Người đi đầu'), h('select', { onchange: e => { R.randomStart = e.target.value === '1'; refresh(); } },
+          h('option', { value: '1', selected: R.randomStart ? true : null }, 'Ngẫu nhiên'), h('option', { value: '0', selected: !R.randomStart ? true : null }, 'Người đầu danh sách'))))));
   }
 
   function start() {
-    if (cfg.players.length < 2) return toast(t('Necesitas al menos 2 jugadores'), 'error');
+    if (cfg.players.length < 2) return toast('Cần ít nhất 2 người chơi', 'error');
     save();
     const game = JSON.parse(JSON.stringify(cfg));
     if (online) {
       const guests = connectedGuests().length;
       const remotes = game.players.filter(p => p.kind === 'remote');
       if (remotes.length > guests) {
-        if (!fillBots) return toast(t('Faltan amigos: hay {n} asientos online y {guests} conectados', { n: remotes.length, guests }), 'error');
+        if (!fillBots) return toast(`Còn thiếu người: có ${remotes.length} ghế online nhưng mới ${guests} người vào`, 'error');
         // empty online seats are taken by bots
         remotes.slice(guests).forEach(p => {
           p.kind = 'bot';
@@ -350,12 +344,12 @@ export function lobbyScreen(root, opts = {}) {
     App.net.onRefused = (why, name) => {
       const n = cfg.players.length;
       if (why === 'full' && n < 8)
-        toast(h('span', null, t('🚪 {name} quiere entrar pero la sala está llena ({n}/{n}). ', { name, n }),
-          h('button', { class: 'btn sm', onclick: () => setCapacity(n + 1) }, t('➕ Hacer sitio ({n})', { n: n + 1 }))), 'error', 10000);
+        toast(h('span', null, `🚪 ${name} muốn vào nhưng phòng đã đầy (${n}/${n}). `,
+          h('button', { class: 'btn sm', onclick: () => setCapacity(n + 1) }, `➕ Thêm chỗ (${n + 1})`)), 'error', 10000);
       else if (why === 'closed')
-        toast(h('span', null, t('🔒 {name} quiere entrar pero la sala está cerrada. ', { name }),
-          h('button', { class: 'btn sm', onclick: () => { App.net.open = true; renderOnline(); } }, t('🟢 Abrir sala'))), 'error', 10000);
-      else toast(why === 'full' ? t('🚪 {name} no pudo entrar: la sala ya tiene el máximo de 8.', { name }) : t('🚪 {name} no pudo entrar: la partida ya empezó.', { name }), 'error', 6000);
+        toast(h('span', null, `🔒 ${name} muốn vào nhưng phòng đã đóng. `,
+          h('button', { class: 'btn sm', onclick: () => { App.net.open = true; renderOnline(); } }, '🟢 Mở phòng')), 'error', 10000);
+      else toast(why === 'full' ? `🚪 ${name} không vào được: phòng đã đủ tối đa 8 người.` : `🚪 ${name} không vào được: ván đã bắt đầu.`, 'error', 6000);
     };
   }
   if (online && opts.capacity) {
@@ -363,7 +357,7 @@ export function lobbyScreen(root, opts = {}) {
     cfg.players.forEach((p, i) => {
       if (i === 0) return;
       p.kind = 'remote';
-      if (BOT_NAMES.includes(p.name)) p.name = t('Amigo {n}', { n: i });
+      if (BOT_NAMES.includes(p.name)) p.name = `Khách ${i}`;
     });
     setCapacity(opts.capacity);
   }

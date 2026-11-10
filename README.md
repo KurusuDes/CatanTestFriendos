@@ -1,143 +1,141 @@
 # Katanittes
 
-*English · [Español](README.es.md)*
+**Trò chơi khai hoang lấy cảm hứng từ Catan, chơi ngay trên trình duyệt.** Bản đồ tự tạo, những chế độ chơi không có trong hộp, bot chơi rất gắt, chơi online với bạn bè, bàn cờ 3D kiểu sa bàn với giao diện pixel art, và một góc trò chơi may rủi để giết thời gian trong lúc chờ người khác đi (tiền ảo 100%).
 
-**A settlers-style board game inspired by Catan that runs in your browser.** Custom maps, game modes the box never had, bots that hate you, online play with friends, a hand-built 3D diorama board with a pixel-art UI, and a gambling-minigame arcade to kill time while everyone else takes their turn (with 100% fake money).
-
-Free, no ads, no accounts, nothing to install. Works on desktop and mobile.
+Miễn phí, không quảng cáo, không cần tài khoản, không cần cài đặt. Chạy trên cả máy tính và điện thoại.
 
 | | |
 |---|---|
-| 🎮 **Play** | https://kurusudes.github.io/CatanTestFriendos/ |
-| 🎞️ **Trailer (English)** | [Watch in the browser](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en) · [MP4](showcase/katanittes-trailer-en.mp4) |
-| 🎞️ **Tráiler (español)** | [Ver en el navegador](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html) · [MP4](showcase/katanittes-trailer.mp4) |
-| 🎬 **Feature showcase** | [Watch in the browser](https://kurusudes.github.io/CatanTestFriendos/showcase/) · [MP4](showcase/katanittes.mp4) |
+| 🎮 **Chơi ngay** | https://kurusudes.github.io/CatanTestFriendos/ |
+| 🎞️ **Trailer (tiếng Anh)** | [Xem trên trình duyệt](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en) · [MP4](showcase/katanittes-trailer-en.mp4) |
+| 🎞️ **Trailer (tiếng Tây Ban Nha)** | [Xem trên trình duyệt](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html) · [MP4](showcase/katanittes-trailer.mp4) |
+| 🎬 **Giới thiệu tính năng** | [Xem trên trình duyệt](https://kurusudes.github.io/CatanTestFriendos/showcase/) · [MP4](showcase/katanittes.mp4) |
 
 [![Katanittes](showcase/poster.jpg)](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en)
 
-> The game is available in English, Spanish, Portuguese, French, German and Italian: it picks your browser's language, and you can change it from the main menu. The trailer is in English and Spanish.
+> Game chỉ có tiếng Việt. Trailer và video giới thiệu được làm từ trước nên vẫn ở tiếng Anh và tiếng Tây Ban Nha.
 
 ---
 
-## The trailer
+## Trailer
 
-A 72-second satirical motion-graphics trailer: an epic movie-trailer cold open ("In a world... where your friends steal your sheep..."), a tour of the modes, fake critic reviews and, as the centerpiece, a parody casino ad for the in-game arcade, now with its two new machines (the sheep race and the mine).
+Trailer châm biếm dài 72 giây theo kiểu motion graphics: mở màn như trailer phim bom tấn ("Trong một thế giới... nơi bạn bè cướp cừu của bạn..."), dạo qua các chế độ chơi, lời khen giả của giới phê bình và, phần chính, một quảng cáo sòng bạc nhại lại góc trò chơi trong game, kèm hai máy mới (đua cừu và khu mỏ).
 
-![The ADHD arcade, sold like a casino ad](showcase/readme/trailer-casino.gif)
+![Góc ADHD, quảng cáo như sòng bạc](showcase/readme/trailer-casino.gif)
 
 | | | |
 |---|---|---|
-| ![3D diorama](showcase/readme/diorama.jpg) | ![Blindfold mode](showcase/readme/blindfold.jpg) | ![Fog of war](showcase/readme/fog.jpg) |
-| ![The new machines: sheep race and the mine](showcase/readme/adhd-machines.jpg) | ![Reach $1600 and win fireworks](showcase/readme/adhd-ladder.jpg) | ![What critics say](showcase/readme/reviews.jpg) |
+| ![Sa bàn 3D](showcase/readme/diorama.jpg) | ![Chế độ Bịt mắt](showcase/readme/blindfold.jpg) | ![Sương mù chiến tranh](showcase/readme/fog.jpg) |
+| ![Hai máy mới: đua cừu và khu mỏ](showcase/readme/adhd-machines.jpg) | ![Đạt $1600 để có pháo hoa](showcase/readme/adhd-ladder.jpg) | ![Giới phê bình nói gì](showcase/readme/reviews.jpg) |
 
-Like the showcase, the trailer is a live web page: every frame is a pure function of the clock, including the real 3D board and real bot games, so the same page plays in the browser or is recorded frame by frame into the MP4. The chiptune soundtrack and sound effects are synthesized in code and timed to the scenes.
+Cũng như trang giới thiệu, trailer là một trang web chạy trực tiếp: mỗi khung hình là một hàm thuần của đồng hồ, kể cả bàn cờ 3D thật và các ván bot thật, nên cùng một trang vừa phát được trên trình duyệt vừa quay được từng khung thành MP4. Nhạc nền chiptune và hiệu ứng âm thanh được tổng hợp bằng code và khớp với từng cảnh.
 
 ---
 
-## Screenshots
+## Ảnh chụp màn hình
 
-| Main menu | A game in progress |
+| Menu chính | Một ván đang chơi |
 |---|---|
-| ![Main menu](showcase/readme/menu.jpg) | ![A game in progress](showcase/readme/in-game.jpg) |
+| ![Menu chính](showcase/readme/menu.jpg) | ![Một ván đang chơi](showcase/readme/in-game.jpg) |
 
 ---
 
-## Features
+## Tính năng
 
-### Maps
-- **10 map shapes:** classic (19 hexes), mini (14), extended for 5–6 players (30), big (37), huge (61), lake ring, star, two kingdoms, archipelago and random pangea.
-- **Map editor** with shareable map codes.
-- Balanced or chaotic resource and number placement, optional **gold** tiles, configurable ports and deserts.
+### Bản đồ
+- **10 kiểu bản đồ:** cổ điển (19 ô), mini (14), mở rộng cho 5–6 người (30), lớn (37), khổng lồ (61), vòng hồ, ngôi sao, hai vương quốc, quần đảo và lục địa ngẫu nhiên.
+- **Trình tạo bản đồ**, chia sẻ bản đồ bằng mã.
+- Xếp tài nguyên và số cân bằng hoặc hỗn loạn, có thể thêm **ô vàng**, tùy chỉnh cảng và sa mạc.
 
-### Signature modes
-- **Blindfold:** the whole board starts face down. You place your first settlements blind (everyone else can see where they went) and when setup ends the board flips over.
-- **Fog of war:** everyone has their own vision, around their buildings plus half a hex beside their roads. Build onto someone you can't see and your piece is diverted to the nearest free spot.
+### Chế độ đặc sắc
+- **Bịt mắt:** cả bàn cờ bị úp từ đầu. Bạn đặt những nhà đầu tiên mà không biết bên dưới là gì (người khác vẫn thấy bạn đặt ở đâu), đặt xong thì cả bàn cờ được lật lên.
+- **Sương mù chiến tranh:** mỗi người chỉ thấy quanh công trình của mình và nửa ô hai bên đường. Xây trúng chỗ đã có người mà bạn không thấy thì công trình sẽ dời sang chỗ trống gần nhất.
 
-### More modes (all combinable)
-- **Secret houses:** nobody sees where the others place their first houses until the reveal; on a clash, the latecomer relocates.
-- **Secret numbers:** you see the resources, but number tokens reveal themselves when someone builds next to them.
-- **Round events:** each round draws an event: bumper harvest, drought, fair trade, black market, earthquake, storm, the king's gift, plague, taxes, rebellion or calm.
-- **Living land:** every 3 rounds the numbers (or the resources) on the map shuffle.
-- **Balanced dice:** rolls come from a 36-card deck, so the statistics hold.
-- **Friendly robber**, **no robber**, **starting city** and **turbo** (double production).
-- **Presets** that bundle them: Classic, Blindfold, Fog of war, Explorers, Paranoia, Total chaos, Quick and War.
+### Thêm chế độ (kết hợp tùy thích)
+- **Nhà bí mật:** không ai thấy người khác đặt nhà đầu ván ở đâu cho tới lúc lật mở; nếu trùng chỗ, người đặt sau phải dời đi.
+- **Số bí mật:** bạn thấy tài nguyên, nhưng số chỉ hiện ra khi có người xây sát bên.
+- **Sự kiện mỗi vòng:** mỗi vòng rút một sự kiện: được mùa, hạn hán, buôn bán sòng phẳng, chợ đen, động đất, bão, quà của vua, dịch bệnh, thu thuế, nổi dậy hoặc yên bình.
+- **Đất chuyển mình:** cứ 3 vòng, số (hoặc tài nguyên) trên bản đồ lại bị xáo trộn.
+- **Xúc xắc cân bằng:** kết quả rút từ bộ 36 lá, nên xác suất luôn đúng như lý thuyết.
+- **Kẻ trộm hiền lành**, **không có kẻ trộm**, **khởi đầu bằng thành phố** và **tăng tốc** (sản lượng gấp đôi).
+- **Bộ cài sẵn** gom các chế độ lại: Cổ điển, Bịt mắt, Sương mù chiến tranh, Nhà thám hiểm, Hoang tưởng, Hỗn loạn, Ván nhanh và Chiến tranh.
 
-### Rules you can tune
-Victory points, hand limit, setup rounds, starting bonus, pieces per player, development card decks (normal, war, progress or none), gold, ports and deserts. The full base rules are in: robber, discards, 3:1 and 2:1 ports, player trading, development cards, longest road and largest army.
+### Luật tùy chỉnh được
+Điểm chiến thắng, giới hạn thẻ, số lượt đặt đầu ván, quà khởi đầu, số công trình mỗi người, bộ thẻ phát triển (thường, chiến tranh, tiến bộ hoặc không có), vàng, cảng và sa mạc. Có đủ luật gốc: kẻ trộm, bỏ thẻ, cảng 3:1 và 2:1, giao dịch giữa người chơi, thẻ phát triển, con đường dài nhất và đội quân lớn nhất.
 
-### Players
-- **Up to 8 players**, with the bank, deck and maps scaled to match.
-- Every kingdom paints its own **flag** in a 12×12 pixel editor and picks a **castle color**; the flag waves on the 3D board.
-- **Bots** in three levels (easy, normal, hard) that trade, rob and block. There's also a 💡 hint button that suggests a move.
-- **Hotseat** on one device, with a pass-the-screen privacy step between human players.
-- **Spectator mode:** watch a bots-only game at the speed you pick.
+### Người chơi
+- **Tối đa 8 người**, ngân hàng, bộ thẻ và bản đồ tự điều chỉnh theo.
+- Mỗi vương quốc tự vẽ **lá cờ** trên khung pixel 12×12 và chọn **màu lâu đài**; lá cờ tung bay trên bàn cờ 3D.
+- **Bot** ba mức (dễ, thường, khó) biết giao dịch, cướp và chặn đường. Có cả nút 💡 gợi ý nước đi.
+- **Chơi chung một máy**, có màn hình chuyền máy để giữ bí mật giữa các người chơi.
+- **Chế độ xem:** xem các bot đấu với nhau ở tốc độ tùy chọn.
 
-### Online with friends
-- **Peer-to-peer** over WebRTC (PeerJS). The host's browser runs the game; there's no game server. Share a short room code or a link.
-- **Automatic reconnection:** drop out and you get your seat back.
-- When someone disconnects, the table **votes**: wait, let a bot take over, or retire the player.
-- If the host drops, they can **reopen the room** with the same code and carry on.
-- **Reactions:** emoji balloons rise from all of your buildings, and a middle click drops a marker on the map that everyone sees.
+### Chơi online với bạn bè
+- **Kết nối ngang hàng** qua WebRTC (PeerJS). Trình duyệt của chủ phòng chạy ván đấu, không cần máy chủ game riêng. Chia sẻ mã phòng ngắn hoặc link.
+- **Tự kết nối lại:** rớt mạng thì vẫn quay về đúng ghế.
+- Khi có người mất kết nối, cả bàn **bỏ phiếu**: chờ, để bot chơi thay hoặc cho người đó rời ván.
+- Nếu chủ phòng rớt mạng, họ có thể **mở lại phòng** với cùng mã và chơi tiếp.
+- **Thả cảm xúc:** emoji bay lên từ mọi công trình của bạn, và nút chuột giữa cắm một lá cờ nhỏ trên bản đồ cho mọi người cùng thấy.
 
-### The ADHD arcade
-A small window of gambling minigames for while you wait for your turn, with **fake money**:
-- Six machines, unlocked one after another as your balance grows ($150, $250, $400, $650, $1000):
-  - **Plinko**, **slots** and **coin flip** (double or nothing).
-  - **Sheep race:** bet on one of four sheep; the favourite pays x2.6, the long shot x10.
-  - **The mine:** 16 rocks, 3 of them hide the robber. Every ore you dig raises the payout; cash out before you find him.
-  - **Rocket:** cash out before it blows up; it can reach x10, but almost never does, and after you cash out a ghost rocket shows how far it would have gone.
-- Machines you've already beaten get an **Auto** button (all but the mine and the rocket).
-- Reach **$1600** and fireworks burst from your houses, with a banner every player sees (winners who land together get their banners one after another).
-- Every win of the match adds **gold trims** to your pieces, up to 5: beams, road edges and studs, windows, a gold knob on the roof and finally a shine.
-- When it's your turn (or a trade offer is up) it **turns see-through and ignores clicks** until you're done, so you can always see the game behind it and never play the arcade by accident.
+### Góc ADHD
+Một cửa sổ nhỏ chứa các trò may rủi để chơi trong lúc chờ tới lượt, bằng **tiền ảo**:
+- Sáu máy, mở khóa dần khi số dư tăng ($150, $250, $400, $650, $1000):
+  - **Plinko**, **máy đánh bạc** và **tung đồng xu** (gấp đôi hoặc trắng tay).
+  - **Đua cừu:** cược vào một trong bốn con cừu; con được kỳ vọng trả x2.6, con ít ai tin trả x10.
+  - **Khu mỏ:** 16 viên đá, 3 viên giấu kẻ trộm. Mỗi viên đập được lại tăng tiền thưởng; hãy rút trước khi gặp hắn.
+  - **Tên lửa:** rút trước khi nó nổ; có thể lên tới x10 nhưng hiếm lắm, và sau khi bạn rút, một tên lửa ma cho thấy nó lẽ ra bay được tới đâu.
+- Máy nào đã chinh phục sẽ có nút **Tự động** (trừ khu mỏ và tên lửa).
+- Đạt **$1600** thì pháo hoa bắn lên từ nhà của bạn, kèm một dải thông báo mọi người đều thấy (nhiều người thắng cùng lúc thì lần lượt từng dải).
+- Mỗi lần thắng trong ván lại thêm **viền vàng** cho công trình của bạn, tối đa 5 mức: xà nhà, mép đường và đinh tán, cửa sổ, núm vàng trên mái và cuối cùng là ánh lấp lánh.
+- Khi tới lượt bạn (hoặc có lời mời giao dịch) cửa sổ **trở nên trong suốt và bỏ qua thao tác** cho tới khi bạn đi xong, để bạn luôn thấy ván đấu phía sau và không bấm nhầm.
 
-### Board and interface
-- **3D diorama board** built with three.js: one continuous terrain blending 8 PBR textures, a physical sky with image-based lighting, water with depth-based foam, grass and wheat swaying in the wind, cloud shadows, ambient occlusion and a tilt-shift camera.
-- **Tile variants:** every resource has several looks (pine hill, woodcutter's clearing, round sheep pen, mill on a knoll, clay pit, brickworks, snowy peak, quarry...), picked per tile so every player sees the same map.
-- Props and resource icons are modelled in **Blender** and generated by scripts in `tools/blender/` (icons are 3D models rendered through a pixel camera).
-- **Top view** button: the camera goes straight down onto the map, like a flat plan. Number tokens and port signs shrink as you zoom out, so they never cover the tiles.
-- A **dice history** in the top right corner of the map: the last rolls, newest first, in the colour of whoever threw them.
-- **Pixel-art UI** with animated dice you can charge (hold the button to throw harder), **cards that fly** from the tiles to your hand, between players when trading and to and from the bank, and a sound effects set synthesized in the browser.
+### Bàn cờ và giao diện
+- **Bàn cờ sa bàn 3D** làm bằng three.js: địa hình liền mạch pha trộn 8 texture PBR, bầu trời vật lý với ánh sáng từ ảnh môi trường, nước có bọt theo độ sâu, cỏ và lúa đung đưa trong gió, bóng mây, đổ bóng môi trường và camera hiệu ứng mô hình (tilt-shift).
+- **Biến thể ô:** mỗi tài nguyên có nhiều kiểu (đồi thông, bãi đốn gỗ, chuồng cừu tròn, cối xay trên gò, hố đất sét, lò gạch, đỉnh núi tuyết, mỏ đá...), chọn theo từng ô để mọi người thấy cùng một bản đồ.
+- Vật trang trí và biểu tượng tài nguyên được dựng trong **Blender** bằng các script ở `tools/blender/` (biểu tượng là mô hình 3D render qua camera pixel).
+- Nút **nhìn từ trên xuống:** camera nhìn thẳng xuống bản đồ như bản vẽ phẳng. Ô số và biển cảng thu nhỏ khi bạn zoom ra để không che các ô.
+- **Lịch sử tung xúc xắc** ở góc trên bên phải bản đồ: các lần tung gần nhất, mới nhất đứng đầu, theo màu của người tung.
+- **Giao diện pixel art** với xúc xắc có thể lấy đà (nhấn giữ nút để tung mạnh hơn), **thẻ bay** từ ô vào tay bạn, giữa các người chơi khi giao dịch, tới và từ ngân hàng, cùng bộ hiệu ứng âm thanh tổng hợp ngay trên trình duyệt.
 
 ---
 
-## Tech
+## Kỹ thuật
 
-- **A static site with no build step:** plain JavaScript ES modules, HTML and CSS. It's served straight from GitHub Pages.
-- **Rules engine** (`js/engine/`): pure functions. `applyAction(state, action)` validates and applies every move, and visual effects come out as a list of events, so the same engine drives local games, online games (on the host) and the tests.
-- **Libraries:** [three.js](https://threejs.org/) for the 3D board and [PeerJS](https://peerjs.com/) for WebRTC. Both load from a CDN.
+- **Trang tĩnh, không cần build:** JavaScript ES module thuần, HTML và CSS. Chạy thẳng từ GitHub Pages.
+- **Engine luật** (`js/engine/`): hàm thuần. `applyAction(state, action)` kiểm tra và áp dụng mọi nước đi, còn hiệu ứng hình ảnh được trả về dưới dạng danh sách sự kiện, nên cùng một engine chạy ván chơi một máy, ván online (trên máy chủ phòng) và các bài test.
+- **Thư viện:** [three.js](https://threejs.org/) cho bàn cờ 3D và [PeerJS](https://peerjs.com/) cho WebRTC. Cả hai tải từ CDN.
+- **Văn bản:** toàn bộ chữ hiển thị viết thẳng bằng tiếng Việt trong code. Lịch sử ván và thông báo lỗi là chuỗi thường, trong đó `@3` là người chơi số 3 (giao diện thay bằng tên người đó, tô theo màu của họ).
 
-| Area | Files | What it does |
+| Phần | File | Chức năng |
 |---|---|---|
-| Rules engine | `js/engine/game.js`, `board.js`, `constants.js`, `config.js`, `rng.js` | Game state, rules, map generation, seeded randomness |
-| Bots | `js/engine/bot.js` | Three difficulty levels, plus the hint button |
-| App | `js/app.js`, `js/main.js` | Game state, dispatching actions, bot turns, saving |
-| Online | `js/net.js` | Rooms, host-authoritative sync, reconnection, voting |
-| Game screen | `js/ui/gameView.js` | Cards, hand, actions, dice, trading, flying cards |
-| 3D board | `js/ui/board3d.js`, `dice3d.js`, `flag.js` | Terrain, tile variants, pieces, fog, 3D dice, flags |
-| ADHD arcade | `js/ui/adhd.js` | The six minigames, balance, unlocks, fireworks |
-| Other UI | `js/ui/lobby.js`, `editor.js`, `pixel.js`, `sfx.js`, `help.js` | Lobby and rooms, map editor, pixel sprites, sounds, help |
-| Languages | `js/i18n.js`, `js/i18n/*.js`, `tools/i18n.mjs` | Spanish is the source; one dictionary per language. `node tools/i18n.mjs check` lists missing texts |
-| Styles | `css/style.css`, `css/pixel.css` | Pixel theme (Sweetie-16 palette) |
-| Assets | `assets/`, `tools/blender/` | Textures, `kit.glb` models and icons, and the Blender scripts that make them |
-| Videos | `showcase/` | Showcase and trailer pages (`trailer.html?lang=en`), shared animation helpers in `motion.js` |
-| Tests | `tests/` | Rules tests plus hundreds of bot-vs-bot games with invariant checks |
+| Engine luật | `js/engine/game.js`, `board.js`, `constants.js`, `config.js`, `rng.js` | Trạng thái ván, luật, sinh bản đồ, ngẫu nhiên có seed |
+| Bot | `js/engine/bot.js` | Ba mức độ khó, cộng với nút gợi ý |
+| Ứng dụng | `js/app.js`, `js/main.js` | Trạng thái ván, gửi hành động, lượt của bot, lưu ván |
+| Online | `js/net.js` | Phòng, đồng bộ do chủ phòng quyết định, kết nối lại, bỏ phiếu |
+| Màn hình ván | `js/ui/gameView.js` | Thẻ, bài trên tay, hành động, xúc xắc, giao dịch, thẻ bay |
+| Bàn cờ 3D | `js/ui/board3d.js`, `dice3d.js`, `flag.js` | Địa hình, biến thể ô, công trình, sương mù, xúc xắc 3D, cờ |
+| Góc ADHD | `js/ui/adhd.js` | Sáu trò chơi nhỏ, số dư, mở khóa, pháo hoa |
+| Giao diện khác | `js/ui/lobby.js`, `editor.js`, `pixel.js`, `sfx.js`, `help.js` | Sảnh và phòng, trình tạo bản đồ, sprite pixel, âm thanh, trợ giúp |
+| Giao diện | `css/style.css`, `css/pixel.css` | Theme pixel (bảng màu Sweetie-16), font VT323 và Tiny5 (có tiếng Việt) |
+| Tài nguyên | `assets/`, `tools/blender/` | Texture, mô hình `kit.glb` và biểu tượng, cùng các script Blender tạo ra chúng |
+| Video | `showcase/` | Trang giới thiệu và trailer (`trailer.html?lang=en`), hàm animation dùng chung trong `motion.js` |
+| Test | `tests/` | Test luật cộng hàng trăm ván bot đấu bot có kiểm tra bất biến |
 
-## Running it locally
+## Chạy trên máy
 
 ```bash
-py -m http.server 8123
-# then open http://localhost:8123/
+python3 -m http.server 8123
+# rồi mở http://localhost:8123/
 ```
 
-Engine tests (rules plus 300 bot-vs-bot games checking invariants):
+Test engine (luật cộng 300 ván bot đấu bot kiểm tra bất biến):
 
 ```bash
 npm test
 ```
 
-## License and credits
+## Giấy phép và ghi công
 
-Original code and assets are under the [MIT license](LICENSE) © 2026 Sowtank. If you use this project or part of it, a visible credit is kindly appreciated (details in [NOTICE.md](NOTICE.md)). The game itself shows that credit, with a link to this repository, under the main menu and in the help screen.
+Code và tài nguyên gốc theo [giấy phép MIT](LICENSE) © 2026 Sowtank. Nếu bạn dùng dự án này hoặc một phần của nó, rất mong bạn ghi công ở chỗ dễ thấy (chi tiết trong [NOTICE.md](NOTICE.md)). Bản thân game cũng hiển thị dòng ghi công đó, kèm link tới kho mã này, ở dưới menu chính và trong màn hình trợ giúp.
 
-**Unofficial fan project.** It isn't affiliated with, sponsored or endorsed by Catan GmbH, CATAN Studio or Kosmos. *CATAN* is a trademark of its respective owners. Third-party notices (three.js, PeerJS, fonts) are in [NOTICE.md](NOTICE.md).
+**Dự án của người hâm mộ, không chính thức.** Không liên kết, không được tài trợ hay bảo trợ bởi Catan GmbH, CATAN Studio hay Kosmos. *CATAN* là thương hiệu của chủ sở hữu tương ứng. Thông tin bên thứ ba (three.js, PeerJS, font chữ) nằm trong [NOTICE.md](NOTICE.md).

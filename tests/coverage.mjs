@@ -17,6 +17,6 @@ for (let i=0;i<150;i++){
     for (const f of s.fx) bump('fx:'+f.kind + (f.kind==='devPlayed'?':'+f.card:''));
     if (a.type==='respondTrade') bump('trade:'+(a.accept?'accept':'reject'));
   }
-  for (const l of s.log) { const m = l.msg.t || l.msg; if (m.includes('Choque')) bump('blindConflict'); if (m.includes('Evento')) bump('events'); if (m.includes('Tierra viva')) bump('chaos'); if (m.includes('banco no tiene')) bump('shortage'); if(l.msg.includes('duerme')) bump('grace'); }
+  for (const l of s.log) { const m = l.msg; if (m.includes('Trùng chỗ')) bump('blindConflict'); if (m.includes('Sự kiện')) bump('events'); if (m.includes('Đất chuyển mình')) bump('chaos'); if (m.includes('Ngân hàng không đủ')) bump('shortage'); if (m.includes('kẻ trộm còn ngủ') || m.includes('Kẻ trộm còn ngủ')) bump('grace'); }
 }
 console.log(counts);
