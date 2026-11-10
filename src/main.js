@@ -27,9 +27,12 @@ import { showHelp, creditLine } from './ui/help.js';
 import { Net, HOST_SESSION, GUEST_SESSION } from './net.js';
 import { openFlagEditor, flagImg, myKingdom, saveMyKingdom, patternFlag } from './ui/flag.js';
 import { autoPixelize } from './ui/pixel.js';
+import { SETTINGS } from '@board/settings';
 
 // live 3D island slowly orbiting behind the title
+// (not built at all on the `low` tier: a static CSS gradient instead, so the GPU stays idle on the menu)
 async function menuDiorama(el) {
+  if (SETTINGS.quality === 'low') return el.classList.add('static');
   try {
     const [{ Board3D }, { createGame }, { defaultConfig }] = await Promise.all([import('@board/Board3D'), import('@engine/game'), import('@engine/config')]);
     if (!el.isConnected) return;
@@ -38,13 +41,14 @@ async function menuDiorama(el) {
     c.map.size = 30;
     c.map.gold = 1;
     const st = createGame(c);
-    const b = await Board3D.create(el);
+    const b = await Board3D.create(el, { diorama: true });
     if (!el.isConnected) return b.dispose();
     b.render(st, {});
     b.labels.domElement.style.display = 'none';
     b.controls.enabled = false;
     b.controls.autoRotate = true;
     b.controls.autoRotateSpeed = 0.35;
+    b.fpsCap = 30; // the background never needs more
     b.setZoom(1.15);
     const prev = App.onLeave;
     App.onLeave = () => {
