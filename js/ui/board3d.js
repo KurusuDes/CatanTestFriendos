@@ -26,11 +26,14 @@ import { Dice3D, diceFlyMs } from './dice3d.js';
 
 const FOV = 32, TOP_FOV = 11; // the normal lens and the narrow one of the top view
 const TOKEN_SPAN = 0.75; // widest a number token gets on the map, in world units (a hex is 1.73 across)
-export const SETTINGS = { pixel: 1, tiltShift: true, quality: 'high', ao: true, outline: true };
+// v2: the tilt-shift starts off (it made the whole map look blurry); older saves drop it
+export const SETTINGS = { v: 2, pixel: 1, tiltShift: false, quality: 'high', ao: true, outline: true };
 // phones and small screens start on the light preset
 if (typeof matchMedia === 'function' && (matchMedia('(pointer: coarse)').matches || innerWidth < 900)) Object.assign(SETTINGS, { quality: 'low', ao: false });
 try {
-  Object.assign(SETTINGS, JSON.parse(localStorage.getItem('katanittes.gfx') || '{}'));
+  const saved = JSON.parse(localStorage.getItem('katanittes.gfx') || '{}');
+  if (saved.v !== 2) delete saved.tiltShift;
+  Object.assign(SETTINGS, saved, { v: 2 });
 } catch {}
 
 const INR = Math.sqrt(3) / 2; // hex inradius
@@ -76,8 +79,9 @@ function tiltShader(dir) {
       const float W[9] = float[9](0.051, 0.0918, 0.12245, 0.1531, 0.1633, 0.1531, 0.12245, 0.0918, 0.051);
       void main() {
         float m = texture2D(tMask, vUv).a;
-        if (m > 0.5) { gl_FragColor = texture2D(tDiffuse, vUv); return; }
-        float hh = h * abs(r - vUv.y);
+        // a wide sharp band in the middle; only the far top/bottom edges get a soft blur
+        float hh = h * max(abs(r - vUv.y) - 0.22, 0.0);
+        if (m > 0.5 || hh <= 0.0) { gl_FragColor = texture2D(tDiffuse, vUv); return; }
         vec4 sum = vec4(0.0); float ws = 0.0;
         for (int i = 0; i < 9; i++) {
           vec2 uv = vUv + vec2(${dir}) * float(i - 4) * hh;
@@ -708,10 +712,16 @@ export class Board3D {
     this.tex = tex;
     this.zoom = 1;
     const hi = SETTINGS.quality === 'high';
-    const r = (this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' }));
-    r.setPixelRatio(Math.min(window.devicePixelRatio, hi ? 2 : 1));
+    const r = (this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' }));
+    // sharp on retina screens; the frame-time watcher in tick() lowers it when the GPU can't keep up
+    this.maxPR = Math.min(window.devicePixelRatio || 1, hi ? 2 : 1.5);
+    r.setPixelRatio(this.maxPR);
+    this.perf = { t: 0, n: 0, sum: 0, good: 0 };
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
+    // the scene barely moves: shadows are redrawn only when something changes (see tick)
+    r.shadowMap.autoUpdate = false;
+    this.shadowDirty = true;
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = 0.92;
     r.outputColorSpace = THREE.SRGBColorSpace;
@@ -758,7 +768,7 @@ export class Board3D {
     scene.add(new THREE.HemisphereLight('#e9f2ff', '#5b5243', 0.35));
     const sun = (this.sun = new THREE.DirectionalLight('#fff0d8', 3.4));
     sun.castShadow = true;
-    const sm = hi ? 4096 : 2048;
+    const sm = hi ? 2048 : 1024;
     sun.shadow.mapSize.set(sm, sm);
     Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 90 });
     sun.shadow.bias = -0.00035;
@@ -792,7 +802,10 @@ export class Board3D {
     });
     this.canvas.addEventListener('mousedown', e => e.button === 1 && e.preventDefault()); // no autoscroll
 
-    this.composer = new EffectComposer(r);
+    // the composer draws into its own target, so the canvas' antialias never applied: MSAA there,
+    // but only on 1x screens (on retina the resolution is already enough and MSAA nearly halved the fps)
+    const samples = this.maxPR <= 1 ? (hi ? 4 : 2) : 0;
+    this.composer = new EffectComposer(r, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples }));
     this.fogCanvas = document.createElement('canvas');
     this.fogCanvas.width = this.fogCanvas.height = 512;
     this.fogTex = new THREE.CanvasTexture(this.fogCanvas);
@@ -801,6 +814,9 @@ export class Board3D {
 
     this.resizeObs = new ResizeObserver(() => this.resize());
     this.resizeObs.observe(container);
+    this.forgetRect = () => (this.canvasRect = null);
+    addEventListener('scroll', this.forgetRect, true);
+    addEventListener('resize', this.forgetRect);
     this.clock = new THREE.Clock();
     this.now = () => performance.now(); // overridable time source (frame-by-frame recording)
     this.alive = true;
@@ -815,6 +831,7 @@ export class Board3D {
   setupPasses() {
     const c = this.composer;
     c.passes.slice().forEach(p => c.removePass(p));
+    this.aoPass = null;
     const px = SETTINGS.pixel | 0;
     const w = this.container.clientWidth || 800, h = this.container.clientHeight || 600;
     if (px > 1) c.addPass(new RenderPixelatedPass(px, this.scene, this.camera, { normalEdgeStrength: 0.25, depthEdgeStrength: 0.35 }));
@@ -822,8 +839,8 @@ export class Board3D {
       c.addPass(new RenderPass(this.scene, this.camera));
       if (SETTINGS.ao && SETTINGS.quality === 'high') {
         const ao = new GTAOPass(this.scene, this.camera, w, h);
-        ao.updateGtaoMaterial({ radius: 0.35, distanceExponent: 1.5, thickness: 1.0, scale: 1.2, samples: 12 });
-        ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 12 });
+        ao.updateGtaoMaterial({ radius: 0.35, distanceExponent: 1.5, thickness: 1.0, scale: 1.2, samples: 8 });
+        ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 8 });
         ao.blendIntensity = 0.9;
         c.addPass(ao);
         this.aoPass = ao;
@@ -853,8 +870,47 @@ export class Board3D {
     this.resize();
   }
 
+  // the frame-time watcher moves the resolution between maxPR and 1
+  applyPixelRatio(pr) {
+    if (Math.abs(pr - this.renderer.getPixelRatio()) < 0.01) return;
+    this.renderer.setPixelRatio(pr);
+    this.resize();
+  }
+
+  // every ~1.5 s: slow frames drop the resolution a step, a long run of fast ones climbs back
+  watchPerf(now) {
+    const p = this.perf;
+    if (p.last != null && !document.hidden) {
+      const dt = now - p.last;
+      if (dt < 250) (p.sum += dt), p.n++; // ignore pauses (tab switch, modal)
+    }
+    p.last = now;
+    if (!p.t) p.t = now;
+    if (now - p.t < 1500 || p.n < 20) return;
+    const avg = p.sum / p.n;
+    p.t = now;
+    p.sum = p.n = 0;
+    const pr = this.renderer.getPixelRatio();
+    if (p.cap == null) p.cap = this.maxPR;
+    if (avg > 22 && this.aoPass && this.aoPass.enabled) {
+      // too slow: first drop the ambient occlusion (for this session only), it is the priciest pass
+      p.good = 0;
+      this.aoPass.enabled = false;
+    } else if (avg > 22 && pr > 1) {
+      // still too slow: one resolution step down, and never climb back to the level that failed
+      p.good = 0;
+      p.cap = pr - 0.25;
+      this.applyPixelRatio(Math.max(1, pr >= 1.75 ? 1.5 : pr - 0.25));
+    } else if (avg < 18 && pr + 0.25 <= p.cap + 0.01) {
+      if (++p.good >= 4) {
+        p.good = 0;
+        this.applyPixelRatio(Math.min(p.cap, pr + 0.25));
+      }
+    } else p.good = 0;
+  }
+
   setGraphics(opts) {
-    Object.assign(SETTINGS, opts);
+    Object.assign(SETTINGS, opts, { v: 2 });
     try {
       localStorage.setItem('katanittes.gfx', JSON.stringify(SETTINGS));
     } catch {}
@@ -868,6 +924,8 @@ export class Board3D {
     this.composer.setSize(w, h);
     this.labels.setSize(w, h);
     this.viewH = h;
+    this.canvasRect = null; // re-measured on the next toScreen()
+    this.shadowDirty = this.masksStale = this.labelsDirty = true;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     const pr = this.renderer.getPixelRatio();
@@ -876,17 +934,19 @@ export class Board3D {
     this.maskAll.setSize(mw, mh);
     if (this.outlinePass) this.outlinePass.uniforms.uTexel.value.set(pr / mw, pr / mh); // ~1-2 css px
     if (this.hts) {
-      this.hts.uniforms.h.value = 3.0 / w;
-      this.vts.uniforms.h.value = 3.0 / h;
+      this.hts.uniforms.h.value = 2.4 / w;
+      this.vts.uniforms.h.value = 2.4 / h;
       this.hts.uniforms.r.value = this.vts.uniforms.r.value = 0.55;
     }
   }
 
   // masks of the player pieces (see OutlineShader / tiltShader)
-  renderMasks() {
+  // `fresh` = the camera, the pieces or the size changed since the last masks; otherwise they still hold
+  renderMasks(fresh) {
     const r = this.renderer, cam = this.camera, sc = this.scene;
     const need = this.hasPieces && (this.hts || this.outlinePass);
     if (!need && !this.masksDirty) return;
+    if (need && !fresh && this.masksDirty) return;
     const prevAuto = r.autoClear, prevShadow = r.shadowMap.autoUpdate, prevMask = cam.layers.mask;
     const prevClear = r.getClearColor(new THREE.Color()), prevAlpha = r.getClearAlpha();
     r.autoClear = false;
@@ -921,6 +981,8 @@ export class Board3D {
     this.alive = false;
     cancelAnimationFrame(this.raf);
     this.resizeObs.disconnect();
+    removeEventListener('scroll', this.forgetRect, true);
+    removeEventListener('resize', this.forgetRect);
     this.controls.dispose();
     this.composer.dispose();
     this.maskVis.dispose();
@@ -1048,7 +1110,8 @@ export class Board3D {
   toScreen(x, y, z) {
     const v = new THREE.Vector3(x, y, z).project(this.camera);
     if (v.z > 1) return null;
-    const r = this.canvas.getBoundingClientRect();
+    // measured once per resize/scroll, not per floater per frame (that forced a layout every frame)
+    const r = this.canvasRect || (this.canvasRect = this.canvas.getBoundingClientRect());
     return { x: r.left + (v.x * 0.5 + 0.5) * r.width, y: r.top + (-v.y * 0.5 + 0.5) * r.height };
   }
 
@@ -1256,19 +1319,53 @@ export class Board3D {
     this.controls.update();
     this.scaleTokens();
     this.updateFloaters(now);
-    this.renderMasks();
-    this.composer.render();
-    this.labels.render(this.scene, this.camera);
-    // snap the pixel labels to whole pixels: sub-pixel positions blur the pixel font
-    for (const el of this.labels.domElement.children) {
-      const t = el.style.transform;
-      if (t && t.indexOf('.') >= 0) el.style.transform = t.replace(/(-?\d+\.\d+)px/g, (m, n) => Math.round(+n) + 'px');
+    this.watchPerf(now);
+    const moved = this.viewChanged();
+    const dicing = !!(this.diceFx && this.diceFx.throw);
+    this.renderMasks(moved || this.masksStale || this.spawns.length > 0 || dicing);
+    this.masksStale = false;
+    // shadows only when something that casts them moved (set after the masks so they don't use it up)
+    if (this.shadowDirty || this.spawns.length || this.plates.length || (this.pings && this.pings.length) || dicing) {
+      this.renderer.shadowMap.needsUpdate = true;
+      this.shadowDirty = false;
     }
+    this.composer.render();
+    // the labels only move with the camera: re-placing ~100 of them every frame cost a style recalc
+    if (moved || this.labelsDirty) {
+      this.labelsDirty = false;
+      this.labels.render(this.scene, this.camera);
+      // snap the pixel labels to whole pixels: sub-pixel positions blur the pixel font
+      for (const el of this.labels.domElement.children) {
+        const t = el.style.transform;
+        if (t && t.indexOf('.') >= 0) el.style.transform = t.replace(/(-?\d+\.\d+)px/g, (m, n) => Math.round(+n) + 'px');
+      }
+    }
+  }
+
+  // did the camera move or change lens since the last frame?
+  viewChanged() {
+    const c = this.camera, pm = c.projectionMatrix.elements;
+    const s = this.viewSig || (this.viewSig = new Float64Array(23).fill(NaN));
+    const cur = this.viewCur || (this.viewCur = new Float64Array(23));
+    c.position.toArray(cur, 0);
+    c.quaternion.toArray(cur, 3);
+    for (let i = 0; i < 16; i++) cur[7 + i] = pm[i];
+    let changed = false;
+    for (let i = 0; i < 23; i++) {
+      if (!(Math.abs(s[i] - cur[i]) < 1e-7)) {
+        changed = true;
+        break;
+      }
+    }
+    if (changed) s.set(cur);
+    return changed;
   }
 
   // ---------- build ----------
   render(st, view = {}) {
     this.lastSt = st;
+    // a state update may add pieces, labels or fog: redraw shadows, masks and labels once
+    this.shadowDirty = this.masksStale = this.labelsDirty = true;
     const bd = st.board;
     this.bounds = bd.bounds;
     const faceDown = !!view.faceDown;

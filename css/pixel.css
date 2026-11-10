@@ -165,14 +165,18 @@ input[type=range] { accent-color: var(--sand); }
 .port3d { font-family: var(--num); background: var(--white); color: var(--ink); padding: 2px 6px; font-size: 14px; font-weight: 700; box-shadow: 0 0 0 3px var(--ink), 3px 4px 0 1px rgba(0,0,0,.35); display: flex; gap: 3px; align-items: center; }
 .rune3d { font-size: 26px; color: #f3d9a4; text-shadow: 2px 2px 0 var(--ink); }
 /* build hints: soft yellow with a slow breathing glow (no hard blinking). No `transform` here either. */
+/* Only `opacity` is animated (the glow sits in ::before): animating box-shadow repainted every spot every frame. */
 .hot3d { pointer-events: auto; border: 0; cursor: pointer; background: #ffe7a3; padding: 0; opacity: .85;
   box-shadow: 0 0 0 3px var(--ink), 0 0 0 4px rgba(255,231,163,.45); animation: hotBreath 2.4s ease-in-out infinite; }
+.hot3d::before { content: ''; position: absolute; inset: 0; pointer-events: none; box-shadow: 0 0 0 9px rgba(255,231,163,.25); opacity: 0; animation: hotGlow 2.4s ease-in-out infinite; }
 .hot3d.v { width: 16px; height: 16px; }
 .hot3d.e { width: 22px; height: 10px; }
 .hot3d.t { width: 30px; height: 30px; display: grid; place-items: center; }
 .hot3d.t::after { content: '✖'; color: var(--ink); font-size: 15px; }
 .hot3d:hover { animation: none; opacity: 1; background: #fff4cf; box-shadow: 0 0 0 3px var(--ink), 0 0 0 7px #ffe7a3; }
-@keyframes hotBreath { 50% { opacity: 1; box-shadow: 0 0 0 3px var(--ink), 0 0 0 9px rgba(255,231,163,.2); } }
+.hot3d:hover::before { animation: none; opacity: 0; }
+@keyframes hotBreath { 50% { opacity: 1; } }
+@keyframes hotGlow { 50% { opacity: 1; } }
 .board-wrap { background: var(--ink); }
 .board-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--sand); font-family: var(--display); font-size: 20px; text-shadow: 3px 3px 0 var(--wine); pointer-events: none; }
 .gfx-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
