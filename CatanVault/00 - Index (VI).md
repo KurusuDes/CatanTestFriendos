@@ -25,7 +25,7 @@ Game xây dựng định cư lấy cảm hứng từ Catan, chạy trên trình 
 | App | `js/app.js`, `js/main.js` | Trạng thái ván chơi, `dispatch`, lượt của bot, phản ứng (`emote`) và đánh dấu (`ping`) |
 | Online | `js/net.js` | PeerJS/WebRTC: host áp dụng mọi hành động và gửi lại trạng thái; kết nối lại bằng token, bỏ phiếu khi ngắt kết nối, phòng |
 | Ván chơi (UI) | `js/ui/gameView.js` | Thẻ người chơi, bài trên tay, hành động, nút xúc xắc có nạp lực, phản ứng, hiệu ứng (`handleFx`) và bài bay giữa tay, người chơi và ngân hàng (`flyCard`) |
-| Bản đồ 3D | `js/ui/board3d.js`, `dice3d.js` | three.js: địa hình, quân cờ, sương mù, xúc xắc 3D, cờ hiệu của nút giữa, bong bóng chat; biến thể diện mạo theo chất liệu (`TILE_LOOKS`) |
+| Bản đồ 3D | `src/board/` (`Board3D.ts`, `terrain.ts`, `pieces.ts`, `fog.ts`, `dice3d.ts`...) | three.js: địa hình, quân cờ, sương mù, xúc xắc 3D, cờ hiệu của nút giữa, bong bóng chat; biến thể diện mạo theo chất liệu (`TILE_LOOKS`) |
 | ADHD | `js/ui/adhd.js` | Minigame để giết thời gian chờ (Plinko, máy đánh bạc, đồng xu, đua cừu, mỏ đá, tên lửa): số dư theo từng người chơi, mở khóa theo mục tiêu, Auto, trong suốt và không bấm được khi đến lượt bạn; thắng là hành động `adhdWin` (pháo hoa, dải thông báo và vàng trên quân cờ) |
 | UI còn lại | `js/ui/lobby.js`, `editor.js`, `flag.js`, `pixel.js`, `sfx.js`, `help.js`, `dom.js` | Menu/phòng, trình chỉnh sửa bản đồ, cờ, sprite pixel, âm thanh tổng hợp, trợ giúp và credit; `dom.js` chuyển các khóa cũ `kchudites.*` |
 | Ngôn ngữ | `js/i18n.js`, `js/i18n/*.js`, `tools/i18n.mjs` | Tiếng Tây Ban Nha là văn bản gốc: `t()` dịch, `tx()` dịch thông điệp của engine; mỗi ngôn ngữ một từ điển; `node tools/i18n.mjs check` cho biết còn thiếu gì |

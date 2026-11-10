@@ -1,6 +1,6 @@
 import { App } from '../app.js';
 import { h, clear, rich, toast, sync } from './dom.js';
-import { BoardView } from './boardView.js';
+import { BoardView } from '@board/BoardView';
 import { RES, TILE_INFO, COSTS, DEV_INFO, EVENTS } from '@engine/constants';
 import * as G from '@engine/game';
 import { hint } from '@engine/bot';
@@ -102,7 +102,7 @@ async function mountBoard(u) {
   const loading = h('div', { class: 'board-loading jit' }, '🏝️ Đang dựng đảo...');
   u.boardWrap.append(loading);
   try {
-    const { Board3D } = await import('./board3d.js');
+    const { Board3D } = await import('@board/Board3D');
     if (ui !== u) return;
     const b = await Board3D.create(u.boardWrap);
     if (ui !== u) return b.dispose();
@@ -122,8 +122,13 @@ async function mountBoard(u) {
     toast('Không tải được bản đồ 3D (mất mạng hoặc thiếu WebGL?): chuyển sang bản đồ phẳng', 'error', 4000);
     u.board = new BoardView(u.boardWrap);
   }
+  // first render builds the island; the shaders compile (compileAsync) while the loader is still up
+  if (App.state) {
+    render(App.state);
+    if (u.board3d && u.board3d.ready) await u.board3d.ready;
+    if (ui !== u) return;
+  }
   loading.remove();
-  if (App.state) render(App.state);
 }
 
 export function disposeGameView() {
