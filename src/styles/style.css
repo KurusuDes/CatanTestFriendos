@@ -163,7 +163,8 @@ input[type=range] { width: 100%; accent-color: var(--gold); }
 .bank-info { padding: 0 12px 6px; display: flex; gap: 8px; font-size: 13px; color: var(--muted); font-weight: 700; flex-wrap: wrap; }
 .log { flex: 1; overflow-y: auto; padding: 8px 12px 12px; font-size: 13px; line-height: 1.45; border-top: 1px solid var(--line); min-height: 80px; }
 .log div { padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,.04); }
-.pname { color: var(--pc); filter: brightness(1.2); }
+.pname { color: color-mix(in srgb, var(--pc), white 15%); }
+@supports (color: rgb(from red r g b)) { .pname { color: rgb(from var(--pc) calc(r * 1.2) calc(g * 1.2) calc(b * 1.2)); } } /* = the old brightness(1.2), without a filter */
 .actionbar { background: rgba(8,14,28,.92); border-top: 1px solid var(--line); padding: 10px 14px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; z-index: 5; }
 .hand { display: flex; gap: 6px; align-items: flex-end; flex-wrap: wrap; }
 .rcard { width: 46px; height: 62px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 22px; position: relative; border: 2px solid rgba(255,255,255,.35); box-shadow: 0 3px 0 rgba(0,0,0,.35); transition: transform .15s; }
