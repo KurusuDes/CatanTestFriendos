@@ -1,6 +1,7 @@
 import { App } from '../app.js';
 import { h, clear, rich, toast, sync } from './dom.js';
 import { BoardView } from '@board/BoardView';
+import { TIERS, TIER_LABEL } from '@board/quality';
 import { RES, TILE_INFO, COSTS, DEV_INFO, EVENTS } from '@engine/constants';
 import * as G from '@engine/game';
 import { hint } from '@engine/bot';
@@ -107,6 +108,7 @@ async function mountBoard(u) {
     const b = await Board3D.create(u.boardWrap);
     if (ui !== u) return b.dispose();
     u.board3d = u.board = b;
+    b.onSlow = () => toast('Máy hơi chậm: thử chọn mức "Máy yếu" trong ☰ Menu → Đồ họa 3D', 'info', 7000);
     b.onPing = (x, z) => {
       const now = Date.now();
       u.pinged = (u.pinged || []).filter(t => now - t < 3000);
@@ -1128,10 +1130,10 @@ function openMenu() {
     h('h2', null, '☰ Menu'),
     h('div', { style: { display: 'grid', gap: '10px' } },
       ui.board3d ? h('div', null, h('div', { class: 'section-label' }, 'Đồ họa 3D'), h('div', { class: 'gfx-row' },
+        TIERS.map(t => h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_Q() === t ? ' on' : ''), title: t === 'low' ? 'Không bóng đổ mềm, không hiệu ứng hậu kỳ, đứng yên khi không chạm vào: dành cho máy cũ' : '', onclick: () => { ui.board3d.setGraphics({ quality: t }); renderModal(App.state); } }, (t === 'low' ? '🐢 ' : '✨ ') + TIER_LABEL[t])),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_TILT() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ tiltShift: !ui.board3d.constructor.SETTINGS_TILT() }); renderModal(App.state); } }, '📷 Hiệu ứng mô hình'),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ pixel: ui.board3d.constructor.SETTINGS_PIXEL() > 1 ? 1 : 3 }); renderModal(App.state); } }, '👾 Bộ lọc pixel'),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_AO() ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ ao: !ui.board3d.constructor.SETTINGS_AO() }); renderModal(App.state); } }, '🌑 Đổ bóng môi trường'),
-        h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_Q() === 'high' ? ' on' : ''), onclick: () => { ui.board3d.setGraphics({ quality: ui.board3d.constructor.SETTINGS_Q() === 'high' ? 'low' : 'high' }); toast('Đã đổi chất lượng: áp dụng khi tải lại bản đồ'); renderModal(App.state); } }, '✨ Chất lượng cao'),
         h('button', { class: 'chip' + (ui.board3d.constructor.SETTINGS_OUTLINE() ? ' on' : ''), title: 'Viền mảnh theo màu từng người chơi, nhìn xuyên qua núi và cây', onclick: () => { ui.board3d.setGraphics({ outline: !ui.board3d.constructor.SETTINGS_OUTLINE() }); renderModal(App.state); } }, '🔲 Viền công trình'))) : null,
       h('div', null, h('div', { class: 'section-label' }, 'Biểu tượng tài nguyên'), h('div', { class: 'gfx-row' },
         ICON_SETS.map(k => [k, { render: '🧊 3D (Blender)', pico: '🆕 Pixel PICO', classic: '🕹️ Cổ điển' }[k]]).map(([k, l]) => h('button', { class: 'chip' + (iconSet() === k ? ' on' : ''), onclick: () => { setIconSet(k); if (ui.board3d) ui.board3d.staticKey = ''; render(App.state); } }, l)))),

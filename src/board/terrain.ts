@@ -4,7 +4,6 @@ import * as THREE from 'three';
 import { pixelToHex as pixelToHexJs, hk } from '@engine/board';
 import type { BBoard, BState, BTile } from './types';
 import { patch } from './shaders';
-import { SETTINGS } from './settings';
 import type { Textures } from './assets';
 import type { Board3D } from './Board3D';
 
@@ -305,7 +304,7 @@ export type TerrainField = ReturnType<typeof terrainOf>;
 export function buildTerrainMesh(board: Board3D, st: BState, field: TerrainField): THREE.Mesh {
   const bd = st.board;
   const b = bd.bounds;
-  const STEP = SETTINGS.quality === 'high' ? 0.045 : 0.075;
+  const STEP = board.params.terrainStep;
   const x0 = b.minX - 0.8, z0 = b.minY - 0.8;
   const nx = Math.ceil((b.maxX - b.minX + 1.6) / STEP) + 1, nz = Math.ceil((b.maxY - b.minY + 1.6) / STEP) + 1;
   const N = nx * nz;

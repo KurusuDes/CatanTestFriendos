@@ -89,6 +89,10 @@ input[type=range] { accent-color: var(--sand); }
 .menu-bg3d { position: absolute; inset: 0; }
 .menu-bg3d::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(26,28,44,.15) 0%, rgba(26,28,44,.75) 70%); pointer-events: none; }
 .menu-bg3d .board-3d { width: 100%; height: 100%; }
+/* `low` tier: no live 3D behind the menu, only a gradient */
+.menu-bg3d.static { background: radial-gradient(ellipse at 50% 40%, #3b5f6d 0%, #243b4a 55%, #1a1c2c 100%); }
+/* vignette of the tiers without a vignette pass (a CSS gradient is nearly free) */
+.vignette-css { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at center, transparent 55%, rgba(0, 0, 0, .34) 100%); }
 .logo .t1 { font-family: var(--display); font-size: clamp(64px, 13vw, 140px); letter-spacing: 6px; background: none; color: var(--sand); -webkit-background-clip: initial; background-clip: initial; filter: none;
   text-shadow: 0 6px 0 var(--coral), 0 12px 0 var(--ink); }
 .logo .x { font-family: var(--display); color: var(--cyan); text-shadow: 4px 4px 0 var(--ink); transform: none; }
