@@ -22,12 +22,12 @@
     "comlink": "^4.4.2",
     "peerjs": "1.5.4",
     "preact": "^11.2.0",
-    "three": "0.170.0"
+    "three": "0.187.0"
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",
     "@types/node": "^26.6.6",
-    "@types/three": "~0.170.0",
+    "@types/three": "0.187.0",
     "stats-gl": "^4.2.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",

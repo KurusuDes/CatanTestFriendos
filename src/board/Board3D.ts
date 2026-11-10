@@ -88,7 +88,7 @@ export class Board3D implements BoardRenderer {
   resizeObs: ResizeObserver;
   forgetRect: () => void;
   canvasRect: DOMRect | null = null;
-  clock: THREE.Clock;
+  t0 = performance.now(); // THREE.Clock is deprecated since r183
   now: () => number;
   alive: boolean;
   raf = 0;
@@ -146,7 +146,7 @@ export class Board3D implements BoardRenderer {
     r.setPixelRatio(this.maxPR);
     this.perf = { t: 0, n: 0, sum: 0, good: 0 };
     r.shadowMap.enabled = true;
-    r.shadowMap.type = THREE.PCFSoftShadowMap;
+    r.shadowMap.type = THREE.PCFShadowMap; // PCFSoftShadowMap was removed in three r186
     // the scene barely moves: shadows are redrawn only when something changes (see tick)
     r.shadowMap.autoUpdate = false;
     this.shadowDirty = true;
@@ -245,7 +245,6 @@ export class Board3D implements BoardRenderer {
     this.forgetRect = () => (this.canvasRect = null);
     addEventListener('scroll', this.forgetRect, true);
     addEventListener('resize', this.forgetRect);
-    this.clock = new THREE.Clock();
     this.now = () => performance.now(); // overridable time source (frame-by-frame recording)
     this.alive = true;
     const loop = () => {
@@ -444,7 +443,7 @@ export class Board3D implements BoardRenderer {
   }
 
   tick() {
-    const t = this.clock.getElapsedTime();
+    const t = (performance.now() - this.t0) / 1000;
     U.uTime.value = t;
     for (const b of this.bobbers) {
       b.obj.position.y = b.y + Math.sin(t * 1.4 + b.ph) * 0.025;
