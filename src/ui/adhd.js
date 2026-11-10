@@ -77,6 +77,7 @@ function apply() {
   const ghost = vis && A.wait;
   // closing it or fading it out cashes out anything still in the air (and stops the Autos)
   if (A.visible && !A.ghost && (!vis || ghost)) settleAll();
+  const wasGhost = A.ghost;
   A.visible = vis;
   A.ghost = ghost;
   A.win.classList.toggle('hidden', !vis);
@@ -84,13 +85,32 @@ function apply() {
   A.win.inert = ghost; // no clicks, no keyboard focus while you play
   const btn = document.querySelector('.adhd-toggle');
   if (btn) btn.classList.toggle('on', vis);
-  if (vis && !A.raf) A.raf = requestAnimationFrame(loop);
+  // see-through (your turn): nobody is playing, so the loop stops; draw the settled state once
+  if (ghost && !wasGhost) for (const g of A.games) g && g.frame(performance.now());
+  if (vis && !ghost && !A.raf) {
+    markDirty();
+    A.raf = requestAnimationFrame(loop);
+  }
 }
 
+function markDirty() {
+  if (A) for (const g of A.games) if (g) g.dirty = true;
+}
+
+// Each machine says how often it needs a redraw right now (g.fps): 60 while something moves,
+// a few per second for idle decorations, 0 when still (it then only redraws when marked dirty).
 function loop(now) {
   if (!A) return;
-  if (!A.visible) return (A.raf = 0);
-  for (const g of A.games) g && g.frame(now);
+  if (!A.visible || A.ghost) return (A.raf = 0);
+  for (const g of A.games) {
+    if (!g) continue;
+    const f = g.fps(now);
+    if (g.dirty || f >= 60 || (f > 0 && now - g.drawn >= 1000 / f - 4)) {
+      g.dirty = false;
+      g.drawn = now;
+      g.frame(now);
+    }
+  }
   A.raf = requestAnimationFrame(loop);
 }
 
@@ -152,6 +172,8 @@ function build() {
 
 function addGame(i, fresh) {
   const g = [plinko, slots, coin, sheep, mine, rocket][i](purse(i));
+  g.dirty = true;
+  g.drawn = 0;
   A.games[i] = g;
   if (fresh) g.el.classList.add('fresh');
   A.grid.children[i].replaceWith(g.el);
@@ -234,6 +256,7 @@ function sprite(e) {
   let i = IMGS[e];
   if (!i) {
     i = IMGS[e] = new Image();
+    i.onload = markDirty; // a still machine must repaint once its sprites arrive
     i.src = pxURL(e, 32);
   }
   return i;
@@ -243,8 +266,13 @@ function drawSprite(g, e, x, y, w, hh = w) {
   if (i.complete && i.naturalWidth) g.drawImage(i, Math.round(x), Math.round(y), Math.round(w), Math.round(hh));
 }
 
+const FONTS = new WeakMap();
 function text(g, s, x, y, color, size = 8) {
-  g.font = `800 ${size + 2}px "Baloo 2", sans-serif`;
+  const font = `800 ${size + 2}px "Baloo 2", sans-serif`;
+  if (FONTS.get(g) !== font) {
+    FONTS.set(g, font);
+    g.font = font;
+  }
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.fillStyle = '#1a1c2c';
@@ -325,6 +353,7 @@ function plinko(K) {
   return {
     el,
     busy: () => balls.length > 0,
+    fps: () => (balls.length || flashes.length || auto.on ? 60 : 0),
     sync() {
       auto.show(K.passed());
     },
@@ -409,6 +438,7 @@ function slots(K) {
   return {
     el,
     busy: () => !!spin,
+    fps: () => (spin || auto.on ? 60 : 0),
     sync() {
       auto.show(K.passed());
     },
@@ -501,6 +531,7 @@ function sheep(K) {
   return {
     el,
     busy: () => !!race,
+    fps: () => (race || auto.on ? 60 : last ? 8 : 0), // the winner blinks (250 ms)
     sync() {
       auto.show(K.passed());
     },
@@ -558,19 +589,22 @@ function mine(K) {
     return Math.floor(m * 100) / 100;
   };
   const [cv, g] = canvas(W, H);
-  let bet = 10, run = null, last = null, hover = -1;
+  let bet = 10, run = null, last = null, hover = -1, rect = null; // rect: canvas box, cached while the pointer is over it
   const btn = h('button', { class: 'btn sm primary', onclick: act }, 'Vào');
   const note = h('div', { class: 'adhd-note nopx' }, 'Đập đá, đừng đánh thức kẻ trộm');
   const el = cell('Khu mỏ', cv, h('div', { class: 'adhd-row' }, betButton(() => bet, b => (bet = b)), btn), note);
   cv.style.cursor = 'pointer';
   const cellAt = e => {
-    const r = cv.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * W - OX, y = ((e.clientY - r.top) / r.height) * H - OY;
+    const r = rect || (rect = cv.getBoundingClientRect()), x = ((e.clientX - r.left) / r.width) * W - OX, y = ((e.clientY - r.top) / r.height) * H - OY;
     const cx = Math.floor(x / (C + GAP)), cy = Math.floor(y / (C + GAP));
     return cx >= 0 && cy >= 0 && cx < N && cy < N && x % (C + GAP) < C && y % (C + GAP) < C ? cy * N + cx : -1;
   };
+  const onResize = () => (rect = null);
+  window.addEventListener('resize', onResize);
+  cv.onpointerenter = onResize;
   cv.onpointermove = e => (hover = cellAt(e));
-  cv.onpointerleave = () => (hover = -1);
-  cv.onclick = e => dig(cellAt(e));
+  cv.onpointerleave = () => ((hover = -1), (rect = null));
+  cv.onclick = e => (rect = null, dig(cellAt(e)));
 
   function setBtn() {
     const k = run ? run.dug.size : 0;
@@ -617,6 +651,7 @@ function mine(K) {
   return {
     el,
     busy: () => !!run,
+    fps: () => (run || last ? 15 : 0), // the robber's cell blinks; hover is cheap at 15 fps
     sync() {},
     settle() {
       // leaving mid-dig: you keep what you dug (or get the ticket back if you hadn't started)
@@ -628,6 +663,7 @@ function mine(K) {
       K.pay(b);
     },
     dispose() {
+      window.removeEventListener('resize', onResize);
       K.dead = true;
     },
     frame(now) {
@@ -673,7 +709,7 @@ function rocket(K) {
   // P(it gets past xm) = (1 - m/10)^2.5: the best cash-out pays about x1.23 on average, like the old x5 rocket
   const crashAt = () => (Math.random() < MOON ? MAX : Math.floor(MAX * (1 - Math.random() ** 0.4) * 100) / 100);
   const [cv, g] = canvas(W, H);
-  let bet = 10, fly = null, last = null, ghost = null, V = 2.5;
+  let bet = 10, fly = null, last = null, ghost = null, V = 2.5, calm = true;
   // the chart zooms out as the rocket climbs, so it never leaves the screen
   const px = m => 5 + (m / V) * 74, py = m => H - 6 - (m / V) ** 1.25 * (H - 16);
   const btn = h('button', { class: 'btn sm primary', onclick: act }, 'Cất cánh');
@@ -734,6 +770,10 @@ function rocket(K) {
   return {
     el,
     busy: () => !!fly,
+    fps(now) {
+      const moving = fly || !calm || (ghost && (!ghost.end || now - ghost.end < 800)) || (last && !last.ok && now - last.t < 800);
+      return moving ? 60 : 8; // idle: only the stars twinkle
+    },
     sync() {},
     settle() {
       if (fly) resolve(performance.now());
@@ -751,7 +791,9 @@ function rocket(K) {
       }
       const gm = ghost && (ghost.end ? ghost.crash : at(ghost, now));
       const top = fly ? at(fly, now) : Math.max(last ? last.m : 0, gm || 0);
-      V += (Math.max(2.5, top * 1.2) - V) * (fly || (ghost && !ghost.end) ? 1 : 0.15);
+      const dV = Math.max(2.5, top * 1.2) - V;
+      V += dV * (fly || (ghost && !ghost.end) ? 1 : 0.15);
+      calm = Math.abs(dV) < 0.01;
       g.fillStyle = '#1a1c2c';
       g.fillRect(0, 0, W, H);
       for (const [x, y, ph] of stars) {
@@ -838,6 +880,7 @@ function coin(K) {
   return {
     el,
     busy: () => !!flip,
+    fps: () => (flip || auto.on ? 60 : 0),
     sync() {
       auto.show(K.passed());
       const max = Math.max(1, Math.floor(K.money()));

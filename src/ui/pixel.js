@@ -408,75 +408,122 @@ export function pxIcon(name, size = 20, title) {
 const EMOJI = /(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*️?|[⭐✨])/gu;
 const EMOJI_TEST = /\p{Extended_Pictographic}/u;
 
+const SKIP = 'input,textarea,select,option,.nopx,.labels-3d';
+const JIT_SEL = '.jit:not([data-jit])';
+
 // Split .jit elements into letters that wobble (hand-drawn "boil" effect).
-function jitterize(root) {
-  for (const el of root.querySelectorAll('.jit:not([data-jit])')) {
-    el.dataset.jit = '1';
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    const texts = [];
-    while (walker.nextNode()) texts.push(walker.currentNode);
-    let i = 0;
-    for (const t of texts) {
-      const frag = document.createDocumentFragment();
-      // letters are grouped per word so line breaks never split a word
-      let word = null;
-      for (const ch of t.nodeValue) {
-        if (ch === ' ') {
-          frag.append(' ');
-          word = null;
-          continue;
-        }
-        if (!word) {
-          word = document.createElement('span');
-          word.className = 'jw';
-          frag.append(word);
-        }
-        const s = document.createElement('span');
-        s.className = 'jl';
-        s.style.animationDelay = `-${((i++ * 137) % 600) / 1000}s`;
-        s.textContent = ch;
-        word.append(s);
+function jitterEl(el) {
+  if (el.dataset.jit) return;
+  el.dataset.jit = '1';
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  const texts = [];
+  while (walker.nextNode()) texts.push(walker.currentNode);
+  let i = 0;
+  for (const t of texts) {
+    const frag = document.createDocumentFragment();
+    // letters are grouped per word so line breaks never split a word
+    let word = null;
+    for (const ch of t.nodeValue) {
+      if (ch === ' ') {
+        frag.append(' ');
+        word = null;
+        continue;
       }
-      t.parentNode.replaceChild(frag, t);
+      if (!word) {
+        word = document.createElement('span');
+        word.className = 'jw';
+        frag.append(word);
+      }
+      const s = document.createElement('span');
+      s.className = 'jl';
+      s.style.animationDelay = `-${((i++ * 137) % 600) / 1000}s`;
+      s.textContent = ch;
+      word.append(s);
     }
+    t.parentNode.replaceChild(frag, t);
   }
 }
 
-// Replace every emoji inside `root` by its pixel-art sprite.
-export function pixelize(root) {
-  if (!root) return;
-  if (root.querySelectorAll) jitterize(root);
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode: n => (n.parentNode && n.parentNode.closest && !n.parentNode.closest('input,textarea,select,option,.nopx') && EMOJI_TEST.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
+// collect the .jit elements affected by `node` (itself, an ancestor, or a descendant)
+function collectJit(node, out) {
+  const el = node.nodeType === 1 ? node : node.parentElement;
+  if (!el) return;
+  const up = el.closest(JIT_SEL);
+  if (up) out.add(up);
+  if (node.nodeType === 1) for (const e of node.querySelectorAll(JIT_SEL)) out.add(e);
+}
+
+function acceptText(n) {
+  const p = n.parentNode;
+  return !!(p && p.closest && !p.closest(SKIP) && EMOJI_TEST.test(n.nodeValue));
+}
+
+function collectText(node, out) {
+  if (node.nodeType === 3) {
+    if (acceptText(node)) out.add(node);
+    return;
+  }
+  if (node.nodeType !== 1 || node.tagName === 'CANVAS') return;
+  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+    acceptNode: n => (acceptText(n) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT),
   });
-  const nodes = [];
-  while (walker.nextNode()) nodes.push(walker.currentNode);
-  for (const node of nodes) {
+  while (walker.nextNode()) out.add(walker.currentNode);
+}
+
+// Process a batch of roots: all reads first, then all writes.
+function processRoots(roots) {
+  const jits = new Set();
+  for (const r of roots) collectJit(r, jits);
+  for (const el of jits) jitterEl(el);
+  const texts = new Set();
+  for (const r of roots) if (r.isConnected !== false) collectText(r, texts);
+  if (!texts.size) return;
+  // read pass: one font-size read per parent element (no DOM writes in between)
+  const sizes = new Map();
+  for (const t of texts) {
+    const par = t.parentNode;
+    if (par && !sizes.has(par)) sizes.set(par, Math.round(parseFloat(getComputedStyle(par).fontSize) * 1.15) || 18);
+  }
+  // write pass
+  for (const node of texts) {
+    const par = node.parentNode;
+    if (!par) continue;
     const parts = node.nodeValue.split(EMOJI);
     if (parts.length < 2) continue;
     const frag = document.createDocumentFragment();
-    const size = Math.round(parseFloat(getComputedStyle(node.parentNode).fontSize) * 1.15) || 18;
+    const size = sizes.get(par);
     parts.forEach((p, i) => {
       if (!p) return;
       if (i % 2 === 1) frag.append(pxIcon(p.replace(/️/g, ''), size, p));
       else frag.append(p);
     });
-    node.parentNode.replaceChild(frag, node);
+    par.replaceChild(frag, node);
   }
 }
 
-// Watch a subtree and keep it pixelized as it re-renders.
+// Replace every emoji inside `root` by its pixel-art sprite.
+export function pixelize(root) {
+  if (root) processRoots([root]);
+}
+
+// Watch a subtree and keep it pixelized as it re-renders (only the nodes that changed).
 export function autoPixelize(root) {
   pixelize(root);
-  let pending = false;
-  const mo = new MutationObserver(() => {
-    if (pending) return;
-    pending = true;
+  let pending = new Set();
+  let scheduled = false;
+  const mo = new MutationObserver(records => {
+    for (const r of records) {
+      if (r.type === 'characterData') pending.add(r.target);
+      else for (const n of r.addedNodes) if (n.nodeType === 1 || n.nodeType === 3) pending.add(n);
+    }
+    if (scheduled || !pending.size) return;
+    scheduled = true;
     requestAnimationFrame(() => {
-      pending = false;
-      mo.disconnect();
-      pixelize(root);
-      mo.observe(root, { childList: true, subtree: true, characterData: true });
+      scheduled = false;
+      const roots = [...pending].filter(n => n.isConnected && !(n.parentElement && n.parentElement.closest('.labels-3d')));
+      pending = new Set();
+      processRoots(roots);
+      mo.takeRecords(); // our own replacements need no second pass
     });
   });
   mo.observe(root, { childList: true, subtree: true, characterData: true });

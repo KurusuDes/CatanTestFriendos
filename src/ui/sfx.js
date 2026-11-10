@@ -15,8 +15,9 @@ function ac() {
 }
 
 function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, when = 0, slide = 0) {
+  if (!sfx.on) return;
   const a = ac();
-  if (!a || !sfx.on) return;
+  if (!a) return;
   const t = a.currentTime + when;
   const o = a.createOscillator();
   const g = a.createGain();
@@ -30,18 +31,26 @@ function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, when = 0, slide = 0) 
   o.stop(t + dur + 0.02);
 }
 
+// one second of white noise, built once and replayed from a random offset
+let noiseBuf = null;
+const CURVE = Float32Array.from({ length: 16 }, (_, k) => (1 - k / 15) ** 2); // the old (1 - t)^2 decay
+
 function noise(dur = 0.2, vol = 0.12, when = 0) {
+  if (!sfx.on) return;
   const a = ac();
-  if (!a || !sfx.on) return;
-  const buf = a.createBuffer(1, a.sampleRate * dur, a.sampleRate);
-  const d = buf.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length) ** 2;
+  if (!a) return;
+  if (!noiseBuf) {
+    noiseBuf = a.createBuffer(1, a.sampleRate, a.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
   const src = a.createBufferSource();
-  src.buffer = buf;
+  src.buffer = noiseBuf;
   const g = a.createGain();
-  g.gain.value = vol;
+  const t = a.currentTime + when;
+  g.gain.setValueCurveAtTime(CURVE.map(c => c * vol), t, dur);
   src.connect(g).connect(a.destination);
-  src.start(a.currentTime + when);
+  src.start(t, Math.random() * (1 - dur), dur);
 }
 
 export const play = {

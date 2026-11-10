@@ -327,17 +327,33 @@ const bankOf = res => (centre(ui.els.bank) ? ui.els.bank.children[1 + RES.indexO
 // cards travel one after another from `a` to `b` (a player id or 'bank'); `hidden` shows their backs
 function flyCards(list, a, b, v, o = {}) {
   const u = ui, spot = (who, res) => (who === 'bank' ? bankOf(res) : cardsOf(who, res, who === v));
-  list.slice(0, 7).forEach((res, i) =>
-    setTimeout(() => {
-      if (ui !== u) return;
+  setTimeout(() => {
+    if (ui !== u) return;
+    // one read pass for every source/target rect, then the cards go in (staggered with the animation delay)
+    const batch = [];
+    list.slice(0, 7).forEach((res, i) => {
       const from = centre(spot(a, res));
-      if (from) flyCard(res, from, () => spot(b, res), { mine: b === v, sound: b === v && i === 0, hidden: o.hidden, short: true });
-    }, (o.delay || 0) + i * 90));
+      const to = from && centre(spot(b, res));
+      if (to) batch.push({ res, i, from, to });
+    });
+    for (const { res, i, from, to } of batch)
+      flyCard(res, from, () => spot(b, res), { mine: b === v, sound: b === v && i === 0, hidden: o.hidden, short: true, to, delay: i * 90 });
+  }, o.delay || 0);
+}
+
+// a card's "bump" when something lands on it; a Web Animation restarts without forcing a layout
+function bumpEl(c) {
+  const small = c.classList.contains('pcard');
+  c.animate(
+    [{ transform: 'none' }, { transform: small ? 'translateY(-4px) scale(1.03)' : 'translateY(-10px) scale(1.12)', offset: 0.4 }, { transform: 'none' }],
+    small ? 450 : c.classList.contains('rcard') ? 500 : 450
+  );
 }
 
 function flyCard(res, from, target, o = {}) {
-  const t = target(), to = centre(t);
+  const to = o.to || centre(target());
   if (!to) return;
+  const delay = o.delay || 0;
   const lift = o.short ? 16 : 34;
   const mid = { x: (from.x + to.x) / 2 + (Math.random() - 0.5) * (o.short ? 60 : 120), y: Math.min(from.y, to.y) - (o.short ? 40 : 70) - Math.random() * 40 };
   const at = (p, s) => `translate(${p.x}px, ${p.y}px) translate(-50%, -50%) scale(${s})`;
@@ -348,15 +364,13 @@ function flyCard(res, from, target, o = {}) {
     { transform: at({ x: from.x, y: from.y - lift }, o.short ? 1.1 : 1.35), opacity: 1, offset: 0.18 },
     { transform: at(mid, 1.05), opacity: 1, offset: 0.58 },
     { transform: at(to, o.mine ? 0.95 : 0.55), opacity: o.mine ? 1 : 0.4 },
-  ], { duration: o.short ? 800 : 950, easing: 'cubic-bezier(.4,0,.6,1)' });
-  setTimeout(() => el.remove(), 2500); // hidden tabs may never finish the animation
+  ], { duration: o.short ? 800 : 950, delay, fill: 'backwards', easing: 'cubic-bezier(.4,0,.6,1)' });
+  setTimeout(() => el.remove(), 2500 + delay); // hidden tabs may never finish the animation
   anim.onfinish = () => {
     el.remove();
     const c = ui && target();
     if (!c) return;
-    c.classList.remove('bump');
-    void c.offsetWidth;
-    c.classList.add('bump');
+    bumpEl(c);
     if (o.sound) play.gain();
   };
 }
