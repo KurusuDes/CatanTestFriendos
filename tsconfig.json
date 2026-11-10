@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "strict": true,
+    "allowJs": true,
+    "checkJs": false,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "types": ["vite/client"],
+    "paths": {
+      "@engine/*": ["./src/engine/*"],
+      "@app/*": ["./src/app/*"],
+      "@net/*": ["./src/net/*"],
+      "@board/*": ["./src/board/*"],
+      "@ui/*": ["./src/ui/*"],
+      "@workers/*": ["./src/workers/*"],
+      "@assets/*": ["./public/assets/*"]
+    }
+  },
+  "include": ["src", "tests", "scripts", "vite.config.ts"]
+}

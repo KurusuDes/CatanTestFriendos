@@ -6,3 +6,4 @@ node_modules/
 CatanVault/.obsidian/*
 !CatanVault/.obsidian/app.json
 *.log
+dist/
