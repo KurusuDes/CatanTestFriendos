@@ -22,14 +22,14 @@ import { Dice3D } from './dice3d';
 import { disposeChildren, disposeTree } from './dispose';
 import { dropPing, float, flipPlates, ping, playerPoints, rollDice, shake, tilePoint, updateFloaters, updatePings, updatePlates, type Floater, type Ping, type Plate } from './effects';
 import { updateFog } from './fog';
-import { buildTokens } from './labels';
+import { buildTokens, tokenKey } from './labels';
 import { placeGrass } from './grass';
 import { buildDynamic } from './pieces';
 import { buildPorts } from './ports';
 import { placeProps } from './props';
 import { saveSettings, SETTINGS, type Settings } from './settings';
 import { LAYER_GRASS, LAYER_PIECES, OutlineShader, patch, pieceColorMat, tiltShader, U } from './shaders';
-import { buildHexGrid, buildTerrainMesh, smooth, terrainOf, type TerrainField } from './terrain';
+import { buildHexGrid, buildTerrainMesh, smooth, terrainKey, terrainOf, type TerrainField } from './terrain';
 import { buildWater } from './water';
 import type { BState, BoardViewState, BBounds, Interaction } from './types';
 
@@ -68,7 +68,8 @@ export class Board3D implements BoardRenderer {
   staticGroup: THREE.Group;
   dynGroup: THREE.Group;
   tokenGroup: THREE.Group | null = null;
-  staticKey = ''; // setting it to '' forces a full static rebuild
+  staticKey = ''; // terrain key; setting it to '' forces a full static rebuild
+  tokenKey = ''; // numbers key; a change rebuilds only the number labels
   dynKey: string | undefined;
   spawns: { obj: THREE.Object3D; y: number; base: THREE.Vector3; t0: number }[] = [];
   plates: Plate[] = [];
@@ -543,12 +544,20 @@ export class Board3D implements BoardRenderer {
     const bd = st.board;
     this.bounds = bd.bounds;
     const faceDown = !!view.faceDown;
-    const key = bd.tiles.map(t => `${t.res}${t.num}${t.revealed ? 1 : 0}${t.numRevealed ? 1 : 0}`).join('|') + (faceDown ? 'F' : '') + bd.ports.length;
+    // terrain, props, grass and ports depend on the terrain key; the numbers have their own key,
+    // so a number-only change (changing-land mode, revealed numbers) rebuilds just the labels
+    const key = terrainKey(bd, faceDown);
     if (key !== this.staticKey) {
       const first = !this.staticKey;
       this.staticKey = key;
       this.buildStatic(st, faceDown);
       if (first) this.frame();
+    } else {
+      const tk = tokenKey(bd);
+      if (tk !== this.tokenKey) {
+        this.tokenKey = tk;
+        buildTokens(this, st, faceDown);
+      }
     }
     if (view.flipAt && view.flipAt !== this.lastFlip) {
       this.lastFlip = view.flipAt;
@@ -592,6 +601,7 @@ export class Board3D implements BoardRenderer {
     placeProps(this, st);
     placeGrass(this, st);
     buildTokens(this, st, faceDown);
+    this.tokenKey = tokenKey(bd);
     buildPorts(this, st);
   }
 }

@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { probLook } from '@engine/constants';
 import { disposeTree } from './dispose';
-import type { BState } from './types';
+import type { BBoard, BState } from './types';
 import type { Board3D } from './Board3D';
 
 export function css2d(cls: string, html: string, tag = 'div'): CSS2DObject {
@@ -11,6 +11,11 @@ export function css2d(cls: string, html: string, tag = 'div'): CSS2DObject {
   el.className = cls;
   if (html) el.innerHTML = html;
   return new CSS2DObject(el);
+}
+
+/** Changes only when a number (or whether it is shown) changes: rebuilds just the token labels. */
+export function tokenKey(bd: BBoard): string {
+  return bd.tiles.map(t => `${t.num}${t.numRevealed ? 1 : 0}`).join('|');
 }
 
 /** (Re)builds the number tokens and face-down runes into a fresh group under the static group. */

@@ -380,3 +380,8 @@ export function buildHexGrid(st: BState, field: TerrainField): THREE.LineSegment
   grid.userData.own = true;
   return grid;
 }
+
+/** Everything the terrain, props, grass and ports depend on (not the numbers: see tokenKey). */
+export function terrainKey(bd: BBoard, faceDown: boolean): string {
+  return bd.tiles.map(t => `${t.id}:${t.q},${t.r}${t.res}${t.revealed ? 1 : 0}`).join('|') + (faceDown ? 'F' : '') + bd.ports.length;
+}
