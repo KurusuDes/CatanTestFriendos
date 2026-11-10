@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Đo baseline phần đo được trong Node (không cần trình duyệt). Chạy: pnpm build && pnpm baseline
 // Ghi kết quả vào docs/perf-baseline.md
 import { readdirSync, statSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
@@ -7,8 +6,9 @@ import { gzipSync } from 'node:zlib';
 import { readFileSync } from 'node:fs';
 import os from 'node:os';
 import { runSim } from './sim.ts';
-import { generateBoard, SHAPES } from '../src/engine/board.js';
-import { defaultConfig } from '../src/engine/config.js';
+import { generateBoard, SHAPES } from '@engine/board';
+import { defaultConfig } from '@engine/config';
+import type { ShapeId } from '@engine/types';
 
 const ms = (t0: number) => performance.now() - t0;
 const quiet = <T>(fn: () => T): T => {
@@ -33,7 +33,7 @@ simTimes.sort((a, b) => a - b);
 const simMs = simTimes[1]!;
 
 // 2. generateBoard theo từng hình dạng bản đồ (cỡ mặc định + cỡ 40), 50 lần mỗi loại
-const shapes = Object.keys(SHAPES).filter(k => k !== 'custom');
+const shapes = Object.keys(SHAPES).filter(k => k !== 'custom') as ShapeId[];
 const rows: string[] = [];
 for (const shape of shapes) {
   const cell = (size: number) => {

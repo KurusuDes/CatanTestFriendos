@@ -1,4 +1,4 @@
-import { TILE_INFO } from '../engine/constants.js';
+import { TILE_INFO } from '@engine/constants';
 
 export function h(tag, props, ...children) {
   const el = document.createElement(tag);

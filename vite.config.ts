@@ -1,10 +1,10 @@
 import { defineConfig } from 'vitest/config';
 import preact from '@preact/preset-vite';
-import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
   base: './',
-  plugins: [preact(), tsconfigPaths()],
+  plugins: [preact()],
+  resolve: { tsconfigPaths: true }, // @engine/*, @ui/* ... from tsconfig.json (native in Vite 8)
   build: {
     target: 'es2020',
     rollupOptions: {

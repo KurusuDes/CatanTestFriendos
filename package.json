@@ -11,7 +11,8 @@
     "test": "vitest run",
     "sim": "tsx scripts/sim.ts",
     "coverage": "tsx scripts/coverage.ts",
-    "baseline": "tsx scripts/baseline.ts"
+    "baseline": "tsx scripts/baseline.ts",
+    "determinism": "tsx scripts/determinism.ts"
   },
   "packageManager": "pnpm@12.15.0",
   "dependencies": {
@@ -25,12 +26,12 @@
   },
   "devDependencies": {
     "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^26.6.6",
     "@types/three": "~0.170.0",
     "stats-gl": "^4.2.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.6",
-    "vite-tsconfig-paths": "^6.1.1",
     "vitest": "^5.1.0"
   }
 }

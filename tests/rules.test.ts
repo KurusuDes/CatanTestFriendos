@@ -1,19 +1,19 @@
-// @ts-nocheck
 // Targeted rule tests. Usage: pnpm test
-import * as G from '../src/engine/game.js';
-import { defaultConfig } from '../src/engine/config.js';
+import * as G from '@engine/game';
+import { defaultConfig } from '@engine/config';
 
 import { test } from 'vitest';
+import type { Action, Config, GameState, Hand, Res } from '@engine/types';
 
-const t = (name, fn) => test(name, fn);
-const eq = (a, b, m = '') => {
+const t = (name: string, fn: () => void) => test(name, fn);
+const eq = (a: unknown, b: unknown, m = '') => {
   if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${m} esperado ${JSON.stringify(b)}, obtenido ${JSON.stringify(a)}`);
 };
-const ok = (c, m) => {
+const ok = (c: unknown, m?: string): void => {
   if (!c) throw new Error(m || 'falló');
 };
 
-function fresh(mut) {
+function fresh(mut?: (c: Config) => unknown): GameState {
   const c = defaultConfig();
   c.seed = 99;
   c.rules.randomStart = false;
@@ -28,28 +28,28 @@ function fresh(mut) {
   s.setup.blindActive = false;
   return s;
 }
-const give = (s, pid, res) => {
-  for (const [r, n] of Object.entries(res)) {
-    s.players[pid].res[r] += n;
+const give = (s: GameState, pid: number, res: Partial<Hand>) => {
+  for (const [r, n] of Object.entries(res) as [Res, number][]) {
+    s.players[pid]!.res[r] += n;
     s.bank[r] -= n;
   }
 };
-const act = (s, a) => G.applyAction(s, a);
+const act = (s: GameState, a: Action): { ok: boolean; error?: string; blocked?: boolean } => G.applyAction(s, a);
 
 // a path of edges: walk vertex -> neighbor greedily avoiding revisits
-function path(s, len, start = 0) {
+function path(s: GameState, len: number, start = 0) {
   const bd = s.board;
-  const edges = [];
+  const edges: number[] = [];
   const seen = new Set([start]);
   let v = start;
   for (let i = 0; i < len; i++) {
-    const e = bd.vertices[v].edges.find(e => {
-      const E = bd.edges[e];
+    const e = bd.vertices[v]!.edges.find(e => {
+      const E = bd.edges[e]!;
       const u = E.a === v ? E.b : E.a;
       return !seen.has(u) && !edges.includes(e);
     });
     if (e === undefined) break;
-    const E = bd.edges[e];
+    const E = bd.edges[e]!;
     v = E.a === v ? E.b : E.a;
     seen.add(v);
     edges.push(e);
@@ -60,26 +60,26 @@ function path(s, len, start = 0) {
 t('camino más largo: 5 tramos otorgan +2 y cortar con poblado lo quita', () => {
   const s = fresh();
   const { edges, verts } = path(s, 6);
-  s.buildings[verts[0]] = { owner: 0, type: 'settlement' };
-  s.players[0].settlementsLeft--;
+  s.buildings[verts[0]!] = { owner: 0, type: 'settlement' };
+  s.players[0]!.settlementsLeft--;
   for (let i = 0; i < 5; i++) {
     give(s, 0, { wood: 1, brick: 1 });
-    const r = act(s, { type: 'build', pid: 0, what: 'road', at: edges[i] });
+    const r = act(s, { type: 'build', pid: 0, what: 'road', at: edges[i]! });
     ok(r.ok, r.error);
   }
   eq(s.longestRoad.owner, 0, 'dueño');
-  eq(s.players[0].roadLen, 5, 'largo');
+  eq(s.players[0]!.roadLen, 5, 'largo');
   eq(G.victoryPoints(s, 0), 3, 'PV');
   // opponent settles in the middle of the road (vertex 3), via own road from outside
-  const mid = [verts[2], verts[3], verts[1], verts[4]].find(v => s.board.vertices[v].edges.some(e => s.roads[e] === undefined));
+  const mid = [verts[2]!, verts[3]!, verts[1]!, verts[4]!].find(v => s.board.vertices[v]!.edges.some(e => s.roads[e] === undefined))!;
   s.buildings[mid] = { owner: 1, type: 'settlement' };
   s.current = 1;
   // trigger recompute through a legal action: build a road for player 1 next to mid
-  const e1 = s.board.vertices[mid].edges.find(e => s.roads[e] === undefined);
+  const e1 = s.board.vertices[mid]!.edges.find(e => s.roads[e] === undefined)!;
   give(s, 1, { wood: 1, brick: 1 });
   const r = act(s, { type: 'build', pid: 1, what: 'road', at: e1 });
   ok(r.ok, r.error);
-  ok(s.players[0].roadLen < 5, 'debería romperse: ' + s.players[0].roadLen);
+  ok(s.players[0]!.roadLen < 5, 'debería romperse: ' + s.players[0]!.roadLen);
   eq(s.longestRoad.owner, -1, 'nadie');
 });
 
@@ -87,7 +87,7 @@ t('regla de distancia y conexión de poblados', () => {
   const s = fresh();
   const v = 10;
   s.buildings[v] = { owner: 1, type: 'settlement' };
-  const nb = s.board.vertices[v].adj[0];
+  const nb = s.board.vertices[v]!.adj[0]!;
   ok(!G.canSetupSettlement({ ...s, setup: { ...s.setup, blindActive: false } }, 0, nb), 'adyacente no permitido');
   give(s, 0, { wood: 1, brick: 1, sheep: 1, wheat: 1 });
   const r = act(s, { type: 'build', pid: 0, what: 'settlement', at: 30 });
@@ -96,21 +96,22 @@ t('regla de distancia y conexión de poblados', () => {
 
 t('producción: poblado 1, ciudad 2, ladrón bloquea', () => {
   const s = fresh();
-  const tile = s.board.tiles.find(x => x.num === 8);
-  const [v1, , v3] = tile.verts;
+  const tile = s.board.tiles.find(x => x.num === 8)!;
+  const [v1, , v3] = tile.verts as [number, number, number];
+  const tres = tile.res as Res;
   s.buildings[v1] = { owner: 0, type: 'settlement' };
   s.buildings[v3] = { owner: 1, type: 'city' };
   s.phase = 'roll';
   s.config.rules.diceMode = 'balanced';
   s.diceDeck = [[3, 5], [3, 5], [3, 5], [3, 5], [3, 5], [3, 5], [4, 4]];
-  const b0 = s.players[0].res[tile.res], b1 = s.players[1].res[tile.res];
+  const b0 = s.players[0]!.res[tres], b1 = s.players[1]!.res[tres];
   act(s, { type: 'roll', pid: 0 });
-  eq(s.players[0].res[tile.res] - b0, 1, 'poblado');
-  eq(s.players[1].res[tile.res] - b1, 2, 'ciudad');
+  eq(s.players[0]!.res[tres] - b0, 1, 'poblado');
+  eq(s.players[1]!.res[tres] - b1, 2, 'ciudad');
   s.board.robber = tile.id;
   s.phase = 'roll';
   act(s, { type: 'roll', pid: 0 });
-  eq(s.players[0].res[tile.res] - b0, 1, 'bloqueado por ladrón');
+  eq(s.players[0]!.res[tres] - b0, 1, 'bloqueado por ladrón');
 });
 
 t('7: descarta la mitad quien supera el límite', () => {
@@ -130,28 +131,29 @@ t('7: descarta la mitad quien supera el límite', () => {
 
 t('ladrón: roba a una víctima adyacente', () => {
   const s = fresh();
-  const tile = s.board.tiles.find(x => x.id !== s.board.robber);
-  s.buildings[tile.verts[0]] = { owner: 2, type: 'settlement' };
+  const tile = s.board.tiles.find(x => x.id !== s.board.robber)!;
+  s.buildings[tile.verts[0]!] = { owner: 2, type: 'settlement' };
   give(s, 2, { brick: 1 });
   s.phase = 'robber';
   const r = act(s, { type: 'moveRobber', pid: 0, tile: tile.id });
   ok(r.ok, r.error);
-  eq(s.players[0].res.brick, 1);
-  eq(s.players[2].res.brick, 0);
+  eq(s.players[0]!.res.brick, 1);
+  eq(s.players[2]!.res.brick, 0);
   eq(s.phase, 'main');
 });
 
 t('puertos: 3:1 y 2:1', () => {
   const s = fresh();
-  const p2 = s.board.ports.find(p => p.type !== 'any');
-  const v = s.board.edges[p2.edge].a;
+  const p2 = s.board.ports.find(p => p.type !== 'any')!;
+  const p2type = p2.type as Res;
+  const v = s.board.edges[p2.edge]!.a;
   s.buildings[v] = { owner: 0, type: 'settlement' };
-  eq(G.tradeRatio(s, 0, p2.type), 2);
-  eq(G.tradeRatio(s, 1, p2.type), 4);
-  give(s, 0, { [p2.type]: 2 });
-  const other = ['wood', 'brick', 'sheep', 'wheat', 'ore'].find(r => r !== p2.type);
-  ok(act(s, { type: 'bankTrade', pid: 0, give: p2.type, get: other }).ok);
-  eq(s.players[0].res[other], 1);
+  eq(G.tradeRatio(s, 0, p2type), 2);
+  eq(G.tradeRatio(s, 1, p2type), 4);
+  give(s, 0, { [p2type]: 2 });
+  const other = (['wood', 'brick', 'sheep', 'wheat', 'ore'] as Res[]).find(r => r !== p2type)!;
+  ok(act(s, { type: 'bankTrade', pid: 0, give: p2type, get: other }).ok);
+  eq(s.players[0]!.res[other], 1);
 });
 
 t('cartas de desarrollo: no se juegan el turno en que se compran', () => {
@@ -164,7 +166,7 @@ t('cartas de desarrollo: no se juegan el turno en que se compran', () => {
   ok(act(s, { type: 'playDev', pid: 0, card: 'knight' }).ok);
   eq(s.phase, 'robber');
   s.phase = 'main';
-  s.players[0].dev.push({ type: 'monopoly', turn: 0 });
+  s.players[0]!.dev.push({ type: 'monopoly', turn: 0 });
   ok(!act(s, { type: 'playDev', pid: 0, card: 'monopoly', res: 'ore' }).ok, 'solo una por turno');
 });
 
@@ -172,19 +174,19 @@ t('monopolio y año de abundancia', () => {
   const s = fresh();
   give(s, 1, { ore: 3 });
   give(s, 2, { ore: 2 });
-  s.players[0].dev.push({ type: 'monopoly', turn: 0 });
+  s.players[0]!.dev.push({ type: 'monopoly', turn: 0 });
   ok(act(s, { type: 'playDev', pid: 0, card: 'monopoly', res: 'ore' }).ok);
-  eq(s.players[0].res.ore, 5);
+  eq(s.players[0]!.res.ore, 5);
   const s2 = fresh();
-  s2.players[0].dev.push({ type: 'yearOfPlenty', turn: 0 });
+  s2.players[0]!.dev.push({ type: 'yearOfPlenty', turn: 0 });
   ok(act(s2, { type: 'playDev', pid: 0, card: 'yearOfPlenty', res: ['wood', 'wood'] }).ok);
-  eq(s2.players[0].res.wood, 2);
+  eq(s2.players[0]!.res.wood, 2);
 });
 
 t('ejército más grande con 3 caballeros', () => {
   const s = fresh(c => (c.rules.noRobber = true));
   for (let i = 0; i < 3; i++) {
-    s.players[0].dev.push({ type: 'knight', turn: 0 });
+    s.players[0]!.dev.push({ type: 'knight', turn: 0 });
     s.devPlayed = false;
     ok(act(s, { type: 'playDev', pid: 0, card: 'knight' }).ok);
   }
@@ -194,18 +196,18 @@ t('ejército más grande con 3 caballeros', () => {
 
 t('escasez del banco: nadie cobra si no alcanza para todos', () => {
   const s = fresh();
-  const tile = s.board.tiles.find(x => x.num === 6);
-  s.buildings[tile.verts[0]] = { owner: 0, type: 'city' };
-  s.buildings[tile.verts[3]] = { owner: 1, type: 'city' };
-  const r = tile.res;
+  const tile = s.board.tiles.find(x => x.num === 6)!;
+  s.buildings[tile.verts[0]!] = { owner: 0, type: 'city' };
+  s.buildings[tile.verts[3]!] = { owner: 1, type: 'city' };
+  const r = tile.res as Res;
   const extra = s.bank[r] - 3;
-  s.players[2].res[r] += extra;
+  s.players[2]!.res[r] += extra;
   s.bank[r] = 3;
   s.phase = 'roll';
   s.config.rules.diceMode = 'balanced';
   s.diceDeck = Array(7).fill([3, 3]);
   act(s, { type: 'roll', pid: 0 });
-  eq(s.players[0].res[r], 0);
+  eq(s.players[0]!.res[r], 0);
   eq(s.bank[r], 3);
 });
 
@@ -228,8 +230,8 @@ t('intercambio entre jugadores', () => {
   ok(!act(s, { type: 'respondTrade', pid: 2, accept: true }).ok, 'P2 no tiene mineral');
   ok(act(s, { type: 'respondTrade', pid: 1, accept: true }).ok);
   ok(act(s, { type: 'confirmTrade', pid: 0, with: 1 }).ok);
-  eq(s.players[0].res.ore, 1);
-  eq(s.players[1].res.wood, 2);
+  eq(s.players[0]!.res.ore, 1);
+  eq(s.players[1]!.res.wood, 2);
 });
 
 t('blindfold: choque en el mismo vértice obliga a reubicar', () => {
@@ -240,22 +242,22 @@ t('blindfold: choque en el mismo vértice obliga a reubicar', () => {
   c.players = c.players.slice(0, 2);
   const s = G.createGame(c);
   const v = 12;
-  const e0 = s.board.vertices[v].edges[0];
+  const e0 = s.board.vertices[v]!.edges[0]!;
   ok(act(s, { type: 'placeSettlement', pid: 0, vid: v }).ok);
   ok(act(s, { type: 'placeRoad', pid: 0, eid: e0 }).ok);
   ok(act(s, { type: 'placeSettlement', pid: 1, vid: v }).ok, 'P1 no ve la casa de P0');
-  ok(act(s, { type: 'placeRoad', pid: 1, eid: s.board.vertices[v].edges[1] }).ok);
+  ok(act(s, { type: 'placeRoad', pid: 1, eid: s.board.vertices[v]!.edges[1]! }).ok);
   eq(Object.keys(s.buildings).length, 0, 'nada visible todavía');
-  const far = s.board.vertices.filter(x => x.id !== v && !x.adj.includes(v) && !s.board.vertices[v].adj.some(u => x.adj.includes(u)));
-  const a1 = far[5].id, a2 = far.find(x => x.id !== a1 && !x.adj.includes(a1) && !x.adj.some(u => far[5].adj.includes(u))).id;
+  const far = s.board.vertices.filter(x => x.id !== v && !x.adj.includes(v) && !s.board.vertices[v]!.adj.some(u => x.adj.includes(u)));
+  const a1 = far[5]!.id, a2 = far.find(x => x.id !== a1 && !x.adj.includes(a1) && !x.adj.some(u => far[5]!.adj.includes(u)))!.id;
   ok(act(s, { type: 'placeSettlement', pid: 1, vid: a1 }).ok, 'P1 ronda 2');
-  ok(act(s, { type: 'placeRoad', pid: 1, eid: s.board.vertices[a1].edges[0] }).ok);
+  ok(act(s, { type: 'placeRoad', pid: 1, eid: s.board.vertices[a1]!.edges[0]! }).ok);
   ok(act(s, { type: 'placeSettlement', pid: 0, vid: a2 }).ok, 'P0 ronda 2');
-  ok(act(s, { type: 'placeRoad', pid: 0, eid: s.board.vertices[a2].edges[0] }).ok);
+  ok(act(s, { type: 'placeRoad', pid: 0, eid: s.board.vertices[a2]!.edges[0]! }).ok);
   eq(s.phase, 'setup', 'fase de reubicación');
   ok(s.setup.fixing, 'reubicando');
   eq(s.current, 1, 'P1 reubica');
-  eq(s.buildings[v].owner, 0, 'P0 llegó primero');
+  eq(s.buildings[v]!.owner, 0, 'P0 llegó primero');
 });
 
 t('volteado: casillas boca abajo durante la colocación, casas visibles, y se voltea todo al terminar', () => {
@@ -267,13 +269,13 @@ t('volteado: casillas boca abajo durante la colocación, casas visibles, y se vo
   const s = G.createGame(c);
   ok(s.board.tiles.every(t => !t.revealed), 'todo boca abajo');
   ok(act(s, { type: 'placeSettlement', pid: 0, vid: 12 }).ok);
-  eq(s.buildings[12].owner, 0, 'la casa es visible para todos');
+  eq(s.buildings[12]!.owner, 0, 'la casa es visible para todos');
   ok(s.board.tiles.every(t => !t.revealed), 'poner casa no revela');
-  ok(act(s, { type: 'placeRoad', pid: 0, eid: G.legalSetupRoads(s, 0)[0] }).ok);
+  ok(act(s, { type: 'placeRoad', pid: 0, eid: G.legalSetupRoads(s, 0)[0]! }).ok);
   for (const pid of [1, 1, 0]) {
-    const v = G.legalSetupSettlements(s, pid)[5];
+    const v = G.legalSetupSettlements(s, pid)[5]!;
     ok(act(s, { type: 'placeSettlement', pid, vid: v }).ok);
-    ok(act(s, { type: 'placeRoad', pid, eid: G.legalSetupRoads(s, pid)[0] }).ok);
+    ok(act(s, { type: 'placeRoad', pid, eid: G.legalSetupRoads(s, pid)[0]! }).ok);
   }
   eq(s.phase, 'roll');
   ok(s.board.tiles.every(t => t.revealed && t.numRevealed), 'todo volteado');
@@ -287,20 +289,20 @@ t('niebla: solo ves lo tuyo; construir sobre alguien oculto te desvía al hueco 
   c.modes.fog = true;
   c.players = c.players.slice(0, 2).map(p => ({ ...p, kind: 'bot' }));
   const s = G.createGame(c);
-  const v0 = s.board.vertices.find(x => x.hexes.length === 3).id;
+  const v0 = s.board.vertices.find(x => x.hexes.length === 3)!.id;
   ok(act(s, { type: 'placeSettlement', pid: 0, vid: v0 }).ok);
-  ok(act(s, { type: 'placeRoad', pid: 0, eid: G.legalSetupRoads(s, 0)[0] }).ok);
+  ok(act(s, { type: 'placeRoad', pid: 0, eid: G.legalSetupRoads(s, 0)[0]! }).ok);
   const v1 = G.viewFor(s, 1);
   eq(Object.keys(v1.buildings).length, 0, 'P1 no ve la casa de P0');
   ok(v1.board.tiles.every(t => !t.numRevealed), 'P1 lo ve todo oscuro');
   eq(G.viewFor(s, 0).board.tiles.filter(t => t.numRevealed).length, 3, 'P0 ve sus 3 casillas');
-  const target = s.board.vertices[v0].adj[0];
+  const target = s.board.vertices[v0]!.adj[0]!;
   const r = act(s, { type: 'placeSettlement', pid: 1, vid: target });
   ok(r.ok, r.error);
   ok(s.fx.some(f => f.kind === 'relocated'), 'se desvió');
-  const placed = Object.keys(s.buildings).map(Number).find(v => s.buildings[v].owner === 1);
+  const placed = Object.keys(s.buildings).map(Number).find(v => s.buildings[v]!.owner === 1)!;
   ok(placed !== target, 'no quedó donde apuntó');
-  ok(!s.board.vertices[placed].adj.some(u => s.buildings[u]), 'respeta la distancia');
+  ok(!s.board.vertices[placed]!.adj.some(u => s.buildings[u]), 'respeta la distancia');
   ok(G.viewFor(s, 1).buildings[v0], 'P1 descubrió la casa de P0');
 });
 
@@ -308,11 +310,11 @@ t('retirarse en su turno: pasa al siguiente, devuelve su mano y pierde premios',
   const s = fresh();
   give(s, 0, { wood: 3, ore: 2 });
   s.largestArmy = { owner: 0, count: 3 };
-  s.players[0].knights = 3;
-  s.players[2].knights = 4;
+  s.players[0]!.knights = 3;
+  s.players[2]!.knights = 4;
   const bankWood = s.bank.wood;
   ok(act(s, { type: 'retirePlayer', pid: 0 }).ok);
-  ok(s.players[0].retired);
+  ok(s.players[0]!.retired);
   eq(s.current, 1, 'turno del siguiente');
   eq(s.phase, 'roll');
   eq(s.bank.wood, bankWood + 3, 'mano al banco');
@@ -335,7 +337,7 @@ t('retirarse durante la colocación inicial y relevo por bot', () => {
   eq(s.current, 1);
   ok(s.setup.queue.every((e, i) => i < s.setup.idx || e.pid !== 0), 'sin turnos pendientes del retirado');
   ok(act(s, { type: 'setController', pid: 1, kind: 'human' }).ok);
-  eq(s.players[1].kind, 'human');
+  eq(s.players[1]!.kind, 'human');
   ok(act(s, { type: 'retirePlayer', pid: 2 }).ok);
   ok(!act(s, { type: 'retirePlayer', pid: 3 }).ok, 'deben quedar 2');
 });
@@ -361,7 +363,7 @@ t('historial de tiradas: quién y cuánto, como mucho 30', () => {
     s.pendingDiscards = {};
   }
   eq(s.rollLog.length, 30);
-  const last = s.rollLog[29];
+  const last = s.rollLog[29]!;
   eq(last.pid, 34 % 4);
-  eq(last.sum, s.dice[0] + s.dice[1]);
+  eq(last.sum, s.dice![0] + s.dice![1]);
 });

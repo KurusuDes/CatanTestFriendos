@@ -15,7 +15,7 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "types": ["vite/client"],
+    "types": ["vite/client", "node"],
     "paths": {
       "@engine/*": ["./src/engine/*"],
       "@app/*": ["./src/app/*"],

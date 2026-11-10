@@ -1,16 +1,17 @@
-import { newSeed } from './rng.js';
+import { newSeed } from './rng';
+import type { Config, Mode, Preset } from './types';
 
-export const PLAYER_COLORS = ['#e53935', '#1e88e5', '#ff9800', '#f5f5f5', '#43a047', '#8e24aa', '#00acc1', '#795548'];
-export const BOT_NAMES = ['Cô Tiều', 'Ngài Gạch', 'Ông Ngân Hàng', 'Chú Lúa', 'Bé Cừu', 'Người Đá', 'Bà Đất Sét', 'Trộm Vặt'];
+export const PLAYER_COLORS: string[] = ['#e53935', '#1e88e5', '#ff9800', '#f5f5f5', '#43a047', '#8e24aa', '#00acc1', '#795548'];
+export const BOT_NAMES: string[] = ['Cô Tiều', 'Ngài Gạch', 'Ông Ngân Hàng', 'Chú Lúa', 'Bé Cừu', 'Người Đá', 'Bà Đất Sét', 'Trộm Vặt'];
 
-export function defaultConfig() {
+export function defaultConfig(): Config {
   return {
     seed: newSeed(),
     players: [
-      { name: 'Bạn', kind: 'human', color: PLAYER_COLORS[0] },
-      { name: BOT_NAMES[0], kind: 'bot', level: 'normal', color: PLAYER_COLORS[1] },
-      { name: BOT_NAMES[1], kind: 'bot', level: 'normal', color: PLAYER_COLORS[2] },
-      { name: BOT_NAMES[2], kind: 'bot', level: 'normal', color: PLAYER_COLORS[3] },
+      { name: 'Bạn', kind: 'human', color: PLAYER_COLORS[0]! },
+      { name: BOT_NAMES[0]!, kind: 'bot', level: 'normal', color: PLAYER_COLORS[1]! },
+      { name: BOT_NAMES[1]!, kind: 'bot', level: 'normal', color: PLAYER_COLORS[2]! },
+      { name: BOT_NAMES[2]!, kind: 'bot', level: 'normal', color: PLAYER_COLORS[3]! },
     ],
     map: { shape: 'classic', size: 24, resources: 'balanced', numbers: 'balanced', deserts: 'auto', gold: 0, ports: 'normal', custom: null },
     rules: {
@@ -23,7 +24,7 @@ export function defaultConfig() {
 }
 
 // Toggleable game modes shown in the lobby. `apply` receives the config.
-export const MODES = [
+export const MODES: Mode[] = [
   { id: 'flipped', icon: '🙈', name: 'Bịt mắt: úp bàn cờ', flagship: true, desc: 'Mọi ô đều bị úp. Bạn đặt nhà mà không biết bên dưới là gì (người khác vẫn thấy nhà bạn), đặt xong thì cả bàn cờ được lật lên.', get: c => c.modes.flipped, set: (c, v) => (c.modes.flipped = v) },
   { id: 'fog', icon: '🌑', name: 'Sương mù chiến tranh', flagship: true, desc: 'Tối om: bạn chỉ thấy quanh nhà mình và nửa ô hai bên đường của mình. Nếu xây trúng chỗ đã có người mà bạn không thấy, công trình sẽ dời sang chỗ trống gần nhất.', get: c => c.modes.fog, set: (c, v) => (c.modes.fog = v) },
   { id: 'blindfold', icon: '🤫', name: 'Nhà bí mật', desc: 'Không ai thấy người khác đặt nhà đầu ván ở đâu cho tới lúc lật mở. Nếu trùng chỗ, người đặt sau phải dời đi.', get: c => c.modes.blindfold, set: (c, v) => (c.modes.blindfold = v) },
@@ -37,7 +38,7 @@ export const MODES = [
   { id: 'doubleProd', icon: '⚡', name: 'Tăng tốc', desc: 'Sản lượng luôn gấp đôi. Ván nào cũng bùng nổ.', get: c => c.rules.productionMult > 1, set: (c, v) => (c.rules.productionMult = v ? 2 : 1) },
 ];
 
-export const PRESETS = [
+export const PRESETS: Preset[] = [
   { id: 'classic', icon: '🏝️', name: 'Cổ điển', desc: 'Luật chơi quen thuộc.', apply: c => {} },
   { id: 'blind', icon: '🙈', name: 'Bịt mắt', desc: 'Úp bàn cờ trong lúc đặt nhà đầu ván.', apply: c => { c.modes.flipped = true; } },
   { id: 'fog', icon: '🌑', name: 'Sương mù chiến tranh', desc: 'Chỉ thấy quanh mình, xung quanh tối om.', apply: c => { c.modes.fog = true; c.map.shape = 'big'; } },

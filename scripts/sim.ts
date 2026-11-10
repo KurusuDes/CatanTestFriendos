@@ -1,42 +1,42 @@
-// @ts-nocheck
 // Headless self-play: runs many bot-only games over every map/mode combination and
 // checks rule invariants after every single action.  Usage: pnpm sim [games]
-import { createGame, applyAction, pendingActors, victoryPoints, handSize, canBuildRoad } from '../src/engine/game.js';
-import { botAct } from '../src/engine/bot.js';
-import { defaultConfig, MODES, PLAYER_COLORS } from '../src/engine/config.js';
-import { SHAPES } from '../src/engine/board.js';
-import { RES } from '../src/engine/constants.js';
+import { createGame, applyAction, pendingActors, victoryPoints, handSize, canBuildRoad } from '@engine/game';
+import { botAct } from '@engine/bot';
+import { defaultConfig, MODES, PLAYER_COLORS } from '@engine/config';
+import { SHAPES } from '@engine/board';
+import { RES } from '@engine/constants';
+import type { Action, BotLevel, Config, DevDeckId, GameState, PlayerConfig, ShapeId } from '@engine/types';
 
-const shapes = Object.keys(SHAPES).filter(k => k !== 'custom');
+const shapes = Object.keys(SHAPES).filter(k => k !== 'custom') as ShapeId[];
 
-function makeConfig(i) {
+export function makeConfig(i: number): Config {
   const c = defaultConfig();
   c.seed = 1000 + i * 7919;
   const np = 2 + (i % 7);
-  c.players = Array.from({ length: np }, (_, k) => ({ name: 'B' + k, kind: 'bot', level: ['easy', 'normal', 'hard'][(i + k) % 3], color: PLAYER_COLORS[k] }));
-  c.map.shape = shapes[i % shapes.length];
+  c.players = Array.from({ length: np }, (_, k): PlayerConfig => ({ name: 'B' + k, kind: 'bot', level: (['easy', 'normal', 'hard'] as BotLevel[])[(i + k) % 3], color: PLAYER_COLORS[k]! }));
+  c.map.shape = shapes[i % shapes.length]!;
   if (np > 4 && ['classic', 'mini'].includes(c.map.shape)) c.map.shape = 'extended';
   if (np > 6) {
-    c.map.shape = ['big', 'huge', 'kingdoms', 'pangea'][i % 4];
+    c.map.shape = (['big', 'huge', 'kingdoms', 'pangea'] as ShapeId[])[i % 4]!;
     c.map.size = 40;
   }
   c.map.size = 18 + (i % 20);
   c.map.gold = i % 4 === 0 ? 2 : 0;
   c.map.resources = i % 3 === 0 ? 'chaos' : 'balanced';
   c.map.numbers = i % 5 === 0 ? 'random' : 'balanced';
-  c.map.ports = ['normal', 'many', 'few', 'none'][i % 4];
+  c.map.ports = (['normal', 'many', 'few', 'none'] as const)[i % 4]!;
   // toggle modes pseudo-randomly
   MODES.forEach((m, k) => m.set(c, ((i * 2654435761) >>> (k + 3)) % 3 === 0));
   if (i % 7 === 0) c.rules.vpTarget = 6 + (i % 9);
   if (i % 6 === 0) c.rules.startBonus = 1;
   if (i % 8 === 0) c.rules.setupRounds = 3;
-  if (i % 9 === 0) c.rules.devDeck = ['war', 'progress', 'none'][i % 3];
+  if (i % 9 === 0) c.rules.devDeck = (['war', 'progress', 'none'] as DevDeckId[])[i % 3]!;
   c.rules.robberGrace = i % 10 === 0 ? 2 : 0;
   return c;
 }
 
-function check(s, where) {
-  const errs = [];
+function check(s: GameState, where: string) {
+  const errs: string[] = [];
   const bankEach = s.bankTotal;
   for (const r of RES) {
     const tot = s.bank[r] + s.players.reduce((a, p) => a + p.res[r], 0);
@@ -57,13 +57,13 @@ function check(s, where) {
     if (roads + blindR + p.roadsLeft !== R.maxRoads) errs.push(`caminos ${p.id}: ${roads}+${blindR}+${p.roadsLeft}`);
   }
   // distance rule
-  for (const k in s.buildings) for (const u of s.board.vertices[k].adj) if (s.buildings[u]) errs.push(`distancia violada ${k}-${u}`);
+  for (const k in s.buildings) for (const u of s.board.vertices[+k]!.adj) if (s.buildings[u]) errs.push(`distancia violada ${k}-${u}`);
   // road connectivity: every road must touch own building or own road
   if (s.phase !== 'setup' || !s.setup.blindActive)
     for (const k in s.roads) {
       const pid = s.roads[k];
-      const E = s.board.edges[k];
-      const ok = [E.a, E.b].some(v => (s.buildings[v] && s.buildings[v].owner === pid) || s.board.vertices[v].edges.some(e => e != k && s.roads[e] === pid));
+      const E = s.board.edges[+k]!;
+      const ok = [E.a, E.b].some(v => (s.buildings[v] && s.buildings[v]!.owner === pid) || s.board.vertices[v]!.edges.some(e => e !== +k && s.roads[e] === pid));
       if (!ok) errs.push(`camino suelto ${k}`);
     }
   // dev cards conservation
@@ -74,11 +74,23 @@ function check(s, where) {
   if (errs.length) throw new Error(`[${where}] ` + errs.join('; '));
 }
 
-export function runSim(GAMES) {
-const summary = { games: 0, finished: 0, turns: 0, byShape: {}, winnerVP: [], errors: 0 };
+interface Summary {
+  games: number;
+  finished: number;
+  turns: number;
+  byShape: Record<string, { n: number; done: number; turns: number }>;
+  winnerVP: number[];
+  errors: number;
+}
+
+// the sim stamps the state to inject each admin action only once
+type SimState = GameState & { __admin?: Record<number, number> };
+
+export function runSim(GAMES: number): Summary {
+const summary: Summary = { games: 0, finished: 0, turns: 0, byShape: {}, winnerVP: [], errors: 0 };
 for (let i = 0; i < GAMES; i++) {
   const cfg = makeConfig(i);
-  let s;
+  let s!: SimState;
   try {
     s = createGame(cfg);
     let guard = 0;
@@ -90,8 +102,8 @@ for (let i = 0; i < GAMES; i++) {
       if (i % 3 === 0 && s.actions > 0 && s.actions % 97 === 0 && !s.__admin?.[s.actions]) {
         (s.__admin ||= {})[s.actions] = 1;
         const alive = s.players.filter(p => !p.retired);
-        const target = alive[(s.actions / 97) % alive.length | 0];
-        const act = alive.length > 2 && (s.actions / 97) % 2 < 1 ? { type: 'retirePlayer', pid: target.id } : { type: 'setController', pid: target.id, kind: target.kind === 'bot' ? 'human' : 'bot' };
+        const target = alive[(s.actions / 97) % alive.length | 0]!;
+        const act: Action = alive.length > 2 && (s.actions / 97) % 2 < 1 ? { type: 'retirePlayer', pid: target.id } : { type: 'setController', pid: target.id, kind: target.kind === 'bot' ? 'human' : 'bot' };
         if (act.type === 'setController' && act.kind === 'human') act.kind = 'bot';
         const r = applyAction(s, act);
         if (!r.ok) throw new Error(`admin ${JSON.stringify(act)}: ${r.error}`);
@@ -109,7 +121,7 @@ for (let i = 0; i < GAMES; i++) {
         // a new road must connect at an end that isn't a rival's building (checked when it's built:
         // a rival may legally cut it later by settling in between)
         if (!setupBefore)
-          for (const k in s.roads) if (roadsBefore[k] === undefined && !canBuildRoad({ ...s, roads: roadsBefore }, s.roads[k], +k))
+          for (const k in s.roads) if (roadsBefore[k] === undefined && !canBuildRoad({ ...s, roads: roadsBefore }, s.roads[k]!, +k))
             throw new Error(`[${a.type}] camino ${k} no conecta (o pasa por un edificio rival)`);
         acted = true;
         break;
@@ -124,28 +136,28 @@ for (let i = 0; i < GAMES; i++) {
     if (s.phase === 'gameOver') {
       summary.finished++;
       sh.done++;
-      summary.winnerVP.push(victoryPoints(s, s.winner));
+      summary.winnerVP.push(victoryPoints(s, s.winner!));
     } else {
       console.log(`⚠️  partida ${i} (${cfg.map.shape}, ${cfg.players.length}p) no terminó en 1500 turnos. VP: ${s.players.map(p => victoryPoints(s, p.id)).join(',')}`);
     }
   } catch (e) {
     summary.errors++;
     console.log(`❌ partida ${i} seed=${cfg.seed} shape=${cfg.map.shape} players=${cfg.players.length} modes=${JSON.stringify(cfg.modes)} rules=${JSON.stringify(cfg.rules)}`);
-    console.log('   ', e.stack.split('\n').slice(0, 4).join('\n    '));
+    console.log('   ', (e as Error).stack!.split('\n').slice(0, 4).join('\n    '));
     if (summary.errors > 5) break;
   }
 }
 return summary;
 }
 
-export function printSummary(summary) {
+export function printSummary(summary: Summary) {
 console.log(`\nPartidas: ${summary.games}, terminadas: ${summary.finished}, errores: ${summary.errors}, turnos medios: ${(summary.turns / Math.max(1, summary.games)).toFixed(1)}`);
 for (const [k, v] of Object.entries(summary.byShape)) console.log(`  ${k.padEnd(9)} ${v.done}/${v.n} terminadas, ${(v.turns / v.n).toFixed(0)} turnos`);
 }
 
 import { fileURLToPath } from 'node:url';
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
-  const summary = runSim(+process.argv[2] || 200);
+  const summary = runSim(+(process.argv[2] ?? 0) || 200);
   printSummary(summary);
   process.exit(summary.errors ? 1 : 0);
 }

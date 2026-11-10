@@ -1,7 +1,7 @@
 // Application controller: owns the current game state, routes actions (locally,
 // or through the online host), drives bots and persists the game.
-import { createGame, applyAction, pendingActors } from './engine/game.js';
-import { botAct } from './engine/bot.js';
+import { createGame, applyAction, pendingActors } from '@engine/game';
+import { botAct } from '@engine/bot';
 import { toast, storage } from './ui/dom.js';
 import { sfx } from './ui/sfx.js';
 

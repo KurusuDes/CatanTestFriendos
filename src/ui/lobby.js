@@ -1,11 +1,11 @@
 import { App } from '../app.js';
 import { h, s as S, clear, storage, toast } from './dom.js';
 import { BoardView } from './boardView.js';
-import { defaultConfig, MODES, PRESETS, PLAYER_COLORS, BOT_NAMES } from '../engine/config.js';
-import { SHAPES, generateBoard } from '../engine/board.js';
-import { DEV_DECKS, TILE_INFO } from '../engine/constants.js';
-import { createGame } from '../engine/game.js';
-import { newSeed } from '../engine/rng.js';
+import { defaultConfig, MODES, PRESETS, PLAYER_COLORS, BOT_NAMES } from '@engine/config';
+import { SHAPES, generateBoard } from '@engine/board';
+import { DEV_DECKS, TILE_INFO } from '@engine/constants';
+import { createGame } from '@engine/game';
+import { newSeed } from '@engine/rng';
 import { openFlagEditor, flagImg, patternFlag, validFlag, myKingdom, saveMyKingdom } from './flag.js';
 import { pixelize } from './pixel.js';
 

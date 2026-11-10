@@ -1,9 +1,9 @@
 import { App } from '../app.js';
 import { h, clear, rich, toast, sync } from './dom.js';
 import { BoardView } from './boardView.js';
-import { RES, TILE_INFO, COSTS, DEV_INFO, EVENTS } from '../engine/constants.js';
-import * as G from '../engine/game.js';
-import { hint } from '../engine/bot.js';
+import { RES, TILE_INFO, COSTS, DEV_INFO, EVENTS } from '@engine/constants';
+import * as G from '@engine/game';
+import { hint } from '@engine/bot';
 import { play } from './sfx.js';
 import { showHelp } from './help.js';
 import { flagImg } from './flag.js';

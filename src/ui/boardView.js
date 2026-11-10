@@ -1,6 +1,6 @@
 // SVG board renderer with pan & zoom. Pure view: it receives the state plus a
 // "view" object describing what the local viewer may see and click.
-import { TILE_INFO, probLook } from '../engine/constants.js';
+import { TILE_INFO, probLook } from '@engine/constants';
 import { s as S, clear } from './dom.js';
 
 const U = 100; // svg units per hex radius

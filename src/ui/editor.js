@@ -1,7 +1,7 @@
 import { App } from '../app.js';
 import { h, s as S, clear, storage, toast } from './dom.js';
-import { TILE_INFO } from '../engine/constants.js';
-import { hexagon, hexCenter, hk, SHAPES } from '../engine/board.js';
+import { TILE_INFO } from '@engine/constants';
+import { hexagon, hexCenter, hk, SHAPES } from '@engine/board';
 import { MAPS_KEY } from './lobby.js';
 
 const U = 100;

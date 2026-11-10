@@ -1,37 +1,42 @@
 // Pure rules engine. The whole game is one JSON-serializable state object that is
 // mutated only through applyAction(). No DOM access here: it runs in Node for tests.
-import { RES, COSTS, DEV_DECKS, EVENTS, TILE_INFO, DEV_INFO } from './constants.js';
-import { rand, randInt, shuffle, pick } from './rng.js';
-import { generateBoard } from './board.js';
+import { RES, COSTS, DEV_DECKS, EVENTS, TILE_INFO, DEV_INFO, isRes, resEntries } from './constants';
+import { randInt, shuffle, pick } from './rng';
+import { generateBoard } from './board';
+import type {
+  Action, ActionOf, ActionType, ApplyResult, BlindPlacement, Config, DevType, Discovered, GameEvent, GameState,
+  GameView, Hand, Res, Rng, SetupEntry, Vision,
+} from './types';
 
-export const zeroRes = () => ({ wood: 0, brick: 0, sheep: 0, wheat: 0, ore: 0 });
-export const handSize = h => RES.reduce((a, r) => a + (h[r] || 0), 0);
-export const canAfford = (h, cost) => Object.entries(cost).every(([r, n]) => (h[r] || 0) >= n);
-const resName = r => `:${r}:`;
+export const zeroRes = (): Hand => ({ wood: 0, brick: 0, sheep: 0, wheat: 0, ore: 0 });
+export const handSize = (h: Partial<Hand>): number => RES.reduce((a, r) => a + (h[r] || 0), 0);
+export const canAfford = (h: Partial<Hand>, cost: Partial<Hand>): boolean => resEntries(cost).every(([r, n]) => (h[r] || 0) >= n);
+const resName = (r: Res) => `:${r}:`;
 
 // messages (history and errors) are plain strings; "@3" stands for player 3 and the UI shows
 // their name in their color
 class GameError extends Error {
-  constructor(m) {
+  m: string;
+  constructor(m: string) {
     super(m);
     this.m = m;
   }
 }
 class Blocked extends Error {}
-const fail = m => {
+function fail(m: string): never {
   throw new GameError(m);
-};
+}
 
-function log(s, msg, pid = -1) {
+function log(s: GameState, msg: string, pid = -1) {
   s.log.push({ turn: s.turn, pid, msg });
   if (s.log.length > 400) s.log.splice(0, s.log.length - 400);
 }
 
-function buildDevDeck(config, n, rng) {
+function buildDevDeck(config: Config, n: number, rng: Rng): DevType[] {
   const d = DEV_DECKS[config.rules.devDeck] || DEV_DECKS.normal;
   const extra = n > 6 ? 2 : n > 4 ? 1 : 0; // 5-6 and 7-8 player expansions
-  const deck = [];
-  const add = (type, k) => { for (let i = 0; i < k; i++) deck.push(type); };
+  const deck: DevType[] = [];
+  const add = (type: DevType, k: number) => { for (let i = 0; i < k; i++) deck.push(type); };
   add('knight', d.knight + (d.knight ? 6 * extra : 0));
   add('vp', d.vp + (d.vp && extra > 1 ? 1 : 0));
   add('roadBuilding', d.roadBuilding + (d.roadBuilding ? extra : 0));
@@ -40,14 +45,14 @@ function buildDevDeck(config, n, rng) {
   return shuffle(rng, deck);
 }
 
-export function createGame(configIn) {
-  const config = JSON.parse(JSON.stringify(configIn));
+export function createGame(configIn: Config): GameState {
+  const config = structuredClone(configIn); // config is plain JSON
   const R = config.rules, M = config.modes;
   const rng = { s: (config.seed >>> 0) || 12345 };
   const n = config.players.length;
   const board = generateBoard(config, rng);
   const bankEach = n > 6 ? 30 : n > 4 ? 24 : 19;
-  const s = {
+  const s: GameState = {
     v: 1,
     config,
     rng,
@@ -62,7 +67,7 @@ export function createGame(configIn) {
     buildings: {},
     roads: {},
     blind: [],
-    bank: Object.fromEntries(RES.map(r => [r, bankEach])),
+    bank: Object.fromEntries(RES.map(r => [r, bankEach])) as Hand,
     bankTotal: bankEach,
     devDeck: [],
     devTotal: 0,
@@ -71,7 +76,7 @@ export function createGame(configIn) {
     first: 0,
     turn: 0,
     round: 0,
-    setup: null,
+    setup: { queue: [], idx: 0, step: 'settlement', lastVid: null, blindActive: false, lastRound: 0, fixing: false }, // filled in below
     dice: null,
     diceDeck: [],
     pendingDiscards: {},
@@ -110,13 +115,13 @@ export function createGame(configIn) {
 
   s.first = R.randomStart ? randInt(rng, n) : 0;
   const order = [...Array(n).keys()].map(i => (i + s.first) % n);
-  const queue = [];
+  const queue: SetupEntry[] = [];
   for (let round = 0; round < R.setupRounds; round++) {
     const o = round % 2 === 0 ? order : [...order].reverse();
     for (const pid of o) queue.push({ pid, round });
   }
   s.setup = { queue, idx: 0, step: 'settlement', lastVid: null, blindActive: !!M.blindfold, lastRound: R.setupRounds - 1, fixing: false };
-  s.current = queue[0].pid;
+  s.current = queue[0]!.pid;
   log(s, `Ván đấu bắt đầu! Bản đồ: ${board.tiles.length} ô.`);
   if (M.flipped) log(s, '🔄 Bàn cờ bị úp: đặt nhà mà không biết bên dưới là gì.');
   if (M.blindfold) log(s, '🤫 Nhà bí mật: không ai thấy bạn đặt ở đâu cho tới lúc lật mở.');
@@ -125,22 +130,22 @@ export function createGame(configIn) {
 }
 
 // ---------------- queries ----------------
-export const B = s => s.board;
+export const B = (s: GameState) => s.board;
 
 // ---- Fog of war: per-player vision ----
 // Houses light a circle that covers the three surrounding tiles; roads light a
 // half-tile band on each side (you see the terrain but not the number token).
 export const VISION = { house: 1.25, road: 0.55 };
 
-export function visionOf(s, pid) {
+export function visionOf(s: GameState, pid: number): Vision {
   const bd = s.board;
-  const circles = [], caps = [];
-  const house = v => circles.push([bd.vertices[v].x, bd.vertices[v].y, VISION.house]);
-  const road = e => {
-    const E = bd.edges[e], a = bd.vertices[E.a], b = bd.vertices[E.b];
+  const circles: Vision['circles'] = [], caps: Vision['caps'] = [];
+  const house = (v: number) => circles.push([bd.vertices[v]!.x, bd.vertices[v]!.y, VISION.house]);
+  const road = (e: number) => {
+    const E = bd.edges[e]!, a = bd.vertices[E.a]!, b = bd.vertices[E.b]!;
     caps.push([a.x, a.y, b.x, b.y, VISION.road]);
   };
-  for (const k in s.buildings) if (s.buildings[k].owner === pid) house(+k);
+  for (const k in s.buildings) if (s.buildings[k]!.owner === pid) house(+k);
   for (const k in s.roads) if (s.roads[k] === pid) road(+k);
   for (const b of s.blind || []) if (b.pid === pid) {
     house(b.vid);
@@ -149,14 +154,14 @@ export function visionOf(s, pid) {
   return { circles, caps };
 }
 
-function segDist(px, py, x1, y1, x2, y2) {
+function segDist(px: number, py: number, x1: number, y1: number, x2: number, y2: number) {
   const dx = x2 - x1, dy = y2 - y1;
   const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy || 1)));
   return Math.hypot(px - x1 - t * dx, py - y1 - t * dy);
 }
 
 // how deep (x,y) lies inside the lit area (> 0 means visible)
-export function visibility(vis, x, y) {
+export function visibility(vis: Vision, x: number, y: number): number {
   let best = -Infinity;
   for (const [cx, cy, r] of vis.circles) best = Math.max(best, r - Math.hypot(x - cx, y - cy));
   for (const [x1, y1, x2, y2, r] of vis.caps) best = Math.max(best, r - segDist(x, y, x1, y1, x2, y2));
@@ -165,143 +170,143 @@ export function visibility(vis, x, y) {
 
 // What `pid` knows: other players' pieces outside their vision are removed and
 // unseen tiles are marked hidden. Used by the UI and by bots (so they don't cheat).
-export function viewFor(s, pid) {
+export function viewFor(s: GameState, pid: number | null | undefined): GameView {
   if (!s.config.modes.fog || pid == null || pid < 0 || s.phase === 'gameOver') return s;
   const vis = visionOf(s, pid);
   const bd = s.board;
-  const buildings = {}, roads = {};
-  const disc = (s.discovered && s.discovered[pid]) || { v: [], e: [] };
+  const buildings: GameState['buildings'] = {}, roads: GameState['roads'] = {};
+  const disc: Discovered = (s.discovered && s.discovered[pid]) || { v: [], e: [] };
   for (const k in s.buildings) {
-    const b = s.buildings[k], V = bd.vertices[k];
+    const b = s.buildings[k]!, V = bd.vertices[+k]!;
     if (b.owner === pid || visibility(vis, V.x, V.y) > 0 || disc.v.includes(+k)) buildings[k] = b;
   }
   for (const k in s.roads) {
-    const E = bd.edges[k], a = bd.vertices[E.a], c = bd.vertices[E.b];
-    if (s.roads[k] === pid || visibility(vis, (a.x + c.x) / 2, (a.y + c.y) / 2) > 0 || disc.e.includes(+k)) roads[k] = s.roads[k];
+    const E = bd.edges[+k]!, a = bd.vertices[E.a]!, c = bd.vertices[E.b]!;
+    if (s.roads[k] === pid || visibility(vis, (a.x + c.x) / 2, (a.y + c.y) / 2) > 0 || disc.e.includes(+k)) roads[k] = s.roads[k]!;
   }
   const tiles = bd.tiles.map(t => {
     const lit = visibility(vis, t.x, t.y);
     return { ...t, revealed: t.revealed && lit > -0.86, numRevealed: t.numRevealed && lit > 0 };
   });
-  const robberSeen = bd.robber >= 0 && tiles[bd.robber].numRevealed;
+  const robberSeen = bd.robber >= 0 && tiles[bd.robber]!.numRevealed;
   return { ...s, buildings, roads, board: { ...bd, tiles, robberHidden: !robberSeen }, vision: vis };
 }
 
-export function victoryPoints(s, pid, hidden = true) {
+export function victoryPoints(s: GameState, pid: number, hidden = true): number {
   let vp = 0;
   for (const k in s.buildings) {
-    const b = s.buildings[k];
+    const b = s.buildings[k]!;
     if (b.owner === pid) vp += b.type === 'city' ? 2 : 1;
   }
   if (s.longestRoad.owner === pid) vp += 2;
   if (s.largestArmy.owner === pid) vp += 2;
-  if (hidden) vp += s.players[pid].dev.filter(c => c.type === 'vp').length;
+  if (hidden) vp += s.players[pid]!.dev.filter(c => c.type === 'vp').length;
   return vp;
 }
 
-export function tradeRatio(s, pid, res) {
+export function tradeRatio(s: GameState, pid: number, res: Res): number {
   let best = 4;
   if (s.event && s.event.id === 'fairTrade') best = 3;
   if (s.event && s.event.id === 'blackMarket' && s.event.res === res) best = 2;
   for (const k in s.buildings) {
-    if (s.buildings[k].owner !== pid) continue;
-    const port = s.board.vertices[k].port;
+    if (s.buildings[k]!.owner !== pid) continue;
+    const port = s.board.vertices[+k]!.port;
     if (port === null || port === undefined) continue;
-    const p = s.board.ports[port];
+    const p = s.board.ports[port]!;
     if (p.type === 'any') best = Math.min(best, 3);
     else if (p.type === res) best = Math.min(best, 2);
   }
   return best;
 }
 
-function ownBlind(s, pid) {
+function ownBlind(s: GameState, pid: number) {
   const own = s.blind.filter(b => b.pid === pid);
   return { verts: new Set(own.map(b => b.vid)), edges: new Set(own.filter(b => b.eid != null).map(b => b.eid)) };
 }
 
-function vertexOpen(s, v) {
+function vertexOpen(s: GameState, v: number): boolean {
   if (s.buildings[v]) return false;
-  return !s.board.vertices[v].adj.some(u => s.buildings[u]);
+  return !s.board.vertices[v]!.adj.some(u => s.buildings[u]);
 }
 
-export function canSetupSettlement(s, pid, v) {
+export function canSetupSettlement(s: GameState, pid: number, v: number): boolean {
   if (!s.board.vertices[v]) return false;
   if (s.setup.blindActive) {
     const { verts } = ownBlind(s, pid);
     if (verts.has(v)) return false;
-    return !s.board.vertices[v].adj.some(u => verts.has(u));
+    return !s.board.vertices[v]!.adj.some(u => verts.has(u));
   }
-  return vertexOpen(s, v) && s.board.vertices[v].edges.some(e => s.roads[e] === undefined);
+  return vertexOpen(s, v) && s.board.vertices[v]!.edges.some(e => s.roads[e] === undefined);
 }
 
-export function canSetupRoad(s, pid, e) {
+export function canSetupRoad(s: GameState, pid: number, e: number): boolean {
   const E = s.board.edges[e];
   if (!E || (E.a !== s.setup.lastVid && E.b !== s.setup.lastVid)) return false;
   if (s.setup.blindActive) return !ownBlind(s, pid).edges.has(e);
   return s.roads[e] === undefined;
 }
 
-export function canBuildRoad(s, pid, e) {
+export function canBuildRoad(s: GameState, pid: number, e: number): boolean {
   const E = s.board.edges[e];
   if (!E || s.roads[e] !== undefined) return false;
   for (const v of [E.a, E.b]) {
     const b = s.buildings[v];
     if (b && b.owner === pid) return true;
     if (b) continue; // opponent building blocks continuing through this vertex
-    if (s.board.vertices[v].edges.some(x => x !== e && s.roads[x] === pid)) return true;
+    if (s.board.vertices[v]!.edges.some(x => x !== e && s.roads[x] === pid)) return true;
   }
   return false;
 }
 
-export function canBuildSettlement(s, pid, v) {
+export function canBuildSettlement(s: GameState, pid: number, v: number): boolean {
   if (!s.board.vertices[v] || !vertexOpen(s, v)) return false;
-  return s.board.vertices[v].edges.some(e => s.roads[e] === pid);
+  return s.board.vertices[v]!.edges.some(e => s.roads[e] === pid);
 }
 
-export const canBuildCity = (s, pid, v) => {
+export const canBuildCity = (s: GameState, pid: number, v: number): boolean => {
   const b = s.buildings[v];
   return !!b && b.owner === pid && b.type === 'settlement';
 };
 
-export function legalSetupSettlements(s, pid) {
+export function legalSetupSettlements(s: GameState, pid: number): number[] {
   return s.board.vertices.filter(v => canSetupSettlement(s, pid, v.id)).map(v => v.id);
 }
-export function legalSetupRoads(s, pid) {
-  const v = s.board.vertices[s.setup.lastVid];
-  return v ? v.edges.filter(e => canSetupRoad(s, pid, e)) : [];
+export function legalSetupRoads(s: GameState, pid: number): number[] {
+  const v = s.setup.lastVid === null ? undefined : s.board.vertices[s.setup.lastVid];
+  return v ? v.edges.filter((e: number) => canSetupRoad(s, pid, e)) : [];
 }
-export function legalRoads(s, pid) {
+export function legalRoads(s: GameState, pid: number): number[] {
   return s.board.edges.filter(e => canBuildRoad(s, pid, e.id)).map(e => e.id);
 }
-export function legalSettlements(s, pid) {
+export function legalSettlements(s: GameState, pid: number): number[] {
   return s.board.vertices.filter(v => canBuildSettlement(s, pid, v.id)).map(v => v.id);
 }
-export function legalCities(s, pid) {
+export function legalCities(s: GameState, pid: number): number[] {
   return Object.keys(s.buildings).map(Number).filter(v => canBuildCity(s, pid, v));
 }
 
-function friendlyProtected(s, pid) {
+function friendlyProtected(s: GameState, pid: number): boolean {
   return s.config.rules.friendlyRobber && victoryPoints(s, pid, false) <= 2;
 }
 
-export function robberVictims(s, pid, tile) {
+export function robberVictims(s: GameState, pid: number, tile: number): number[] {
   const t = s.board.tiles[tile];
   if (!t) return [];
-  const out = new Set();
+  const out = new Set<number>();
   for (const v of t.verts) {
     const b = s.buildings[v];
-    if (b && b.owner !== pid && handSize(s.players[b.owner].res) > 0) out.add(b.owner);
+    if (b && b.owner !== pid && handSize(s.players[b.owner]!.res) > 0) out.add(b.owner);
   }
   return [...out];
 }
 
-export const stealTargets = (s, pid, tile) => robberVictims(s, pid, tile).filter(v => !friendlyProtected(s, v));
+export const stealTargets = (s: GameState, pid: number, tile: number): number[] => robberVictims(s, pid, tile).filter(v => !friendlyProtected(s, v));
 
-export function legalRobberTiles(s, pid) {
+export function legalRobberTiles(s: GameState, pid: number): number[] {
   const all = s.board.tiles.filter(t => t.id !== s.board.robber).map(t => t.id);
   if (!s.config.rules.friendlyRobber) return all;
   const ok = all.filter(id =>
-    !s.board.tiles[id].verts.some(v => {
+    !s.board.tiles[id]!.verts.some(v => {
       const b = s.buildings[v];
       return b && b.owner !== pid && friendlyProtected(s, b.owner);
     })
@@ -309,10 +314,10 @@ export function legalRobberTiles(s, pid) {
   return ok.length ? ok : all;
 }
 
-export function playableDev(s, pid) {
+export function playableDev(s: GameState, pid: number): DevType[] {
   if (s.devPlayed) return [];
-  const p = s.players[pid];
-  const types = new Set();
+  const p = s.players[pid]!;
+  const types = new Set<DevType>();
   for (const c of p.dev) {
     if (c.type === 'vp' || c.turn >= s.turn) continue;
     if (s.phase === 'main' || (s.phase === 'roll' && c.type === 'knight')) types.add(c.type);
@@ -321,36 +326,36 @@ export function playableDev(s, pid) {
 }
 
 // Which players must act right now.
-export function pendingActors(s) {
+export function pendingActors(s: GameState): number[] {
   if (s.phase === 'gameOver') return [];
-  if (s.phase === 'setup') return [s.setup.queue[s.setup.idx].pid];
-  if (s.phase === 'discard') return Object.keys(s.pendingDiscards).map(Number).filter(pid => !s.players[pid].retired);
+  if (s.phase === 'setup') return [s.setup.queue[s.setup.idx]!.pid];
+  if (s.phase === 'discard') return Object.keys(s.pendingDiscards).map(Number).filter(pid => !s.players[pid]!.retired);
   const out = [s.current];
-  if (s.trade) for (const pid of s.trade.to) if (s.trade.responses[pid] == null && !s.players[pid].retired) out.push(pid);
+  if (s.trade) for (const pid of s.trade.to) if (s.trade.responses[pid] == null && !s.players[pid]!.retired) out.push(pid);
   return out;
 }
 
 // ---------------- internal helpers ----------------
-function pay(s, pid, cost) {
-  const p = s.players[pid];
-  for (const [r, k] of Object.entries(cost)) {
+function pay(s: GameState, pid: number, cost: Partial<Hand>) {
+  const p = s.players[pid]!;
+  for (const [r, k] of resEntries(cost)) {
     p.res[r] -= k;
     s.bank[r] += k;
   }
 }
 
-function giveFromBank(s, pid, r, k) {
+function giveFromBank(s: GameState, pid: number, r: Res, k: number): number {
   const g = Math.min(k, s.bank[r]);
   s.bank[r] -= g;
-  s.players[pid].res[r] += g;
-  s.players[pid].stats.gained += g;
+  s.players[pid]!.res[r] += g;
+  s.players[pid]!.stats.gained += g;
   return g;
 }
 
-function revealAround(s, v) {
+function revealAround(s: GameState, v: number) {
   if (s.config.modes.flipped && s.phase === 'setup') return;
-  for (const h of s.board.vertices[v].hexes) {
-    const t = s.board.tiles[h];
+  for (const h of s.board.vertices[v]!.hexes) {
+    const t = s.board.tiles[h]!;
     if (!t.revealed || !t.numRevealed) {
       t.revealed = t.numRevealed = true;
       s.fx.push({ kind: 'revealTile', tile: h });
@@ -358,27 +363,27 @@ function revealAround(s, v) {
   }
 }
 
-function roadLength(s, pid) {
+function roadLength(s: GameState, pid: number): number {
   const bd = s.board;
-  const starts = new Set();
+  const starts = new Set<number>();
   for (const k in s.roads) if (s.roads[k] === pid) {
-    starts.add(bd.edges[k].a);
-    starts.add(bd.edges[k].b);
+    starts.add(bd.edges[+k]!.a);
+    starts.add(bd.edges[+k]!.b);
   }
   if (!starts.size) return 0;
   let best = 0;
-  const used = new Set();
-  const blocked = v => {
+  const used = new Set<number>();
+  const blocked = (v: number) => {
     const b = s.buildings[v];
-    return b && b.owner !== pid;
+    return !!b && b.owner !== pid;
   };
-  const dfs = (v, len) => {
+  const dfs = (v: number, len: number): void => {
     if (len > best) best = len;
     if (len > 0 && blocked(v)) return;
-    for (const e of bd.vertices[v].edges) {
+    for (const e of bd.vertices[v]!.edges) {
       if (s.roads[e] !== pid || used.has(e)) continue;
       used.add(e);
-      const E = bd.edges[e];
+      const E = bd.edges[e]!;
       dfs(E.a === v ? E.b : E.a, len + 1);
       used.delete(e);
     }
@@ -387,15 +392,15 @@ function roadLength(s, pid) {
   return best;
 }
 
-function updateLongestRoad(s) {
+function updateLongestRoad(s: GameState) {
   const lens = s.players.map(p => (p.roadLen = p.retired ? 0 : roadLength(s, p.id)));
   const cur = s.longestRoad.owner;
   const max = Math.max(...lens);
-  let owner;
-  if (cur >= 0 && lens[cur] >= 5 && lens[cur] === max) owner = cur;
+  let owner: number;
+  if (cur >= 0 && lens[cur]! >= 5 && lens[cur] === max) owner = cur;
   else {
     const top = lens.map((l, i) => i).filter(i => lens[i] === max);
-    owner = max >= 5 && top.length === 1 ? top[0] : -1;
+    owner = max >= 5 && top.length === 1 ? top[0]! : -1;
   }
   if (owner !== cur) {
     if (owner >= 0) {
@@ -403,11 +408,11 @@ function updateLongestRoad(s) {
       s.fx.push({ kind: 'award', what: 'road', pid: owner });
     } else log(s, '🛣️ Giờ không ai giữ Con đường dài nhất.');
   }
-  s.longestRoad = { owner, len: owner >= 0 ? lens[owner] : 0 };
+  s.longestRoad = { owner, len: owner >= 0 ? lens[owner]! : 0 };
 }
 
-function updateLargestArmy(s, pid) {
-  const p = s.players[pid];
+function updateLargestArmy(s: GameState, pid: number) {
+  const p = s.players[pid]!;
   const la = s.largestArmy;
   if (p.knights >= 3 && la.owner !== pid && p.knights > la.count) {
     s.largestArmy = { owner: pid, count: p.knights };
@@ -416,7 +421,7 @@ function updateLargestArmy(s, pid) {
   } else if (la.owner === pid) la.count = p.knights;
 }
 
-function checkWin(s) {
+function checkWin(s: GameState) {
   if (s.phase === 'setup' || s.phase === 'gameOver') return;
   const vp = victoryPoints(s, s.current);
   if (vp >= s.config.rules.vpTarget) {
@@ -428,24 +433,24 @@ function checkWin(s) {
   }
 }
 
-function stealRandom(s, from, to) {
-  const p = s.players[from];
-  const bag = [];
+function stealRandom(s: GameState, from: number, to: number): Res | null {
+  const p = s.players[from]!;
+  const bag: Res[] = [];
   for (const r of RES) for (let i = 0; i < p.res[r]; i++) bag.push(r);
   if (!bag.length) return null;
   const r = pick(s.rng, bag);
   p.res[r]--;
-  s.players[to].res[r]++;
-  s.players[to].stats.stolen++;
+  s.players[to]!.res[r]++;
+  s.players[to]!.stats.stolen++;
   p.stats.lost++;
   return r;
 }
 
-function produce(s, sum) {
+function produce(s: GameState, sum: number) {
   const bd = s.board;
   const mult = (s.config.rules.productionMult || 1) * (s.event && s.event.id === 'bonanza' ? 2 : 1);
   const gains = s.players.map(() => zeroRes());
-  const from = s.players.map(() => ({})); // tiles each gain came from (the UI flies the cards from there)
+  const from = s.players.map((): Partial<Record<Res, number[]>> => ({})); // tiles each gain came from (the UI flies the cards from there)
   for (const t of bd.tiles) {
     if (t.num !== sum || t.id === bd.robber) continue;
     if (s.event && s.event.id === 'drought' && s.event.res === t.res) continue;
@@ -453,16 +458,16 @@ function produce(s, sum) {
     let produced = false;
     for (const v of t.verts) {
       const b = s.buildings[v];
-      if (!b || s.players[b.owner].retired) continue;
+      if (!b || s.players[b.owner]!.retired) continue;
       const amt = (b.type === 'city' ? 2 : 1) * mult;
       let r = t.res;
       if (r === 'gold') {
         // gold gives the resource the player has least of (hand + pending gains)
-        const p = s.players[b.owner];
-        r = RES.reduce((best, x) => (p.res[x] + gains[b.owner][x] < p.res[best] + gains[b.owner][best] ? x : best), RES[0]);
+        const p = s.players[b.owner]!;
+        r = RES.reduce((best, x) => (p.res[x] + gains[b.owner]![x] < p.res[best] + gains[b.owner]![best] ? x : best), RES[0]!);
       }
-      gains[b.owner][r] += amt;
-      (from[b.owner][r] ||= []).push(t.id);
+      gains[b.owner]![r] += amt;
+      (from[b.owner]![r] ||= []).push(t.id);
       produced = true;
     }
     if (produced && t.revealed && !t.numRevealed) {
@@ -471,16 +476,16 @@ function produce(s, sum) {
     }
   }
   for (const r of RES) {
-    const receivers = gains.map((g, i) => i).filter(i => gains[i][r] > 0);
-    const total = receivers.reduce((a, i) => a + gains[i][r], 0);
+    const receivers = gains.map((g, i) => i).filter(i => gains[i]![r] > 0);
+    const total = receivers.reduce((a, i) => a + gains[i]![r], 0);
     if (!total) continue;
     if (total > s.bank[r] && receivers.length > 1) {
       log(s, `🏦 Ngân hàng không đủ ${resName(r)}: không ai được nhận.`);
       continue;
     }
     for (const i of receivers) {
-      const g = giveFromBank(s, i, r, gains[i][r]);
-      if (g) s.fx.push({ kind: 'gain', pid: i, res: r, n: g, tiles: from[i][r] });
+      const g = giveFromBank(s, i, r, gains[i]![r]);
+      if (g) s.fx.push({ kind: 'gain', pid: i, res: r, n: g, tiles: from[i]![r] });
     }
   }
   const summary = gains
@@ -492,46 +497,45 @@ function produce(s, sum) {
   if (summary.length) log(s, '📦 ' + summary.join(' · ')); // only icons and numbers: nothing to translate
 }
 
-function rollDice(s) {
+function rollDice(s: GameState): [number, number] {
   if (s.config.rules.diceMode === 'balanced') {
     if (s.diceDeck.length < 6) {
       s.diceDeck = [];
       for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) s.diceDeck.push([a, b]);
       shuffle(s.rng, s.diceDeck);
     }
-    return s.diceDeck.pop();
+    return s.diceDeck.pop()!;
   }
   return [1 + randInt(s.rng, 6), 1 + randInt(s.rng, 6)];
 }
 
-function randomLandTile(s, exclude) {
+function randomLandTile(s: GameState, exclude: number): number {
   const ids = s.board.tiles.map(t => t.id).filter(id => id !== exclude);
   return pick(s.rng, ids);
 }
 
-function startRound(s) {
+function startRound(s: GameState) {
   const M = s.config.modes;
   // Tierra viva: reshuffle numbers/resources every N rounds
   if (M.chaosEvery > 0 && s.round > 1 && (s.round - 1) % M.chaosEvery === 0) {
     const tiles = s.board.tiles.filter(t => t.res !== 'desert');
     if (M.chaosWhat !== 'resources') {
       const nums = shuffle(s.rng, tiles.map(t => t.num));
-      tiles.forEach((t, i) => (t.num = nums[i]));
+      tiles.forEach((t, i) => (t.num = nums[i] ?? null));
     }
     if (M.chaosWhat !== 'numbers') {
       const res = shuffle(s.rng, tiles.map(t => t.res));
-      tiles.forEach((t, i) => (t.res = res[i]));
+      tiles.forEach((t, i) => (t.res = res[i]!));
     }
     log(s, '🌀 Đất chuyển mình! Bản đồ vừa bị xáo trộn.');
     s.fx.push({ kind: 'chaos' });
   }
   if (!M.events) return;
-  const ev = { ...pick(s.rng, EVENTS) };
-  delete ev.desc;
-  s.event = { id: ev.id, name: ev.name, icon: ev.icon };
-  const E = s.event;
+  const ev = pick(s.rng, EVENTS);
+  const E: GameEvent = { id: ev.id, name: ev.name, icon: ev.icon };
+  s.event = E;
   const active = () => s.players.filter(p => !p.retired).map(p => p.id);
-  const leader = () => active().sort((a, b) => victoryPoints(s, b, false) - victoryPoints(s, a, false))[0];
+  const leader = () => active().sort((a, b) => victoryPoints(s, b, false) - victoryPoints(s, a, false))[0]!;
   switch (E.id) {
     case 'drought':
     case 'blackMarket':
@@ -564,7 +568,7 @@ function startRound(s) {
     case 'plague':
       for (const p of s.players) {
         if (handSize(p.res) < 6) continue;
-        const bag = RES.flatMap(r => Array(p.res[r]).fill(r));
+        const bag: Res[] = RES.flatMap(r => Array<Res>(p.res[r]).fill(r));
         const r = pick(s.rng, bag);
         p.res[r]--;
         s.bank[r]++;
@@ -572,8 +576,8 @@ function startRound(s) {
       break;
     case 'tax': {
       const l = leader();
-      const p = s.players[l];
-      const bag = RES.flatMap(r => Array(p.res[r]).fill(r));
+      const p = s.players[l]!;
+      const bag: Res[] = RES.flatMap(r => Array<Res>(p.res[r]).fill(r));
       if (bag.length) {
         const r = pick(s.rng, bag);
         p.res[r]--;
@@ -583,7 +587,7 @@ function startRound(s) {
       break;
     }
     case 'rebellion': {
-      const last = active().sort((a, b) => victoryPoints(s, a, false) - victoryPoints(s, b, false))[0];
+      const last = active().sort((a, b) => victoryPoints(s, a, false) - victoryPoints(s, b, false))[0]!;
       for (let i = 0; i < 2; i++) giveFromBank(s, last, pick(s.rng, RES), 1);
       E.pid = last;
       break;
@@ -594,21 +598,21 @@ function startRound(s) {
   s.fx.push({ kind: 'event', event: E });
 }
 
-function beginTurns(s) {
+function beginTurns(s: GameState) {
   if (s.config.modes.flipped) {
     const hideNums = s.config.modes.hiddenNumbers;
     for (const t of s.board.tiles) {
       t.revealed = true;
       t.numRevealed = !hideNums;
     }
-    if (hideNums) for (const k in s.buildings) for (const h of s.board.vertices[k].hexes) s.board.tiles[h].numRevealed = true;
+    if (hideNums) for (const k in s.buildings) for (const h of s.board.vertices[+k]!.hexes) s.board.tiles[h]!.numRevealed = true;
     for (const [pid, vid] of s.setup.pendingRes || []) setupResources(s, pid, vid);
     s.setup.pendingRes = [];
     s.fx.push({ kind: 'flipAll' });
     log(s, '🔄 Lật bàn cờ! Giờ ai cũng thấy bên dưới có gì.');
   }
   s.phase = 'roll';
-  s.current = s.players[s.first].retired ? nextActive(s, s.first).pid : s.first;
+  s.current = s.players[s.first]!.retired ? nextActive(s, s.first).pid : s.first;
   s.turn = 1;
   s.round = 1;
   s.setup.blindActive = false;
@@ -617,21 +621,21 @@ function beginTurns(s) {
   startRound(s);
 }
 
-function setupResources(s, pid, v) {
-  for (const h of s.board.vertices[v].hexes) {
-    const t = s.board.tiles[h];
-    if (RES.includes(t.res)) giveFromBank(s, pid, t.res, 1);
+function setupResources(s: GameState, pid: number, v: number) {
+  for (const h of s.board.vertices[v]!.hexes) {
+    const t = s.board.tiles[h]!;
+    if (isRes(t.res)) giveFromBank(s, pid, t.res, 1);
     else if (t.res === 'gold') giveFromBank(s, pid, pick(s.rng, RES), 1);
   }
 }
 
-function advanceSetup(s) {
+function advanceSetup(s: GameState) {
   const st = s.setup;
   st.idx++;
   st.step = 'settlement';
   st.lastVid = null;
   if (st.idx < st.queue.length) {
-    s.current = st.queue[st.idx].pid;
+    s.current = st.queue[st.idx]!.pid;
     return;
   }
   if (st.blindActive) {
@@ -642,14 +646,14 @@ function advanceSetup(s) {
 }
 
 // Reveal blindfold placements; conflicting ones must be placed again.
-function resolveBlind(s) {
+function resolveBlind(s: GameState) {
   const st = s.setup;
   st.blindActive = false;
-  const fix = [];
-  const accepted = [];
+  const fix: SetupEntry[] = [];
+  const accepted: BlindPlacement[] = [];
   for (const b of s.blind) {
     if (vertexOpen(s, b.vid)) {
-      const p = s.players[b.pid];
+      const p = s.players[b.pid]!;
       const isCity = b.type === 'city';
       s.buildings[b.vid] = { owner: b.pid, type: b.type };
       if (b.eid != null && s.roads[b.eid] === undefined) {
@@ -661,7 +665,7 @@ function resolveBlind(s) {
       accepted.push(b);
       void isCity;
     } else {
-      const p = s.players[b.pid];
+      const p = s.players[b.pid]!;
       if (b.type === 'city') p.citiesLeft++;
       else p.settlementsLeft++;
       if (b.eid != null) p.roadsLeft++;
@@ -683,23 +687,24 @@ function resolveBlind(s) {
     st.queue = fix;
     st.idx = 0;
     st.fixing = true;
-    st.step = fix[0].roadOnly ? 'road' : 'settlement';
-    st.lastVid = fix[0].roadOnly ? fix[0].vid : null;
-    s.current = fix[0].pid;
+    const first = fix[0]!;
+    st.step = first.roadOnly ? 'road' : 'settlement';
+    st.lastVid = first.roadOnly ? first.vid! : null;
+    s.current = first.pid;
     s.phase = 'setup';
   } else {
     s.phase = 'roll';
   }
 }
 
-function nextFixOrBegin(s) {
+function nextFixOrBegin(s: GameState) {
   const st = s.setup;
   st.idx++;
   if (st.idx < st.queue.length) {
-    const f = st.queue[st.idx];
+    const f = st.queue[st.idx]!;
     s.current = f.pid;
     st.step = f.roadOnly ? 'road' : 'settlement';
-    st.lastVid = f.roadOnly ? f.vid : null;
+    st.lastVid = f.roadOnly ? f.vid! : null;
     return;
   }
   beginTurns(s);
@@ -708,16 +713,16 @@ function nextFixOrBegin(s) {
 // ---- fog relocation ----
 // In fog mode a move that looks legal to the player (given what they can see) but
 // collides with an unseen piece is moved to a random nearest legal spot.
-function nearest(s, kind, from, ok) {
+function nearest(s: GameState, kind: 'vertex' | 'edge', from: number, ok: (x: number) => boolean): number | null {
   const bd = s.board;
   const seen = new Set([from]);
-  let level = [from];
+  let level: number[] = [from];
   while (level.length) {
     const hits = level.filter(x => x !== from && ok(x));
     if (hits.length) return pick(s.rng, hits);
-    const next = [];
+    const next: number[] = [];
     for (const x of level) {
-      const nbs = kind === 'vertex' ? bd.vertices[x].adj : [bd.edges[x].a, bd.edges[x].b].flatMap(v => bd.vertices[v].edges);
+      const nbs = kind === 'vertex' ? bd.vertices[x]!.adj : [bd.edges[x]!.a, bd.edges[x]!.b].flatMap(v => bd.vertices[v]!.edges);
       for (const y of nbs) if (!seen.has(y)) {
         seen.add(y);
         next.push(y);
@@ -729,24 +734,26 @@ function nearest(s, kind, from, ok) {
 }
 
 // remember the hidden pieces you bumped into
-function discover(s, pid, kind, id) {
+function discover(s: GameState, pid: number, kind: 'vertex' | 'edge', id: number) {
   const bd = s.board;
   s.discovered = s.discovered || {};
-  const d = (s.discovered[pid] = s.discovered[pid] || { v: [], e: [] });
-  const addV = v => { const b = s.buildings[v]; if (b && b.owner !== pid && !d.v.includes(v)) d.v.push(v); };
-  const addE = e => { if (s.roads[e] !== undefined && s.roads[e] !== pid && !d.e.includes(e)) d.e.push(e); };
+  const d: Discovered = (s.discovered[pid] = s.discovered[pid] || { v: [], e: [] });
+  const addV = (v: number) => { const b = s.buildings[v]; if (b && b.owner !== pid && !d.v.includes(v)) d.v.push(v); };
+  const addE = (e: number) => { if (s.roads[e] !== undefined && s.roads[e] !== pid && !d.e.includes(e)) d.e.push(e); };
   if (kind === 'vertex') {
     addV(id);
-    bd.vertices[id].adj.forEach(addV);
-    bd.vertices[id].edges.forEach(addE);
+    bd.vertices[id]!.adj.forEach(addV);
+    bd.vertices[id]!.edges.forEach(addE);
   } else {
     addE(id);
-    addV(bd.edges[id].a);
-    addV(bd.edges[id].b);
+    addV(bd.edges[id]!.a);
+    addV(bd.edges[id]!.b);
   }
 }
 
-function fogResolve(s, a, kind, okReal, okKnown, key) {
+function fogResolve<K extends 'vid' | 'eid' | 'at', A extends { pid: number } & Record<K, number>>(
+  s: GameState, a: A, kind: 'vertex' | 'edge', okReal: (x: number) => boolean, okKnown: (view: GameState) => boolean, key: K,
+): A {
   if (!s.config.modes.fog || (s.phase === 'setup' && s.setup.blindActive)) return a;
   if (okReal(a[key])) return a;
   if (!okKnown(viewFor(s, a.pid))) return a; // plainly illegal even with what you see: normal error
@@ -759,20 +766,22 @@ function fogResolve(s, a, kind, okReal, okKnown, key) {
   }
   s.fx.push({ kind: 'relocated', pid: a.pid, what: kind, from: a[key], to });
   log(s, `🌑 Có người trong sương mù! Công trình của @${a.pid} bị dời đi.`, a.pid);
-  return { ...a, [key]: to };
+  return { ...a, [key]: to } as A;
 }
 
 // ---------------- action handlers ----------------
-const H = {};
+type Handlers = { [K in ActionType]: (s: GameState, a: ActionOf<K>) => void };
+// every handler is assigned below (the table is complete once the module has loaded)
+const H = {} as Handlers;
 
 H.placeSettlement = (s, a) => {
   if (s.phase !== 'setup' || s.setup.step !== 'settlement') fail('Chưa phải lúc đặt nhà.');
   const st = s.setup;
-  const entry = st.queue[st.idx];
+  const entry = st.queue[st.idx]!;
   if (entry.pid !== a.pid) fail('Chưa tới lượt bạn.');
   a = fogResolve(s, a, 'vertex', v => canSetupSettlement(s, a.pid, v), kv => canSetupSettlement(kv, a.pid, a.vid), 'vid');
   if (!canSetupSettlement(s, a.pid, a.vid)) fail('Không đặt ở đó được (luật khoảng cách).');
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   const isCity = s.config.rules.setupCity && entry.round === st.lastRound && p.citiesLeft > 0;
   const type = isCity ? 'city' : 'settlement';
   if (isCity) p.citiesLeft--;
@@ -801,18 +810,18 @@ H.placeSettlement = (s, a) => {
 H.placeRoad = (s, a) => {
   if (s.phase !== 'setup' || s.setup.step !== 'road') fail('Chưa phải lúc đặt đường.');
   const st = s.setup;
-  if (st.queue[st.idx].pid !== a.pid) fail('Chưa tới lượt bạn.');
+  if (st.queue[st.idx]!.pid !== a.pid) fail('Chưa tới lượt bạn.');
   a = fogResolve(s, a, 'edge', e => canSetupRoad(s, a.pid, e), kv => canSetupRoad(kv, a.pid, a.eid), 'eid');
   if (!canSetupRoad(s, a.pid, a.eid)) fail('Đường phải đi ra từ nhà bạn vừa đặt.');
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   if (p.roadsLeft <= 0) fail('Bạn hết đường rồi.');
   p.roadsLeft--;
   if (st.blindActive) {
-    const b = s.blind.find(x => x.pid === a.pid && x.vid === st.lastVid && x.eid == null);
+    const b = s.blind.find(x => x.pid === a.pid && x.vid === st.lastVid && x.eid == null)!;
     b.eid = a.eid;
   } else {
     s.roads[a.eid] = a.pid;
-    const E = s.board.edges[a.eid];
+    const E = s.board.edges[a.eid]!;
     revealAround(s, E.a);
     revealAround(s, E.b);
   }
@@ -827,11 +836,11 @@ H.roll = (s, a) => {
   const d = rollDice(s);
   const sum = d[0] + d[1];
   s.dice = d;
-  s.stats.rolls[sum]++;
+  s.stats.rolls[sum]!++;
   (s.rollLog ||= []).push({ pid: a.pid, sum });
   if (s.rollLog.length > 30) s.rollLog.shift();
   // how hard the dice were thrown (hold the button to charge it): only changes the animation
-  const power = Math.round(Math.min(1, Math.max(0, +a.power || 0)) * 100) / 100;
+  const power = Math.round(Math.min(1, Math.max(0, +(a.power ?? 0) || 0)) * 100) / 100;
   s.fx.push({ kind: 'dice', dice: d, power });
   log(s, `🎲 @${a.pid} tung ra ${sum}.`, a.pid);
   if (sum !== 7) {
@@ -862,14 +871,14 @@ H.discard = (s, a) => {
   const res = a.res || {};
   const total = RES.reduce((t, r) => t + (res[r] || 0), 0);
   if (total !== need) fail(`Bạn phải bỏ đúng ${need} thẻ.`);
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   for (const r of RES) if ((res[r] || 0) < 0 || (res[r] || 0) > p.res[r]) fail('Bạn không có những thẻ đó.');
   for (const r of RES) {
     p.res[r] -= res[r] || 0;
     s.bank[r] += res[r] || 0;
   }
   p.stats.lost += need;
-  s.fx.push({ kind: 'discard', pid: a.pid, res: Object.fromEntries(RES.map(r => [r, res[r] || 0])) });
+  s.fx.push({ kind: 'discard', pid: a.pid, res: Object.fromEntries(RES.map(r => [r, res[r] || 0])) as Hand });
   delete s.pendingDiscards[a.pid];
   log(s, `🗑️ @${a.pid} bỏ ${need} thẻ.`, a.pid);
   if (!Object.keys(s.pendingDiscards).length) s.phase = s.config.rules.noRobber ? 'main' : 'robber';
@@ -883,9 +892,10 @@ H.moveRobber = (s, a) => {
   const victims = stealTargets(s, a.pid, a.tile);
   let victim = a.victim;
   if (victims.length === 1 && victim == null) victim = victims[0];
+  const isVictim = (v: number | null | undefined) => v != null && victims.includes(v);
   // in the fog you may not see who is there: steal from a random neighbour
-  if (s.config.modes.fog && victims.length && !victims.includes(victim)) victim = pick(s.rng, victims);
-  if (victims.length && !victims.includes(victim)) fail('Chọn người để cướp.');
+  if (s.config.modes.fog && victims.length && !isVictim(victim)) victim = pick(s.rng, victims);
+  if (victims.length && !isVictim(victim)) fail('Chọn người để cướp.');
   if (!victims.length) victim = null;
   s.board.robberFrom = s.board.robber; // bots use it so they don't just send it back
   s.board.robber = a.tile;
@@ -899,14 +909,14 @@ H.moveRobber = (s, a) => {
   s.phase = s.robberReturn;
 };
 
-function assertMain(s, a) {
+function assertMain(s: GameState, a: Action) {
   if (a.pid !== s.current) fail('Chưa tới lượt bạn.');
   if (s.phase !== 'main') fail(s.phase === 'roll' ? 'Tung xúc xắc trước đã.' : 'Làm nốt việc đang dở trước đã.');
 }
 
 H.build = (s, a) => {
   if (a.pid !== s.current) fail('Chưa tới lượt bạn.');
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   const free = s.phase === 'roadBuilding' && a.what === 'road';
   if (!free) assertMain(s, a);
   if (a.what === 'road') {
@@ -917,7 +927,7 @@ H.build = (s, a) => {
     if (!free) pay(s, a.pid, COSTS.road);
     p.roadsLeft--;
     s.roads[a.at] = a.pid;
-    const E = s.board.edges[a.at];
+    const E = s.board.edges[a.at]!;
     revealAround(s, E.a);
     revealAround(s, E.b);
     log(s, free ? `🛤️ @${a.pid} làm một đoạn đường miễn phí.` : `🛤️ @${a.pid} làm một đoạn đường.`, a.pid);
@@ -942,7 +952,7 @@ H.build = (s, a) => {
     pay(s, a.pid, COSTS.city);
     p.citiesLeft--;
     p.settlementsLeft++;
-    s.buildings[a.at].type = 'city';
+    s.buildings[a.at]!.type = 'city';
     log(s, `🏰 @${a.pid} nâng cấp lên thành phố.`, a.pid);
   } else fail('Công trình không hợp lệ.');
   s.fx.push({ kind: 'build', what: a.what, pid: a.pid, at: a.at });
@@ -957,11 +967,11 @@ H.endRoadBuilding = (s, a) => {
 
 H.buyDev = (s, a) => {
   assertMain(s, a);
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   if (!s.devDeck.length) fail('Hết thẻ phát triển rồi.');
   if (!canAfford(p.res, COSTS.dev)) fail('Bạn không đủ tài nguyên.');
   pay(s, a.pid, COSTS.dev);
-  const type = s.devDeck.pop();
+  const type = s.devDeck.pop()!;
   p.dev.push({ type, turn: s.turn });
   s.fx.push({ kind: 'devBought', pid: a.pid, type });
   log(s, `🃏 @${a.pid} mua một thẻ phát triển.`, a.pid);
@@ -970,16 +980,16 @@ H.buyDev = (s, a) => {
 H.playDev = (s, a) => {
   if (a.pid !== s.current) fail('Chưa tới lượt bạn.');
   if (!playableDev(s, a.pid).includes(a.card)) fail('Giờ chưa dùng thẻ đó được.');
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   // validate parameters before mutating
   if (a.card === 'yearOfPlenty') {
     const rs = a.res || [];
-    if (rs.length !== 2 || !rs.every(r => RES.includes(r))) fail('Chọn 2 tài nguyên.');
-    const need = {};
+    if (rs.length !== 2 || !rs.every(isRes)) fail('Chọn 2 tài nguyên.');
+    const need: Partial<Record<Res, number>> = {};
     rs.forEach(r => (need[r] = (need[r] || 0) + 1));
-    for (const r in need) if (s.bank[r] < need[r]) fail('Ngân hàng không đủ.');
+    for (const [r, k] of resEntries(need)) if (s.bank[r] < k) fail('Ngân hàng không đủ.');
   }
-  if (a.card === 'monopoly' && !RES.includes(a.res)) fail('Chọn một tài nguyên.');
+  if (a.card === 'monopoly' && !isRes(a.res)) fail('Chọn một tài nguyên.');
   const idx = p.dev.findIndex(c => c.type === a.card && c.turn < s.turn);
   p.dev.splice(idx, 1);
   s.devPlayed = true;
@@ -1003,7 +1013,7 @@ H.playDev = (s, a) => {
       break;
     case 'monopoly': {
       let got = 0;
-      const from = [];
+      const from: [number, number][] = [];
       for (const o of s.players) {
         if (o.id === a.pid) continue;
         if (o.res[a.res]) from.push([o.id, o.res[a.res]]);
@@ -1023,7 +1033,7 @@ H.bankTrade = (s, a) => {
   assertMain(s, a);
   if (!RES.includes(a.give) || !RES.includes(a.get) || a.give === a.get) fail('Giao dịch không hợp lệ.');
   const ratio = tradeRatio(s, a.pid, a.give);
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   if (p.res[a.give] < ratio) fail(`Bạn cần ${ratio} thẻ loại đó.`);
   if (s.bank[a.get] < 1) fail('Ngân hàng hết loại tài nguyên đó.');
   p.res[a.give] -= ratio;
@@ -1034,7 +1044,7 @@ H.bankTrade = (s, a) => {
   log(s, `🏦 @${a.pid} đổi ${ratio}${resName(a.give)} lấy 1${resName(a.get)}.`, a.pid);
 };
 
-const validOffer = o => o && RES.every(r => Number.isInteger(o[r] || 0) && (o[r] || 0) >= 0);
+const validOffer = (o: Partial<Hand> | null | undefined): boolean => !!o && RES.every(r => Number.isInteger(o[r] || 0) && (o[r] || 0) >= 0);
 
 H.proposeTrade = (s, a) => {
   assertMain(s, a);
@@ -1042,17 +1052,17 @@ H.proposeTrade = (s, a) => {
   if (!validOffer(a.give) || !validOffer(a.get)) fail('Lời mời không hợp lệ.');
   if (!handSize(a.give) || !handSize(a.get)) fail('Lời mời phải có cả thứ đưa và thứ nhận.');
   if (RES.some(r => (a.give[r] || 0) && (a.get[r] || 0))) fail('Không thể đưa và đòi cùng một loại tài nguyên.');
-  if (!canAfford(s.players[a.pid].res, a.give)) fail('Bạn không có thứ mình định đưa.');
-  const to = (a.to && a.to.length ? a.to : s.players.map(p => p.id)).filter(i => i !== a.pid && s.players[i] && !s.players[i].retired);
+  if (!canAfford(s.players[a.pid]!.res, a.give)) fail('Bạn không có thứ mình định đưa.');
+  const to = (a.to && a.to.length ? a.to : s.players.map(p => p.id)).filter(i => i !== a.pid && s.players[i] && !s.players[i]!.retired);
   if (!to.length) fail('Không có ai để mời.');
   const give = zeroRes(), get = zeroRes();
   for (const r of RES) {
     give[r] = a.give[r] || 0;
     get[r] = a.get[r] || 0;
   }
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   if (p.tradeTurn !== s.turn) p.tradeTurn = s.turn, p.tradeCount = 0;
-  p.tradeCount++;
+  p.tradeCount!++;
   s.trade = { id: ++s.tradeSeq, from: a.pid, give, get, to, responses: Object.fromEntries(to.map(i => [i, null])) };
   log(s, `🤝 @${a.pid} mời giao dịch.`, a.pid);
 };
@@ -1061,7 +1071,7 @@ H.respondTrade = (s, a) => {
   const t = s.trade;
   if (!t || !t.to.includes(a.pid)) fail('Không có lời mời nào cho bạn.');
   if (a.tradeId != null && a.tradeId !== t.id) fail('Lời mời đó không còn nữa.');
-  if (a.accept && !canAfford(s.players[a.pid].res, t.get)) fail('Bạn không có thứ họ cần.');
+  if (a.accept && !canAfford(s.players[a.pid]!.res, t.get)) fail('Bạn không có thứ họ cần.');
   t.responses[a.pid] = a.accept ? 'accept' : 'reject';
 };
 
@@ -1069,7 +1079,7 @@ H.confirmTrade = (s, a) => {
   const t = s.trade;
   if (!t || t.from !== a.pid) fail('Bạn chưa đưa ra lời mời nào.');
   if (t.responses[a.with] !== 'accept') fail('Người đó chưa đồng ý.');
-  const p = s.players[a.pid], o = s.players[a.with];
+  const p = s.players[a.pid]!, o = s.players[a.with]!;
   if (!canAfford(p.res, t.give) || !canAfford(o.res, t.get)) {
     s.trade = null;
     fail('Có người không còn đủ tài nguyên nữa.');
@@ -1089,17 +1099,17 @@ H.cancelTrade = (s, a) => {
 };
 
 // next seat still in the game; `wrapped` when we pass the first player (new round)
-export function nextActive(s, from) {
+export function nextActive(s: GameState, from: number): { pid: number; wrapped: boolean } {
   const n = s.players.length;
-  const pos = p => (p - s.first + n) % n;
+  const pos = (p: number) => (p - s.first + n) % n;
   for (let k = 1; k <= n; k++) {
     const c = (from + k) % n;
-    if (!s.players[c].retired) return { pid: c, wrapped: pos(c) <= pos(from) };
+    if (!s.players[c]!.retired) return { pid: c, wrapped: pos(c) <= pos(from) };
   }
   return { pid: from, wrapped: true };
 }
 
-function advanceTurn(s) {
+function advanceTurn(s: GameState) {
   s.trade = null;
   const { pid, wrapped } = nextActive(s, s.current);
   s.current = pid;
@@ -1122,7 +1132,7 @@ H.endTurn = (s, a) => {
 
 // ---- seat management (host only: disconnections, votes) ----
 H.setController = (s, a) => {
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   if (p.retired) fail('Người đó đã rời ván.');
   if (a.kind !== 'bot' && a.kind !== 'human') fail('Lệnh điều khiển không hợp lệ.');
   if (p.kind === a.kind) return;
@@ -1134,7 +1144,7 @@ H.setController = (s, a) => {
 
 H.retirePlayer = (s, a) => {
   const pid = a.pid;
-  const p = s.players[pid];
+  const p = s.players[pid]!;
   if (p.retired) fail('Người đó đã rời ván.');
   if (s.players.filter(x => !x.retired).length <= 2) fail('Phải còn ít nhất 2 người chơi.');
   p.retired = true;
@@ -1165,7 +1175,7 @@ H.retirePlayer = (s, a) => {
     const act = s.players.filter(x => !x.retired && x.knights >= 3);
     const max = Math.max(0, ...act.map(x => x.knights));
     const top = act.filter(x => x.knights === max);
-    s.largestArmy = top.length === 1 ? { owner: top[0].id, count: max } : { owner: -1, count: 0 };
+    s.largestArmy = top.length === 1 ? { owner: top[0]!.id, count: max } : { owner: -1, count: 0 };
   }
   updateLongestRoad(s);
   log(s, `🚪 @${pid} rời ván.`, pid);
@@ -1174,15 +1184,15 @@ H.retirePlayer = (s, a) => {
   delete s.pendingDiscards[pid];
   if (s.phase === 'setup') {
     const st = s.setup;
-    const cur = st.queue[st.idx];
+    const cur = st.queue[st.idx]!;
     st.queue = st.queue.filter((e, i) => i <= st.idx || e.pid !== pid);
     if (cur.pid === pid) {
       st.queue.splice(st.idx, 1);
       if (st.idx < st.queue.length) {
-        const nx = st.queue[st.idx];
+        const nx = st.queue[st.idx]!;
         s.current = nx.pid;
         st.step = nx.roadOnly ? 'road' : 'settlement';
-        st.lastVid = nx.roadOnly ? nx.vid : null;
+        st.lastVid = nx.roadOnly ? nx.vid! : null;
       } else {
         st.step = 'settlement';
         st.lastVid = null;
@@ -1205,7 +1215,7 @@ H.retirePlayer = (s, a) => {
 // someone beat the ADHD arcade (the minigames for the wait): any seat, any time. It counts the wins
 // of this match (their pieces get gold trims) and sets off the fireworks for everyone
 H.adhdWin = (s, a) => {
-  const p = s.players[a.pid];
+  const p = s.players[a.pid]!;
   p.adhdWins = (p.adhdWins || 0) + 1;
   s.fx.push({ kind: 'cheer', pid: a.pid, n: p.adhdWins });
 };
@@ -1213,10 +1223,11 @@ H.adhdWin = (s, a) => {
 // actions that leave the trade on the table when the current player makes them
 const TRADE_ACTIONS = new Set(['proposeTrade', 'respondTrade', 'confirmTrade', 'cancelTrade', 'adhdWin']);
 
-export function applyAction(s, a) {
+export function applyAction(s: GameState, a: Action): ApplyResult {
   s.fx = [];
   try {
-    const h = H[a && a.type];
+    // `a` may be garbage coming over the network: look the handler up without trusting its type
+    const h = (H as unknown as Record<string, ((s: GameState, a: Action) => void) | undefined>)[a && a.type];
     if (!h) fail('Hành động không hợp lệ.');
     if (typeof a.pid !== 'number' || !s.players[a.pid]) fail('Người chơi không hợp lệ.');
     if (s.phase === 'gameOver') fail('Ván đã kết thúc.');

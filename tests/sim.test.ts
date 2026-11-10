@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Chạy 300 ván bot đấu bot (cùng logic với scripts/sim.ts), kiểm tra bất biến sau mỗi hành động.
 import { test, expect } from 'vitest';
 import { runSim } from '../scripts/sim.ts';

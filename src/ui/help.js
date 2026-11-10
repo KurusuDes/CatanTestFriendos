@@ -1,5 +1,5 @@
 import { h } from './dom.js';
-import { MODES } from '../engine/config.js';
+import { MODES } from '@engine/config';
 
 export const REPO_URL = 'https://github.com/KurusuDes/CatanTestFriendos';
 const repoLink = () => h('a', { href: REPO_URL, target: '_blank', rel: 'noopener' }, 'Mã nguồn trên GitHub');

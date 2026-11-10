@@ -9,7 +9,7 @@ import { App } from '../app.js';
 import { h, clear, toast, storage } from './dom.js';
 import { pxURL } from './pixel.js';
 import { play } from './sfx.js';
-import { pendingActors } from '../engine/game.js';
+import { pendingActors } from '@engine/game';
 
 const KEY = 'katanittes.adhd.v2';
 const START = 100;

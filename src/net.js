@@ -8,7 +8,7 @@
 //    retire them (a bot seat is handed back if the player returns);
 //  - the host autosaves the session and can reopen the room with the same code.
 import { App } from './app.js';
-import { applyAction, createGame } from './engine/game.js';
+import { applyAction, createGame } from '@engine/game';
 import { toast, storage } from './ui/dom.js';
 
 const PREFIX = 'kchx-v1-';
