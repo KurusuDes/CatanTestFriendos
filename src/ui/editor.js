@@ -39,7 +39,9 @@ export function editorScreen(root, initial) {
   root.append(h('div', { class: 'editor screen' }, side, wrap));
 
   let painting = false;
-  window.addEventListener('pointerup', () => (painting = false));
+  const stopPaint = () => (painting = false);
+  window.addEventListener('pointerup', stopPaint);
+  App.onLeave = () => window.removeEventListener('pointerup', stopPaint); // the router clears it after calling it
 
   function apply(q, r) {
     const k = hk(q, r);
@@ -54,30 +56,40 @@ export function editorScreen(root, initial) {
       if (brush === 'desert') t.num = 0;
       tiles.set(k, t);
     }
-    drawBoard();
+    paintCell(q, r); // only the touched hex changes
+  }
+
+  // one <g> per hex, created once (with its listeners); painting only rewrites that group's children
+  const cells = new Map();
+  function paintCell(q, r) {
+    const g = cells.get(hk(q, r));
+    const c = hexCenter(q, r);
+    const t = tiles.get(hk(q, r));
+    clear(g);
+    if (!t) g.append(S('polygon', { points: hexPts(c.x * U, c.y * U, U * 0.95), class: 'slot' }));
+    else {
+      const info = t.res === 'random' ? { color: '#6b7aa6', icon: '🎲' } : TILE_INFO[t.res];
+      g.append(S('polygon', { points: hexPts(c.x * U, c.y * U, U * 0.96), fill: info.color, stroke: 'rgba(0,0,0,.35)', 'stroke-width': 5, style: 'cursor:pointer' }));
+      g.append(S('text', { x: c.x * U, y: c.y * U - 22, class: 'tile-icon', 'font-size': 40 }, info.icon));
+      if (t.res !== 'desert') {
+        g.append(S('circle', { cx: c.x * U, cy: c.y * U + 26, r: 24, fill: '#f6ecd2', stroke: '#9c8a60', 'stroke-width': 2 }));
+        g.append(S('text', { x: c.x * U, y: c.y * U + 34, class: 'token-num' + (t.num ? '' : ' q'), style: t.num === 6 || t.num === 8 ? 'fill:#d32f2f' : '' }, t.num || '?'));
+      }
+    }
   }
 
   function drawBoard() {
-    clear(svg);
-    for (const [q, r] of hexagon(R)) {
-      const c = hexCenter(q, r);
-      const t = tiles.get(hk(q, r));
-      const g = S('g', {
-        onpointerdown: e => { e.preventDefault(); painting = true; apply(q, r); },
-        onpointerenter: () => painting && apply(q, r),
-      });
-      if (!t) g.append(S('polygon', { points: hexPts(c.x * U, c.y * U, U * 0.95), class: 'slot' }));
-      else {
-        const info = t.res === 'random' ? { color: '#6b7aa6', icon: '🎲' } : TILE_INFO[t.res];
-        g.append(S('polygon', { points: hexPts(c.x * U, c.y * U, U * 0.96), fill: info.color, stroke: 'rgba(0,0,0,.35)', 'stroke-width': 5, style: 'cursor:pointer' }));
-        g.append(S('text', { x: c.x * U, y: c.y * U - 22, class: 'tile-icon', 'font-size': 40 }, info.icon));
-        if (t.res !== 'desert') {
-          g.append(S('circle', { cx: c.x * U, cy: c.y * U + 26, r: 24, fill: '#f6ecd2', stroke: '#9c8a60', 'stroke-width': 2 }));
-          g.append(S('text', { x: c.x * U, y: c.y * U + 34, class: 'token-num' + (t.num ? '' : ' q'), style: t.num === 6 || t.num === 8 ? 'fill:#d32f2f' : '' }, t.num || '?'));
-        }
+    if (!cells.size) {
+      for (const [q, r] of hexagon(R)) {
+        const g = S('g', {
+          onpointerdown: e => { e.preventDefault(); painting = true; apply(q, r); },
+          onpointerenter: () => painting && apply(q, r),
+        });
+        cells.set(hk(q, r), g);
+        svg.append(g);
       }
-      svg.append(g);
     }
+    for (const [q, r] of hexagon(R)) paintCell(q, r); // whole-board changes (load, clear, shapes)
   }
 
   function current() {
