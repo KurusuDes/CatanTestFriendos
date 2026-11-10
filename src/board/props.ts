@@ -6,12 +6,21 @@ import { shared } from './dispose';
 import type { BState } from './types';
 import type { Board3D } from './Board3D';
 
+const DECOR = new Set(['pine', 'oak', 'bush', 'rock', 'rock#clay', 'cactus', 'crystal', 'hay', 'sheaf']);
+
 export function placeProps(board: Board3D, st: BState) {
   const kit = board.kit;
   const field = board.field!;
   const bd = st.board;
   const inst: Record<string, [number, number, number, number, number][]> = {};
-  const put = (name: string, x: number, z: number, s = 1, ry = 0) => (inst[name] = inst[name] || []).push([x, field.sample(x, z) - 0.01, z, s, ry]);
+  // lighter tiers drop a fixed share of the DECORATIVE props, by running index (not random): every player
+  // sees the same island shape, and the rng stream of the spot search is untouched
+  const density = board.params.props;
+  let seq = 0;
+  const put = (name: string, x: number, z: number, s = 1, ry = 0) => {
+    if (density < 1 && DECOR.has(name) && ((seq++ * 37) % 100) / 100 >= density) return;
+    (inst[name] = inst[name] || []).push([x, field.sample(x, z) - 0.01, z, s, ry]);
+  };
   // which way is downhill at a point (to turn a mine's entrance away from its mountain)
   const downhill = (x: number, z: number) => {
     const d = 0.05;

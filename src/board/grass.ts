@@ -1,6 +1,5 @@
 // Thousands of wind-swept grass and wheat tufts.
 import * as THREE from 'three';
-import { SETTINGS } from './settings';
 import { LAYER_GRASS, patch } from './shaders';
 import { INR, NORMALS, pixelToHex, prng } from './terrain';
 import type { BState } from './types';
@@ -31,8 +30,9 @@ export function tuftGeometry(blades: number, height: number, width: number, base
 export function placeGrass(board: Board3D, st: BState) {
   const bd = st.board;
   const field = board.field!;
-  const hi = SETTINGS.quality === 'high';
-  const kinds: Record<string, [string, number]> = { sheep: ['grass', hi ? 320 : 120], wheat: ['wheat', hi ? 420 : 160], wood: ['grass', hi ? 60 : 20], ore: ['grass', hi ? 50 : 15], gold: ['grass', 20] };
+  const dens = board.params.grass;
+  if (dens <= 0) return; // weak machines: no tufts at all
+  const kinds: Record<string, [string, number]> = { sheep: ['grass', Math.round(320 * dens)], wheat: ['wheat', Math.round(420 * dens)], wood: ['grass', Math.round(60 * dens)], ore: ['grass', Math.round(50 * dens)], gold: ['grass', Math.round(20 * dens)] };
   const lists: Record<string, [number, number, number, number, number][]> = { grass: [], wheat: [] };
   for (const t of bd.tiles) {
     const spec = t.revealed && kinds[t.res];

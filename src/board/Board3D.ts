@@ -4,6 +4,10 @@
 // (IBL), with a depth-aware sea, instanced Blender props, wind-swept grass, drifting cloud shadows,
 // GTAO and tilt-shift. Tokens, port signs and click targets are crisp pixel-art CSS2D labels.
 // Same interface as BoardView (see BoardRenderer): render(state, view), setZoom(), resetView(), dispose().
+//
+// Rendering is ON DEMAND: a frame is drawn only when something changed (camera, state, a transient
+// effect, a resize, a setting) or, for the ambient animations (water, wind, flags), at the quality tier's
+// `ambientFps`. At the `low` tier that is 0: when nobody touches the board the GPU sits idle.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, type CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
@@ -27,8 +31,9 @@ import { placeGrass } from './grass';
 import { buildDynamic } from './pieces';
 import { buildPorts } from './ports';
 import { placeProps } from './props';
-import { saveSettings, SETTINGS, type Settings } from './settings';
-import { LAYER_GRASS, LAYER_PIECES, OutlineShader, patch, pieceColorMat, tiltShader, U } from './shaders';
+import { detailKey, dioramaParams, PARAMS, type Tier, type TierParams } from './quality';
+import { applyLowFx, effective, saveSettings, SETTINGS, type Settings } from './settings';
+import { LAYER_GRASS, LAYER_PIECES, OutlineOverlayShader, OutlineShader, patch, pieceColorMat, tiltShader, U } from './shaders';
 import { buildHexGrid, buildTerrainMesh, smooth, terrainKey, terrainOf, type TerrainField } from './terrain';
 import { buildWater } from './water';
 import type { BState, BoardViewState, BBounds, Interaction } from './types';
@@ -42,6 +47,11 @@ declare global {
 export { SETTINGS };
 export { TILE_LOOKS, LOOK_OVERRIDE } from './terrain';
 
+export interface BoardOptions {
+  /** the rotating menu / lobby background: always the light profile, no labels, 30 fps (see dioramaParams) */
+  diorama?: boolean;
+}
+
 export class Board3D implements BoardRenderer {
   // ---- state shared with the helper modules
   container: HTMLElement;
@@ -50,7 +60,10 @@ export class Board3D implements BoardRenderer {
   zoom = 1;
   renderer: THREE.WebGLRenderer;
   maxPR: number;
-  perf: { t: number; n: number; sum: number; good: number; last?: number; cap?: number };
+  /** live parameters: the tier's table + the player's chips; the adaptive ladder lowers them during the session */
+  params: TierParams;
+  diorama: boolean;
+  perf: { t: number; n: number; sum: number; slow: number; grace: number; last?: number };
   shadowDirty = true;
   canvas: HTMLCanvasElement;
   labels: CSS2DRenderer;
@@ -79,7 +92,8 @@ export class Board3D implements BoardRenderer {
   pings: Ping[] | undefined;
   pingGeo: Record<string, THREE.BufferGeometry> | undefined;
   controls: OrbitControls;
-  composer: EffectComposer;
+  /** null at the tiers that render straight to the canvas (medium, low) */
+  composer: EffectComposer | null = null;
   fogCanvas: HTMLCanvasElement;
   fogTex: THREE.CanvasTexture;
   fogKey = ''; // vision the fog canvas currently shows
@@ -88,7 +102,7 @@ export class Board3D implements BoardRenderer {
   resizeObs: ResizeObserver;
   forgetRect: () => void;
   canvasRect: DOMRect | null = null;
-  clock: THREE.Clock;
+  t0 = performance.now(); // THREE.Clock is deprecated since r183
   now: () => number;
   alive: boolean;
   raf = 0;
@@ -96,6 +110,9 @@ export class Board3D implements BoardRenderer {
   hts: ShaderPass | null = null;
   vts: ShaderPass | null = null;
   outlinePass: ShaderPass | null = null;
+  /** outline drawn as a blended quad on the canvas (no composer) */
+  overlay: { scene: THREE.Scene; cam: THREE.OrthographicCamera; mat: THREE.ShaderMaterial; geo: THREE.BufferGeometry } | null = null;
+  vignetteEl: HTMLElement;
   viewH = 600;
   masksStale = true;
   labelsDirty = true;
@@ -106,7 +123,10 @@ export class Board3D implements BoardRenderer {
   tk: number | undefined;
   diceFx: Dice3D | undefined;
   onPing: ((x: number, z: number) => void) | undefined;
+  /** called once when the adaptive ladder ran out of cheap steps and the machine is still slow */
+  onSlow: (() => void) | undefined;
   lastSt: BState | undefined;
+  lastView: BoardViewState = {};
   bounds: BBounds | undefined;
   field: TerrainField | undefined;
   water: THREE.Mesh | undefined;
@@ -122,31 +142,49 @@ export class Board3D implements BoardRenderer {
   ready: Promise<void>;
   private markReady!: () => void;
 
+  // ---- render on demand
+  /** something changed: draw a frame on the next tick (see invalidate) */
+  needsRender = true;
+  /** hard cap on the frame rate (the menu background: 30); 0 = none */
+  fpsCap = 0;
+  private lastRender = 0;
+  private renderedLastTick = false;
+  private movedPending = false;
+  private frameLog: number[] = [];
+  private lastDrawCalls = 0;
+  private lastTriangles = 0;
+  private suggested = false;
+  private builtDetail = '';
+
   static SETTINGS_TILT(): boolean { return SETTINGS.tiltShift; }
   static SETTINGS_PIXEL() { return SETTINGS.pixel; }
-  static SETTINGS_Q() { return SETTINGS.quality; }
+  static SETTINGS_Q(): Tier { return SETTINGS.quality; }
   static SETTINGS_AO() { return SETTINGS.ao; }
   static SETTINGS_OUTLINE() { return SETTINGS.outline; }
 
-  static async create(container: HTMLElement): Promise<Board3D> {
-    const [kit, tex] = await Promise.all([loadKit(), loadTextures()]);
-    return new Board3D(container, kit, tex);
+  static async create(container: HTMLElement, opts: BoardOptions = {}): Promise<Board3D> {
+    const low = opts.diorama ? true : PARAMS[SETTINGS.quality].lowTextures;
+    const [kit, tex] = await Promise.all([loadKit(), loadTextures(low)]);
+    return new Board3D(container, kit, tex, opts);
   }
 
-  constructor(container: HTMLElement, kit: Kit, tex: Textures) {
+  constructor(container: HTMLElement, kit: Kit, tex: Textures, opts: BoardOptions = {}) {
     this.ready = new Promise<void>(res => (this.markReady = res));
     this.container = container;
     this.kit = kit;
     this.tex = tex;
     this.zoom = 1;
-    const hi = SETTINGS.quality === 'high';
-    const r = (this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' }));
-    // sharp on retina screens; the frame-time watcher in tick() lowers it when the GPU can't keep up
-    this.maxPR = Math.min(window.devicePixelRatio || 1, hi ? 2 : 1.5);
+    this.diorama = !!opts.diorama;
+    const P = (this.params = this.diorama ? dioramaParams(effective()) : effective());
+    const r = (this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: this.diorama ? 'low-power' : 'high-performance' }));
+    // sharp on retina screens; the frame-time watcher lowers it when the GPU can't keep up
+    this.maxPR = Math.min(window.devicePixelRatio || 1, P.maxPR);
     r.setPixelRatio(this.maxPR);
-    this.perf = { t: 0, n: 0, sum: 0, good: 0 };
+    this.perf = { t: 0, n: 0, sum: 0, slow: 0, grace: 0 };
+    // draw-call counts of a whole frame (masks + composer passes), reset by hand once per frame
+    r.info.autoReset = false;
     r.shadowMap.enabled = true;
-    r.shadowMap.type = THREE.PCFSoftShadowMap;
+    r.shadowMap.type = P.shadow.type === 'pcf' ? THREE.PCFShadowMap : THREE.BasicShadowMap; // PCFSoft was removed in r186
     // the scene barely moves: shadows are redrawn only when something changes (see tick)
     r.shadowMap.autoUpdate = false;
     this.shadowDirty = true;
@@ -156,8 +194,14 @@ export class Board3D implements BoardRenderer {
     this.canvas = r.domElement;
     this.canvas.className = 'board-3d';
     container.append(this.canvas);
+    // the vignette for the tiers without a vignette pass: a CSS gradient costs next to nothing
+    this.vignetteEl = document.createElement('div');
+    this.vignetteEl.className = 'vignette-css';
+    this.vignetteEl.style.display = 'none';
+    container.append(this.vignetteEl);
     this.labels = new CSS2DRenderer();
     this.labels.domElement.className = 'labels-3d';
+    if (this.diorama) this.labels.domElement.style.display = 'none';
     container.append(this.labels.domElement);
     window.__board3d = this;
 
@@ -196,8 +240,7 @@ export class Board3D implements BoardRenderer {
     scene.add(new THREE.HemisphereLight('#e9f2ff', '#5b5243', 0.35));
     const sun = (this.sun = new THREE.DirectionalLight('#fff0d8', 3.4));
     sun.castShadow = true;
-    const sm = hi ? 2048 : 1024;
-    sun.shadow.mapSize.set(sm, sm);
+    sun.shadow.mapSize.set(P.shadow.size, P.shadow.size);
     Object.assign(sun.shadow.camera, { left: -18, right: 18, top: 18, bottom: -18, near: 1, far: 90 });
     sun.shadow.bias = -0.00035;
     sun.shadow.normalBias = 0.02;
@@ -222,6 +265,7 @@ export class Board3D implements BoardRenderer {
     Object.assign(this.controls, { enableDamping: true, dampingFactor: 0.08, maxPolarAngle: 1.15, minPolarAngle: 0.3, minDistance: 3, maxDistance: 50, screenSpacePanning: false });
     // middle button = drop a 1 s marker there (zoom stays on the wheel)
     this.controls.mouseButtons.MIDDLE = -1 as unknown as THREE.MOUSE;
+    this.controls.addEventListener('change', this.invalidate);
     this.canvas.addEventListener('pointerdown', e => {
       if (e.button !== 1) return;
       e.preventDefault();
@@ -230,14 +274,12 @@ export class Board3D implements BoardRenderer {
     });
     this.canvas.addEventListener('mousedown', e => e.button === 1 && e.preventDefault()); // no autoscroll
 
-    // the composer draws into its own target, so the canvas' antialias never applied: MSAA there,
-    // but only on 1x screens (on retina the resolution is already enough and MSAA nearly halved the fps)
-    const samples = this.maxPR <= 1 ? (hi ? 4 : 2) : 0;
-    this.composer = new EffectComposer(r, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples }));
     this.fogCanvas = document.createElement('canvas');
     this.fogCanvas.width = this.fogCanvas.height = 512;
     this.fogTex = new THREE.CanvasTexture(this.fogCanvas);
     U.uFogTex.value = this.fogTex;
+    this.applyShadow();
+    this.applyFx();
     this.setupPasses();
 
     this.resizeObs = new ResizeObserver(() => this.resize());
@@ -245,9 +287,10 @@ export class Board3D implements BoardRenderer {
     this.forgetRect = () => (this.canvasRect = null);
     addEventListener('scroll', this.forgetRect, true);
     addEventListener('resize', this.forgetRect);
-    this.clock = new THREE.Clock();
+    document.addEventListener('visibilitychange', this.onVisibility);
     this.now = () => performance.now(); // overridable time source (frame-by-frame recording)
     this.alive = true;
+    // the loop itself is nearly free when idle (see tick): it only polls the camera and the transient effects
     const loop = () => {
       if (!this.alive) return;
       this.raf = requestAnimationFrame(loop);
@@ -256,121 +299,242 @@ export class Board3D implements BoardRenderer {
     loop();
   }
 
+  /** Ask for a frame (cheap, idempotent). Anything that changes what the board shows calls this. */
+  invalidate = () => {
+    this.needsRender = true;
+  };
+
+  private onVisibility = () => {
+    this.renderedLastTick = false;
+    this.perf.last = undefined;
+    if (!document.hidden) this.invalidate();
+  };
+
+  // ---------- quality ----------
+  /** wind / cloud shadows / sea foam are uniforms, so a tier change needs no shader recompile */
+  private applyFx() {
+    const P = this.params;
+    U.uFx.value.set(P.wind ? 1 : 0, P.clouds ? 1 : 0, P.foam ? 1 : 0);
+  }
+
+  private applyShadow() {
+    const s = this.params.shadow, r = this.renderer, sh = this.sun.shadow;
+    const type = s.type === 'pcf' ? THREE.PCFShadowMap : THREE.BasicShadowMap;
+    const typeChanged = r.shadowMap.type !== type, sizeChanged = sh.mapSize.x !== s.size;
+    r.shadowMap.type = type;
+    sh.mapSize.set(s.size, s.size);
+    if (typeChanged || sizeChanged) {
+      sh.map?.dispose();
+      sh.map = null;
+    }
+    // the shadow filter is part of every material's program: rebuild them once
+    if (typeChanged)
+      this.scene.traverse(o => {
+        const mt = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
+        if (mt) for (const m of ([] as THREE.Material[]).concat(mt)) m.needsUpdate = true;
+      });
+    this.shadowDirty = true;
+  }
+
+  /** (Re)builds the post-processing for the current tier + the player's chips. */
   setupPasses() {
-    const c = this.composer;
-    c.passes.slice().forEach(p => c.removePass(p));
-    this.aoPass = null;
-    const px = SETTINGS.pixel | 0;
+    const P = this.params;
+    const px = this.diorama ? 1 : SETTINGS.pixel | 0, tilt = !this.diorama && SETTINGS.tiltShift;
     const w = this.container.clientWidth || 800, h = this.container.clientHeight || 600;
-    if (px > 1) c.addPass(new RenderPixelatedPass(px, this.scene, this.camera, { normalEdgeStrength: 0.25, depthEdgeStrength: 0.35 }));
-    else {
-      c.addPass(new RenderPass(this.scene, this.camera));
-      if (SETTINGS.ao && SETTINGS.quality === 'high') {
-        const ao = new GTAOPass(this.scene, this.camera, w, h);
-        ao.updateGtaoMaterial({ radius: 0.35, distanceExponent: 1.5, thickness: 1.0, scale: 1.2, samples: 8 });
-        ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 8 });
-        ao.blendIntensity = 0.9;
-        c.addPass(ao);
-        this.aoPass = ao;
+    if (this.composer) this.composer.dispose();
+    this.composer = null;
+    this.aoPass = this.hts = this.vts = this.outlinePass = null;
+    this.disposeOverlay();
+    const outline = P.outline !== 'off';
+    // the pixel filter and the tilt-shift need the composer whatever the tier; AO is an ultra pass
+    const useComposer = P.composer || px > 1 || tilt;
+    let vignettePass = false;
+    if (useComposer) {
+      const type = P.halfFloat || !P.composer ? THREE.HalfFloatType : THREE.UnsignedByteType;
+      // MSAA only on 1x screens: on retina the resolution is enough and MSAA nearly halved the fps
+      const samples = this.maxPR <= 1 ? P.samples : 0;
+      const c = (this.composer = new EffectComposer(this.renderer, new THREE.WebGLRenderTarget(1, 1, { type, samples })));
+      if (px > 1) c.addPass(new RenderPixelatedPass(px, this.scene, this.camera, { normalEdgeStrength: 0.25, depthEdgeStrength: 0.35 }));
+      else {
+        c.addPass(new RenderPass(this.scene, this.camera));
+        if (P.ao) {
+          const ao = new GTAOPass(this.scene, this.camera, w, h);
+          ao.updateGtaoMaterial({ radius: 0.35, distanceExponent: 1.5, thickness: 1.0, scale: 1.2, samples: 8 });
+          ao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 6, rings: 2, samples: 8 });
+          ao.blendIntensity = 0.9;
+          c.addPass(ao);
+          this.aoPass = ao;
+        }
       }
+      if (tilt) {
+        this.hts = new ShaderPass(tiltShader('1.0, 0.0'));
+        this.vts = new ShaderPass(tiltShader('0.0, 1.0'));
+        this.hts.uniforms.tMask!.value = this.vts!.uniforms.tMask!.value = this.maskVis.texture;
+        c.addPass(this.hts);
+        c.addPass(this.vts);
+        this.hts.enabled = this.vts!.enabled = !this.top;
+      }
+      c.addPass(new OutputPass());
+      if (outline) {
+        this.outlinePass = new ShaderPass(OutlineShader);
+        this.outlinePass.uniforms.tVis!.value = this.maskVis.texture;
+        this.outlinePass.uniforms.tAll!.value = this.maskAll.texture;
+        c.addPass(this.outlinePass);
+      }
+      if (P.vignette) {
+        const vig = new ShaderPass(VignetteShader);
+        vig.uniforms.offset!.value = 0.95;
+        vig.uniforms.darkness!.value = 1.05;
+        c.addPass(vig);
+        vignettePass = true;
+      }
+    } else if (outline) {
+      // straight to the canvas: the outline is one blended quad over the tone-mapped frame
+      const mat = new THREE.ShaderMaterial({ ...OutlineOverlayShader, uniforms: THREE.UniformsUtils.clone(OutlineOverlayShader.uniforms), transparent: true, depthTest: false, depthWrite: false });
+      mat.uniforms.tVis!.value = this.maskVis.texture;
+      mat.uniforms.tAll!.value = this.maskAll.texture;
+      const geo = new THREE.PlaneGeometry(2, 2);
+      const sc = new THREE.Scene();
+      const quad = new THREE.Mesh(geo, mat);
+      quad.frustumCulled = false;
+      sc.add(quad);
+      this.overlay = { scene: sc, cam: new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1), mat, geo };
     }
-    this.hts = this.vts = null;
-    if (SETTINGS.tiltShift) {
-      this.hts = new ShaderPass(tiltShader('1.0, 0.0'));
-      this.vts = new ShaderPass(tiltShader('0.0, 1.0'));
-      this.hts.uniforms.tMask!.value = this.vts!.uniforms.tMask!.value = this.maskVis.texture;
-      c.addPass(this.hts);
-      c.addPass(this.vts);
-      this.hts.enabled = this.vts!.enabled = !this.top;
-    }
-    c.addPass(new OutputPass());
-    this.outlinePass = null;
-    if (SETTINGS.outline) {
-      this.outlinePass = new ShaderPass(OutlineShader);
-      this.outlinePass.uniforms.tVis!.value = this.maskVis.texture;
-      this.outlinePass.uniforms.tAll!.value = this.maskAll.texture;
-      c.addPass(this.outlinePass);
-    }
-    const vig = new ShaderPass(VignetteShader);
-    vig.uniforms.offset!.value = 0.95;
-    vig.uniforms.darkness!.value = 1.05;
-    c.addPass(vig);
+    this.vignetteEl.style.display = vignettePass || this.diorama ? 'none' : '';
     this.resize();
   }
 
-  // the frame-time watcher moves the resolution between maxPR and 1
+  private disposeOverlay() {
+    if (!this.overlay) return;
+    this.overlay.mat.dispose();
+    this.overlay.geo.dispose();
+    this.overlay = null;
+  }
+
+  /** after a tier / chip change: re-read the parameters and rebuild whatever depends on them */
+  applyTier() {
+    this.params = this.diorama ? dioramaParams(effective()) : effective();
+    this.perf.slow = this.perf.grace = 0;
+    this.maxPR = Math.min(window.devicePixelRatio || 1, this.params.maxPR);
+    this.applyPixelRatio(this.maxPR);
+    this.applyShadow();
+    this.applyFx();
+    this.setupPasses();
+    // the island's own detail (terrain grid, grass, props) changed: rebuild it (the camera stays)
+    if (this.lastSt && this.builtDetail !== this.detailSig()) this.render(this.lastSt, this.lastView);
+    this.invalidate();
+  }
+
+  private detailSig() {
+    return this.diorama ? 'diorama' : detailKey(SETTINGS.quality);
+  }
+
+  setGraphics(opts: Partial<Settings>) {
+    Object.assign(SETTINGS, opts, { v: 3 });
+    if (opts.quality) SETTINGS.chosen = true;
+    saveSettings();
+    applyLowFx();
+    this.applyTier();
+  }
+
   applyPixelRatio(pr: number) {
     if (Math.abs(pr - this.renderer.getPixelRatio()) < 0.01) return;
     this.renderer.setPixelRatio(pr);
     this.resize();
   }
 
-  // every ~1.5 s: slow frames drop the resolution a step, a long run of fast ones climbs back
-  watchPerf(now: number) {
+  // ---------- adaptive quality ladder (see tick) ----------
+  // Fed with the time between two frames drawn back to back. Two slow windows (1.5 s each) in a row
+  // take the next cheaper step; one window is skipped after each step so the change can settle.
+  // It only ever goes down: never above the tier the player chose.
+  watchPerf(real: number, dt: number) {
     const p = this.perf;
-    if (p.last != null && !document.hidden) {
-      const dt = now - p.last;
-      if (dt < 250) (p.sum += dt), p.n++; // ignore pauses (tab switch, modal)
-    }
-    p.last = now;
-    if (!p.t) p.t = now;
-    if (now - p.t < 1500 || p.n < 20) return;
+    if (p.last != null && real - p.last > 1000) (p.t = real), (p.sum = p.n = 0); // idle gap: start a fresh window
+    p.last = real;
+    if (!p.t) p.t = real;
+    if (dt < 250) (p.sum += dt), p.n++; // ignore pauses (tab switch, modal)
+    if (real - p.t < 1500 || p.n < 20) return;
     const avg = p.sum / p.n;
-    p.t = now;
+    p.t = real;
     p.sum = p.n = 0;
-    const pr = this.renderer.getPixelRatio();
-    if (p.cap == null) p.cap = this.maxPR;
-    if (avg > 22 && this.aoPass && this.aoPass.enabled) {
-      // too slow: first drop the ambient occlusion (for this session only), it is the priciest pass
-      p.good = 0;
-      this.aoPass.enabled = false;
-    } else if (avg > 22 && pr > 1) {
-      // still too slow: one resolution step down, and never climb back to the level that failed
-      p.good = 0;
-      p.cap = pr - 0.25;
-      this.applyPixelRatio(Math.max(1, pr >= 1.75 ? 1.5 : pr - 0.25));
-    } else if (avg < 18 && pr + 0.25 <= p.cap + 0.01) {
-      if (++p.good >= 4) {
-        p.good = 0;
-        this.applyPixelRatio(Math.min(p.cap, pr + 0.25));
-      }
-    } else p.good = 0;
+    if (p.grace > 0) return void p.grace--;
+    if (avg <= 22) return void (p.slow = 0);
+    if (++p.slow < 2) return;
+    p.slow = 0;
+    if (this.degrade()) p.grace = 1;
   }
 
-  setGraphics(opts: Partial<Settings>) {
-    Object.assign(SETTINGS, opts, { v: 2 });
-    saveSettings();
-    this.setupPasses();
+  /** the next cheaper step; false when none is left */
+  private degrade(): boolean {
+    const P = this.params;
+    if (this.aoPass && this.aoPass.enabled) {
+      this.aoPass.enabled = false; // the priciest pass
+      P.ao = false;
+      return true;
+    }
+    if (P.outline !== 'off') {
+      P.outline = 'off';
+      if (this.outlinePass) this.outlinePass.enabled = false;
+      this.disposeOverlay();
+      return true;
+    }
+    if (P.shadow.type === 'pcf') {
+      P.shadow = { type: 'basic', size: P.shadow.size };
+      this.applyShadow();
+      return true;
+    }
+    if (P.ambientFps > 30) {
+      P.ambientFps = 30;
+      return true;
+    }
+    const pr = this.renderer.getPixelRatio();
+    if (pr - 0.25 >= 0.75 - 0.01) {
+      this.applyPixelRatio(Math.max(0.75, pr - 0.25));
+      return true;
+    }
+    if (!this.suggested && SETTINGS.quality !== 'low' && !this.diorama) {
+      this.suggested = true;
+      if (this.onSlow) this.onSlow();
+    }
+    return false;
   }
 
   resize() {
     const w = this.container.clientWidth || 800, h = this.container.clientHeight || 600;
-    this.renderer.setSize(w, h, false);
-    this.composer.setPixelRatio(this.renderer.getPixelRatio());
-    this.composer.setSize(w, h);
+    const r = this.renderer;
+    r.setSize(w, h, false);
+    if (this.composer) {
+      this.composer.setPixelRatio(r.getPixelRatio());
+      this.composer.setSize(w, h);
+    }
     this.labels.setSize(w, h);
     this.viewH = h;
     this.canvasRect = null; // re-measured on the next toScreen()
     this.shadowDirty = this.masksStale = this.labelsDirty = true;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
-    const pr = this.renderer.getPixelRatio();
-    const mw = Math.round(w * pr), mh = Math.round(h * pr);
+    const pr = r.getPixelRatio();
+    // masks: half resolution on the `medium` tier (the outline is 1-2 px wide anyway)
+    const ms = this.params.outline === 'half' ? 0.5 : 1;
+    const mw = Math.max(1, Math.round(w * pr * ms)), mh = Math.max(1, Math.round(h * pr * ms));
     this.maskVis.setSize(mw, mh);
     this.maskAll.setSize(mw, mh);
-    if (this.outlinePass) this.outlinePass.uniforms.uTexel!.value.set(pr / mw, pr / mh); // ~1-2 css px
+    const u = this.outlinePass ? this.outlinePass.uniforms : this.overlay ? this.overlay.mat.uniforms : null;
+    if (u) u.uTexel!.value.set(1 / w, 1 / h); // ~1-2 css px whatever the mask resolution
     if (this.hts) {
       this.hts.uniforms.h!.value = 2.4 / w;
       this.vts!.uniforms.h!.value = 2.4 / h;
       this.hts.uniforms.r!.value = this.vts!.uniforms.r!.value = 0.55;
     }
+    this.invalidate();
   }
 
   // masks of the player pieces (see OutlineShader / tiltShader)
   // `fresh` = the camera, the pieces or the size changed since the last masks; otherwise they still hold
   renderMasks(fresh: boolean) {
     const r = this.renderer, cam = this.camera, sc = this.scene;
-    const need = !!(this.hasPieces && (this.hts || this.outlinePass));
+    const outline = this.params.outline !== 'off' && !!(this.outlinePass || this.overlay);
+    const need = !!(this.hasPieces && (this.hts || outline));
     if (!need && !this.masksDirty) return;
     if (need && !fresh && this.masksDirty) return;
     const prevAuto = r.autoClear, prevShadow = r.shadowMap.autoUpdate, prevMask = cam.layers.mask;
@@ -390,7 +554,7 @@ export class Board3D implements BoardRenderer {
     }
     r.setRenderTarget(this.maskAll);
     r.clear();
-    if (need && this.outlinePass) {
+    if (need && outline) {
       sc.overrideMaterial = this.allMat;
       r.render(sc, cam);
     }
@@ -409,13 +573,17 @@ export class Board3D implements BoardRenderer {
     this.resizeObs.disconnect();
     removeEventListener('scroll', this.forgetRect, true);
     removeEventListener('resize', this.forgetRect);
+    document.removeEventListener('visibilitychange', this.onVisibility);
+    this.controls.removeEventListener('change', this.invalidate);
     this.controls.dispose();
-    this.composer.dispose();
+    if (this.composer) this.composer.dispose();
+    this.disposeOverlay();
     this.maskVis.dispose();
     this.maskAll.dispose();
     this.envRT.dispose();
     this.renderer.dispose();
     this.canvas.remove();
+    this.vignetteEl.remove();
     this.labels.domElement.remove();
     if (this.diceFx) this.diceFx.dispose();
     for (const pg of this.pings || []) dropPing(this, pg);
@@ -443,39 +611,106 @@ export class Board3D implements BoardRenderer {
     return info;
   }
 
+  /** Dev check (console: `__board3d.perfInfo()`): the tier, what it resolved to and how many frames were drawn
+   *  in the last second. Standing still at the `low` tier this must say 0 frames. */
+  perfInfo() {
+    const nowT = performance.now();
+    this.frameLog = this.frameLog.filter(t => nowT - t < 1000);
+    const c = this.composer;
+    const info = {
+      tier: SETTINGS.quality,
+      chosenByPlayer: SETTINGS.chosen,
+      framesLastSecond: this.frameLog.length,
+      drawCalls: this.lastDrawCalls,
+      triangles: this.lastTriangles,
+      pixelRatio: this.renderer.getPixelRatio(),
+      composer: !!c,
+      passes: c ? c.passes.filter(p => p.enabled).length : 1 + (this.overlay ? 1 : 0),
+      outline: this.params.outline,
+      ambientFps: this.params.ambientFps,
+      shadow: this.params.shadow,
+      params: { ...this.params },
+      geometries: this.renderer.info.memory.geometries,
+      textures: this.renderer.info.memory.textures,
+    };
+    console.log('[board3d] perfInfo', info);
+    return info;
+  }
+
+  // anything still moving by itself? (polled every tick; each one needs a frame per tick)
+  private stepTransients(now: number): boolean {
+    let active = false;
+    if (this.spawns.length) {
+      active = true;
+      this.spawns = this.spawns.filter(sp => {
+        const k = Math.min(1, (now - sp.t0) / 450);
+        const e = 1 - Math.pow(1 - k, 3);
+        sp.obj.position.y = sp.y + (1 - e) * 1.2;
+        sp.obj.scale.copy(sp.base).multiplyScalar(0.6 + e * 0.4);
+        return k < 1;
+      });
+    }
+    if (this.plates.length) (active = true), updatePlates(this, now);
+    if (this.diceFx && this.diceFx.throw) (active = true), this.diceFx.update(now);
+    else if (this.diceFx) this.diceFx.update(now);
+    if (this.pings && this.pings.length) (active = true), updatePings(this, now);
+    // the robber's red stain fades in on its new tile
+    const rt = this.robberTile, ru = U.uRobber.value;
+    if (rt && (rt.x !== ru.x || rt.y !== ru.y)) ru.set(rt.x, rt.y, 0);
+    const target = rt ? 1 : 0;
+    if (ru.z !== target) {
+      active = true;
+      ru.z += (target - ru.z) * 0.06;
+      if (Math.abs(target - ru.z) < 0.004) ru.z = target;
+    }
+    if (this.camAnim) (active = true), updateCamAnim(this, now);
+    if (this.floaters.length) updateFloaters(this, now); // DOM only: no frame needed
+    return active || this.controls.autoRotate;
+  }
+
   tick() {
-    const t = this.clock.getElapsedTime();
+    if (document.hidden) {
+      this.renderedLastTick = false;
+      return;
+    }
+    const real = performance.now(), now = this.now();
+    const active = this.stepTransients(now);
+    this.controls.update();
+    if (this.compiling) return;
+    const moved = this.viewChanged() || this.movedPending;
+    const afps = this.params.ambientFps;
+    const ambientDue = afps > 0 && real - this.lastRender >= 1000 / afps - 1;
+    if (!(this.needsRender || moved || active || ambientDue)) {
+      this.renderedLastTick = false;
+      return;
+    }
+    if (this.fpsCap && real - this.lastRender < 1000 / this.fpsCap - 2) {
+      this.movedPending = moved; // keep wanting the frame, draw it a little later
+      return;
+    }
+    this.movedPending = false;
+    this.needsRender = false;
+    // the frame-time watcher only samples frames drawn back to back (not the gaps between idle frames)
+    if (this.renderedLastTick && !this.diorama) this.watchPerf(real, real - this.lastRender);
+    this.renderedLastTick = true;
+    this.lastRender = real;
+    this.frameLog.push(real);
+    if (this.frameLog.length > 240) this.frameLog.splice(0, this.frameLog.length - 240);
+
+    // ambient animations advance only when a frame is drawn
+    const t = (real - this.t0) / 1000;
     U.uTime.value = t;
     for (const b of this.bobbers) {
       b.obj.position.y = b.y + Math.sin(t * 1.4 + b.ph) * 0.025;
       b.obj.rotation.z = Math.sin(t * 1.1 + b.ph) * 0.05;
     }
-    const now = this.now();
-    this.spawns = this.spawns.filter(sp => {
-      const k = Math.min(1, (now - sp.t0) / 450);
-      const e = 1 - Math.pow(1 - k, 3);
-      sp.obj.position.y = sp.y + (1 - e) * 1.2;
-      sp.obj.scale.copy(sp.base).multiplyScalar(0.6 + e * 0.4);
-      return k < 1;
-    });
-    updatePlates(this, now);
-    if (this.diceFx) this.diceFx.update(now);
-    updatePings(this, now);
-    // the robber's red stain fades in on its new tile
-    const rt = this.robberTile, ru = U.uRobber.value;
-    if (rt && (rt.x !== ru.x || rt.y !== ru.y)) ru.set(rt.x, rt.y, 0);
-    ru.z += ((rt ? 1 : 0) - ru.z) * 0.06;
     if (goldGlow.size) {
       const shine = 0.22 + 0.4 * Math.max(0, Math.sin(t * 2.4)) ** 3;
       for (const m of goldGlow) m.emissiveIntensity = shine;
     }
-    updateCamAnim(this, now);
-    this.controls.update();
-    scaleTokens(this);
-    updateFloaters(this, now);
-    this.watchPerf(now);
-    if (this.compiling) return;
-    const moved = this.viewChanged();
+    if (moved || this.labelsDirty) scaleTokens(this);
+
+    this.renderer.info.reset();
     const dicing = !!(this.diceFx && this.diceFx.throw);
     this.renderMasks(moved || this.masksStale || this.spawns.length > 0 || dicing);
     this.masksStale = false;
@@ -484,9 +719,11 @@ export class Board3D implements BoardRenderer {
       this.renderer.shadowMap.needsUpdate = true;
       this.shadowDirty = false;
     }
-    this.composer.render();
+    this.drawFrame();
+    this.lastDrawCalls = this.renderer.info.render.calls;
+    this.lastTriangles = this.renderer.info.render.triangles;
     // the labels only move with the camera: re-placing ~100 of them every frame cost a style recalc
-    if (moved || this.labelsDirty) {
+    if ((moved || this.labelsDirty) && !this.diorama) {
       this.labelsDirty = false;
       this.labels.render(this.scene, this.camera);
       // snap the pixel labels to whole pixels: sub-pixel positions blur the pixel font
@@ -494,6 +731,19 @@ export class Board3D implements BoardRenderer {
         const t = el.style.transform;
         if (t && t.indexOf('.') >= 0) el.style.transform = t.replace(/(-?\d+\.\d+)px/g, (_m: string, n: string) => Math.round(+n) + 'px');
       }
+    }
+  }
+
+  private drawFrame() {
+    if (this.composer) return this.composer.render();
+    const r = this.renderer;
+    r.render(this.scene, this.camera);
+    const o = this.overlay;
+    if (o && this.hasPieces) {
+      const auto = r.autoClear;
+      r.autoClear = false;
+      r.render(o.scene, o.cam);
+      r.autoClear = auto;
     }
   }
 
@@ -523,20 +773,21 @@ export class Board3D implements BoardRenderer {
   }
 
   // ---------- thin wrappers: the logic lives in the helper modules ----------
-  rollDice(values: number[], at: number, power = 0): number { return rollDice(this, values, at, power); }
+  // (each one changes what is on screen, so each asks for a frame)
+  rollDice(values: number[], at: number, power = 0): number { this.invalidate(); return rollDice(this, values, at, power); }
   shake(px: number) { shake(this, px); }
   pickGround(cx: number, cy: number) { return pickGround(this, cx, cy); }
-  ping(x: number, z: number, color: string) { ping(this, x, z, color); }
+  ping(x: number, z: number, color: string) { this.invalidate(); ping(this, x, z, color); }
   toScreen(x: number, y: number, z: number) { return toScreen(this, x, y, z); }
   tilePoint(id: number) { return tilePoint(this, id); }
   playerPoints(pid: number) { return playerPoints(this, pid); }
   float(el: HTMLElement, point: THREE.Vector3, opts?: { rise?: number; life?: number; wobble?: number }) { float(this, el, point, opts); }
-  setZoom(z: number) { setZoom(this, z); }
-  resetView() { resetView(this); }
+  setZoom(z: number) { setZoom(this, z); this.invalidate(); }
+  resetView() { resetView(this); this.invalidate(); }
   framing(top: boolean) { return framing(this, top); }
-  frame() { frame(this); }
-  lens(fov: number) { lens(this, fov); }
-  setTopView(on: boolean) { setTopView(this, on); }
+  frame() { frame(this); this.invalidate(); }
+  lens(fov: number) { lens(this, fov); this.invalidate(); }
+  setTopView(on: boolean) { setTopView(this, on); this.invalidate(); }
 
   heightAt(x: number, z: number): number {
     return this.field ? this.field.sample(x, z) : 0.3;
@@ -545,17 +796,21 @@ export class Board3D implements BoardRenderer {
   // ---------- build ----------
   render(st: BState, view: BoardViewState = {}) {
     this.lastSt = st;
+    this.lastView = view;
     // a state update may add pieces, labels or fog: redraw shadows, masks and labels once
     this.shadowDirty = this.masksStale = this.labelsDirty = true;
+    this.invalidate();
     const bd = st.board;
     this.bounds = bd.bounds;
     const faceDown = !!view.faceDown;
-    // terrain, props, grass and ports depend on the terrain key; the numbers have their own key,
-    // so a number-only change (changing-land mode, revealed numbers) rebuilds just the labels
-    const key = terrainKey(bd, faceDown);
+    // terrain, props, grass and ports depend on the terrain key (+ the tier's detail); the numbers have
+    // their own key, so a number-only change (changing-land mode, revealed numbers) rebuilds just the labels
+    const detail = this.detailSig();
+    const key = terrainKey(bd, faceDown) + '|' + detail;
     if (key !== this.staticKey) {
-      const first = !this.staticKey;
+      const first = !this.field;
       this.staticKey = key;
+      this.builtDetail = detail;
       this.buildStatic(st, faceDown);
       if (first) this.frame();
     } else {
@@ -591,6 +846,7 @@ export class Board3D implements BoardRenderer {
     }
     this.compiling = false;
     this.shadowDirty = this.masksStale = this.labelsDirty = true;
+    this.invalidate();
     this.markReady();
   }
 

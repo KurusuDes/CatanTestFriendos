@@ -22,7 +22,7 @@ function waterMaterial(tex: Textures, heightTex: THREE.DataTexture) {
   vec3 shallow = vec3(0.30, 0.72, 0.74), deep = vec3(0.03, 0.22, 0.33);
   diffuseColor.rgb = mix(shallow, deep, smoothstep(0.0, 0.85, depth));
   float n = texture2D(normalMap, vWxz * 0.9 + uTime * vec2(0.03, 0.02)).r;
-  float foam = (1.0 - smoothstep(0.02, 0.2 + 0.08 * sin(uTime * 1.3 + vWxz.x * 3.0), depth)) * smoothstep(0.35, 0.7, n);
+  float foam = (1.0 - smoothstep(0.02, 0.2 + 0.08 * sin(uTime * 1.3 + vWxz.x * 3.0), depth)) * smoothstep(0.35, 0.7, n) * uFx.z;
   diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.96), foam);
   diffuseColor.a = mix(0.5, 0.93, smoothstep(0.0, 0.5, depth)) + foam * 0.4;`)
       .replace('texture2D( normalMap, vNormalMapUv ).xyz', `normalize(texture2D(normalMap, vWxz * 0.33 + uTime * vec2(0.012, 0.007)).xyz * 2.0 - 1.0 + texture2D(normalMap, vWxz * 0.57 - uTime * vec2(0.009, 0.013)).xyz * 2.0 - 1.0) * 0.5 + 0.5`);
