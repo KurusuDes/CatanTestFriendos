@@ -91,7 +91,7 @@ Một cửa sổ nhỏ chứa các trò may rủi để chơi trong lúc chờ t
 | Ứng dụng | `src/app.js`, `src/main.js` | Trạng thái ván, gửi hành động, lượt của bot, lưu ván |
 | Online | `src/net.js` | Phòng, đồng bộ do chủ phòng quyết định, kết nối lại, bỏ phiếu |
 | Màn hình ván | `src/ui/gameView.js` | Thẻ, bài trên tay, hành động, xúc xắc, giao dịch, thẻ bay |
-| Bàn cờ 3D | `src/ui/board3d.js`, `dice3d.js`, `flag.js` | Địa hình, biến thể ô, công trình, sương mù, xúc xắc 3D, cờ |
+| Bàn cờ 3D | `src/board/` (`Board3D.ts`, `terrain.ts`, `pieces.ts`, `fog.ts`, `dice3d.ts`...), `src/ui/flag.js` | Địa hình, biến thể ô, công trình, sương mù, xúc xắc 3D, cờ |
 | Góc ADHD | `src/ui/adhd.js` | Sáu trò chơi nhỏ, số dư, mở khóa, pháo hoa |
 | Giao diện khác | `src/ui/lobby.js`, `editor.js`, `pixel.js`, `sfx.js`, `help.js` | Sảnh và phòng, trình tạo bản đồ, sprite pixel, âm thanh, trợ giúp |
 | Giao diện | `src/styles/style.css`, `src/styles/pixel.css` | Theme pixel (bảng màu Sweetie-16), font VT323 và Tiny5 (có tiếng Việt) |

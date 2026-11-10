@@ -31,7 +31,7 @@ import { autoPixelize } from './ui/pixel.js';
 // live 3D island slowly orbiting behind the title
 async function menuDiorama(el) {
   try {
-    const [{ Board3D }, { createGame }, { defaultConfig }] = await Promise.all([import('./ui/board3d.js'), import('./engine/game.js'), import('./engine/config.js')]);
+    const [{ Board3D }, { createGame }, { defaultConfig }] = await Promise.all([import('@board/Board3D'), import('./engine/game.js'), import('./engine/config.js')]);
     if (!el.isConnected) return;
     const c = defaultConfig();
     c.map.shape = ['pangea', 'big', 'star', 'ring'][Math.floor(Math.random() * 4)];

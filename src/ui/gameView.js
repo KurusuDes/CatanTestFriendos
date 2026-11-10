@@ -1,6 +1,6 @@
 import { App } from '../app.js';
 import { h, clear, rich, toast, sync } from './dom.js';
-import { BoardView } from './boardView.js';
+import { BoardView } from '@board/BoardView';
 import { RES, TILE_INFO, COSTS, DEV_INFO, EVENTS } from '../engine/constants.js';
 import * as G from '../engine/game.js';
 import { hint } from '../engine/bot.js';
@@ -102,7 +102,7 @@ async function mountBoard(u) {
   const loading = h('div', { class: 'board-loading jit' }, '🏝️ Đang dựng đảo...');
   u.boardWrap.append(loading);
   try {
-    const { Board3D } = await import('./board3d.js');
+    const { Board3D } = await import('@board/Board3D');
     if (ui !== u) return;
     const b = await Board3D.create(u.boardWrap);
     if (ui !== u) return b.dispose();

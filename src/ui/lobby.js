@@ -1,6 +1,6 @@
 import { App } from '../app.js';
 import { h, s as S, clear, storage, toast } from './dom.js';
-import { BoardView } from './boardView.js';
+import { BoardView } from '@board/BoardView';
 import { defaultConfig, MODES, PRESETS, PLAYER_COLORS, BOT_NAMES } from '../engine/config.js';
 import { SHAPES, generateBoard } from '../engine/board.js';
 import { DEV_DECKS, TILE_INFO } from '../engine/constants.js';

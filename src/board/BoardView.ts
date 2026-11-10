@@ -1,10 +1,12 @@
 // SVG board renderer with pan & zoom. Pure view: it receives the state plus a
 // "view" object describing what the local viewer may see and click.
-import { TILE_INFO, probLook } from '../engine/constants.js';
-import { s as S, clear } from './dom.js';
+import { TILE_INFO, probLook } from '@engine/constants';
+import { s as S, clear } from '@ui/dom';
+import type { BoardRenderer } from './BoardRenderer';
+import type { BState, BoardViewState } from './types';
 
 const U = 100; // svg units per hex radius
-const hexPoints = (cx, cy, r) =>
+const hexPoints = (cx: number, cy: number, r: number) =>
   Array.from({ length: 6 }, (_, i) => {
     const a = (Math.PI / 180) * (60 * i - 30);
     return `${(cx + r * Math.cos(a)).toFixed(1)},${(cy + r * Math.sin(a)).toFixed(1)}`;
@@ -13,14 +15,30 @@ const hexPoints = (cx, cy, r) =>
 const HOUSE = 'M-13,10 L-13,-3 L0,-15 L13,-3 L13,10 Z';
 const CITY = 'M-20,12 L-20,-5 L-9,-5 L-9,-13 L1,-23 L11,-13 L11,-2 L20,-2 L20,12 Z';
 
-function shade(hex, f) {
+function shade(hex: string, f: number) {
   const n = parseInt(hex.slice(1), 16);
   const c = [n >> 16, (n >> 8) & 255, n & 255].map(x => Math.max(0, Math.min(255, Math.round(x * f))));
   return '#' + c.map(x => x.toString(16).padStart(2, '0')).join('');
 }
 
-export class BoardView {
-  constructor(container, { interactive = true } = {}) {
+export class BoardView implements BoardRenderer {
+  container: HTMLElement;
+  interactive: boolean;
+  svg: SVGElement;
+  zoom: number;
+  cx: number | null;
+  cy: number | null;
+  prevPieces: Set<string>;
+  boundsKey: string;
+  dragging = false;
+  vbW = 0;
+  vbH = 0;
+  baseW = 0;
+  baseH = 0;
+  bx = 0;
+  by = 0;
+
+  constructor(container: HTMLElement, { interactive = true }: { interactive?: boolean } = {}) {
     this.container = container;
     this.interactive = interactive;
     this.svg = S('svg', { class: 'board-svg', xmlns: 'http://www.w3.org/2000/svg' });
@@ -35,28 +53,28 @@ export class BoardView {
 
   initPanZoom() {
     const svg = this.svg;
-    svg.addEventListener('wheel', e => {
+    svg.addEventListener('wheel', (e: WheelEvent) => {
       e.preventDefault();
       this.setZoom(this.zoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12));
     }, { passive: false });
-    const pts = new Map();
-    let start = null;
-    svg.addEventListener('pointerdown', e => {
+    const pts = new Map<number, { x: number; y: number }>();
+    let start: { x: number; y: number; cx: number | null; cy: number | null; zoom: number; dist: number | null; moved: boolean } | null = null;
+    svg.addEventListener('pointerdown', (e: PointerEvent) => {
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       start = { x: e.clientX, y: e.clientY, cx: this.cx, cy: this.cy, zoom: this.zoom, dist: null, moved: false };
       if (pts.size === 2) {
         const [a, b] = [...pts.values()];
-        start.dist = Math.hypot(a.x - b.x, a.y - b.y);
+        start.dist = Math.hypot(a!.x - b!.x, a!.y - b!.y);
       }
     });
-    svg.addEventListener('pointermove', e => {
+    svg.addEventListener('pointermove', (e: PointerEvent) => {
       if (!start || !pts.has(e.pointerId)) return;
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
       const rect = svg.getBoundingClientRect();
       const scale = this.vbW / rect.width;
       if (pts.size === 2 && start.dist) {
         const [a, b] = [...pts.values()];
-        const d = Math.hypot(a.x - b.x, a.y - b.y);
+        const d = Math.hypot(a!.x - b!.x, a!.y - b!.y);
         this.setZoom((start.zoom * d) / start.dist);
         return;
       }
@@ -64,11 +82,11 @@ export class BoardView {
       if (!start.moved && Math.hypot(dx, dy) < 6) return;
       start.moved = true;
       this.dragging = true;
-      this.cx = start.cx - dx * scale;
-      this.cy = start.cy - dy * scale;
+      this.cx = start.cx! - dx * scale;
+      this.cy = start.cy! - dy * scale;
       this.applyViewBox();
     });
-    const end = e => {
+    const end = (e: PointerEvent) => {
       pts.delete(e.pointerId);
       if (!pts.size) {
         start = null;
@@ -80,7 +98,7 @@ export class BoardView {
     svg.addEventListener('pointerleave', end);
   }
 
-  setZoom(z) {
+  setZoom(z: number) {
     this.zoom = Math.max(0.6, Math.min(4, z));
     this.applyViewBox();
   }
@@ -96,11 +114,11 @@ export class BoardView {
     if (this.cx == null) return;
     this.vbW = this.baseW / this.zoom;
     this.vbH = this.baseH / this.zoom;
-    this.svg.setAttribute('viewBox', `${this.cx - this.vbW / 2} ${this.cy - this.vbH / 2} ${this.vbW} ${this.vbH}`);
+    this.svg.setAttribute('viewBox', `${this.cx - this.vbW / 2} ${this.cy! - this.vbH / 2} ${this.vbW} ${this.vbH}`);
   }
 
   // view = { viewer, interaction: {kind, legal:Set, onPick}, rolled, blindOwn:[], showAll }
-  render(st, view = {}) {
+  render(st: BState, view: BoardViewState = {}) {
     const bd = st.board;
     const b = bd.bounds;
     const key = `${b.minX},${b.maxX},${b.minY},${b.maxY}`;
@@ -117,8 +135,8 @@ export class BoardView {
     this.applyViewBox();
     const svg = clear(this.svg);
     const inter = view.interaction || null;
-    const legal = inter ? inter.legal : new Set();
-    const pick = (id, e) => {
+    const legal: Iterable<number> = inter ? inter.legal : new Set<number>();
+    const pick = (id: number, e: Event) => {
       if (this.dragging) return;
       e.stopPropagation();
       inter && inter.onPick(id);
@@ -154,7 +172,7 @@ export class BoardView {
     const rolled = view.rolled;
     for (const t of bd.tiles) {
       const cx = t.x * U, cy = t.y * U;
-      const info = TILE_INFO[t.res] || TILE_INFO.desert;
+      const info = (TILE_INFO as Record<string, any>)[t.res] || TILE_INFO.desert;
       const hidden = !t.revealed;
       const faceDown = hidden && view.faceDown;
       const flip = view.flipAt ? ` flip` : '';
@@ -187,15 +205,15 @@ export class BoardView {
     // ports
     const gPorts = S('g', { class: 'ports' });
     for (const p of bd.ports) {
-      const E = bd.edges[p.edge];
+      const E = bd.edges[p.edge]!;
       const px = p.x * U, py = p.y * U;
       for (const v of [E.a, E.b]) {
-        const V = bd.vertices[v];
+        const V = bd.vertices[v]!;
         gPorts.append(S('line', { x1: px, y1: py, x2: V.x * U, y2: V.y * U, class: 'dock' }));
       }
       const label = p.type === 'any' ? '3:1' : '2:1';
       gPorts.append(S('circle', { cx: px, cy: py, r: 25, class: 'port ' + p.type, filter: 'url(#shadow)' }));
-      if (p.type !== 'any') gPorts.append(S('text', { x: px, y: py - 1, class: 'port-icon' }, TILE_INFO[p.type].icon));
+      if (p.type !== 'any') gPorts.append(S('text', { x: px, y: py - 1, class: 'port-icon' }, (TILE_INFO as Record<string, any>)[p.type].icon));
       gPorts.append(S('text', { x: px, y: py + (p.type === 'any' ? 7 : 18), class: 'port-label' + (p.type === 'any' ? ' big' : '') }, label));
     }
     svg.append(gPorts);
@@ -204,18 +222,18 @@ export class BoardView {
     if (inter && inter.kind === 'robber') {
       const gR = S('g', { class: 'hot-tiles' });
       for (const id of legal) {
-        const t = bd.tiles[id];
-        gR.append(S('polygon', { points: hexPoints(t.x * U, t.y * U, U * 0.9), class: 'hot-tile', onclick: e => pick(id, e) }));
+        const t = bd.tiles[id]!;
+        gR.append(S('polygon', { points: hexPoints(t.x * U, t.y * U, U * 0.9), class: 'hot-tile', onclick: (e: Event) => pick(id, e) }));
       }
       svg.append(gR);
     }
 
     // roads
-    const pieces = new Set();
+    const pieces = new Set<string>();
     const gRoads = S('g', { class: 'roads' });
-    const drawRoad = (eid, color, extra = '') => {
-      const E = bd.edges[eid];
-      const a = bd.vertices[E.a], c = bd.vertices[E.b];
+    const drawRoad = (eid: number, color: string, extra = '') => {
+      const E = bd.edges[eid]!;
+      const a = bd.vertices[E.a]!, c = bd.vertices[E.b]!;
       const k = 0.17;
       const x1 = (a.x + (c.x - a.x) * k) * U, y1 = (a.y + (c.y - a.y) * k) * U;
       const x2 = (c.x + (a.x - c.x) * k) * U, y2 = (c.y + (a.y - c.y) * k) * U;
@@ -227,31 +245,31 @@ export class BoardView {
       g.append(S('line', { x1, y1, x2, y2, class: 'road-in', stroke: color }));
       gRoads.append(g);
     };
-    for (const k in st.roads) drawRoad(+k, st.players[st.roads[k]].color);
-    for (const b of view.blindOwn || []) if (b.eid != null) drawRoad(b.eid, st.players[b.pid].color, ' ghost');
+    for (const k in st.roads) drawRoad(+k, st.players[st.roads[k]!]!.color);
+    for (const b of view.blindOwn || []) if (b.eid != null) drawRoad(b.eid, st.players[b.pid]!.color, ' ghost');
     svg.append(gRoads);
 
     // buildings
     const gB = S('g', { class: 'buildings' });
-    const drawBuilding = (vid, owner, type, extra = '') => {
-      const V = bd.vertices[vid];
+    const drawBuilding = (vid: number, owner: number, type: string, extra = '') => {
+      const V = bd.vertices[vid]!;
       const key = 'b' + vid + type + extra;
       const isNew = this.prevPieces.size && !this.prevPieces.has(key);
       pieces.add(key);
-      const color = st.players[owner].color;
+      const color = st.players[owner]!.color;
       const g = S('g', { class: 'piece ' + type + extra + (isNew ? ' new' : ''), transform: `translate(${V.x * U},${V.y * U}) scale(1.55)` });
       g.append(S('path', { d: type === 'city' ? CITY : HOUSE, fill: color, stroke: shade(color, 0.45), 'stroke-width': 2.2, 'stroke-linejoin': 'round', filter: 'url(#shadow)' }));
       if (type === 'city') g.append(S('rect', { x: -4, y: 1, width: 7, height: 11, fill: shade(color, 0.5) }));
       else g.append(S('rect', { x: -3.5, y: 1, width: 7, height: 9, fill: shade(color, 0.5) }));
       gB.append(g);
     };
-    for (const k in st.buildings) drawBuilding(+k, st.buildings[k].owner, st.buildings[k].type);
+    for (const k in st.buildings) drawBuilding(+k, st.buildings[k]!.owner, st.buildings[k]!.type);
     for (const b of view.blindOwn || []) drawBuilding(b.vid, b.pid, b.type, ' ghost');
     svg.append(gB);
 
     // robber
-    if (bd.robber >= 0 && !st.config.rules.noRobber && bd.tiles[bd.robber].revealed && !bd.robberHidden) {
-      const t = bd.tiles[bd.robber];
+    if (bd.robber >= 0 && !st.config.rules.noRobber && bd.tiles[bd.robber]!.revealed && !bd.robberHidden) {
+      const t = bd.tiles[bd.robber]!;
       const g = S('g', { class: 'robber', transform: `translate(${t.x * U - 40},${t.y * U + 6})` });
       g.append(S('ellipse', { cx: 0, cy: 22, rx: 15, ry: 5, fill: 'rgba(0,0,0,.35)' }));
       g.append(S('path', { d: 'M-12,22 C-14,4 -8,-4 0,-4 C8,-4 14,4 12,22 Z', class: 'robber-body' }));
@@ -275,25 +293,29 @@ export class BoardView {
     if (inter && (inter.kind === 'settlement' || inter.kind === 'city')) {
       const g = S('g', { class: 'hot' });
       for (const v of legal) {
-        const V = bd.vertices[v];
+        const V = bd.vertices[v]!;
         g.append(S('circle', { cx: V.x * U, cy: V.y * U, r: 14, class: 'hot-v', style: `--pc:${inter.color || '#fff'}` }));
-        g.append(S('circle', { cx: V.x * U, cy: V.y * U, r: 24, class: 'hit', onclick: e => pick(v, e) }));
+        g.append(S('circle', { cx: V.x * U, cy: V.y * U, r: 24, class: 'hit', onclick: (e: Event) => pick(v, e) }));
       }
       svg.append(g);
     }
     if (inter && inter.kind === 'road') {
       const g = S('g', { class: 'hot' });
       for (const e of legal) {
-        const E = bd.edges[e];
-        const a = bd.vertices[E.a], c = bd.vertices[E.b];
+        const E = bd.edges[e]!;
+        const a = bd.vertices[E.a]!, c = bd.vertices[E.b]!;
         const x1 = (a.x + (c.x - a.x) * 0.24) * U, y1 = (a.y + (c.y - a.y) * 0.24) * U;
         const x2 = (c.x + (a.x - c.x) * 0.24) * U, y2 = (c.y + (a.y - c.y) * 0.24) * U;
         g.append(S('line', { x1, y1, x2, y2, class: 'hot-e-bg' }));
         g.append(S('line', { x1, y1, x2, y2, class: 'hot-e', style: `--pc:${inter.color || '#fff'}` }));
-        g.append(S('line', { x1, y1, x2, y2, class: 'hit-e', onclick: ev => pick(e, ev) }));
+        g.append(S('line', { x1, y1, x2, y2, class: 'hit-e', onclick: (ev: Event) => pick(e, ev) }));
       }
       svg.append(g);
     }
     this.prevPieces = pieces;
+  }
+
+  dispose() {
+    this.svg.remove();
   }
 }
