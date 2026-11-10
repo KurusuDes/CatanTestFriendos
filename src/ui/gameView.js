@@ -122,8 +122,13 @@ async function mountBoard(u) {
     toast('Không tải được bản đồ 3D (mất mạng hoặc thiếu WebGL?): chuyển sang bản đồ phẳng', 'error', 4000);
     u.board = new BoardView(u.boardWrap);
   }
+  // first render builds the island; the shaders compile (compileAsync) while the loader is still up
+  if (App.state) {
+    render(App.state);
+    if (u.board3d && u.board3d.ready) await u.board3d.ready;
+    if (ui !== u) return;
+  }
   loading.remove();
-  if (App.state) render(App.state);
 }
 
 export function disposeGameView() {

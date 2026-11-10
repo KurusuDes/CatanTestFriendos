@@ -117,7 +117,10 @@ export class Board3D implements BoardRenderer {
   rolledAt: number | undefined;
   viewSig: Float64Array | undefined;
   viewCur: Float64Array | undefined;
+  /** resolves once the first build and the shader compile are done (see render) */
   floor: THREE.Mesh;
+  ready: Promise<void>;
+  private markReady!: () => void;
 
   static SETTINGS_TILT(): boolean { return SETTINGS.tiltShift; }
   static SETTINGS_PIXEL() { return SETTINGS.pixel; }
@@ -131,6 +134,7 @@ export class Board3D implements BoardRenderer {
   }
 
   constructor(container: HTMLElement, kit: Kit, tex: Textures) {
+    this.ready = new Promise<void>(res => (this.markReady = res));
     this.container = container;
     this.kit = kit;
     this.tex = tex;
@@ -428,6 +432,7 @@ export class Board3D implements BoardRenderer {
     disposeChildren(this.staticGroup);
     disposeChildren(this.dynGroup);
     disposeTree(this.floor);
+    this.markReady();
   }
 
   /** Dev check: GPU resource counts (geometries/textures should not grow on rebuilds). */
@@ -469,6 +474,7 @@ export class Board3D implements BoardRenderer {
     scaleTokens(this);
     updateFloaters(this, now);
     this.watchPerf(now);
+    if (this.compiling) return;
     const moved = this.viewChanged();
     const dicing = !!(this.diceFx && this.diceFx.throw);
     this.renderMasks(moved || this.masksStale || this.spawns.length > 0 || dicing);
@@ -566,6 +572,26 @@ export class Board3D implements BoardRenderer {
     this.markRolled(view.rolled, view.rolledAt);
     updateFog(this, st, view);
     buildDynamic(this, st, view);
+    // compile the shaders now (not on the first visible frame); `ready` resolves when done
+    if (!this.compileStarted) {
+      this.compileStarted = true;
+      this.compile();
+    }
+  }
+
+  private compileStarted = false;
+  private compiling = false;
+  private async compile() {
+    this.compiling = true; // no frames while the shaders build: the loader covers the canvas
+    try {
+      // a timeout so a stuck compile can never keep the loader up
+      await Promise.race([this.renderer.compileAsync(this.scene, this.camera), new Promise(res => setTimeout(res, 6000))]);
+    } catch (e) {
+      console.warn('compileAsync failed', e);
+    }
+    this.compiling = false;
+    this.shadowDirty = this.masksStale = this.labelsDirty = true;
+    this.markReady();
   }
 
   // the winning numbers blink green for a few seconds (the CSS animation ends by itself).

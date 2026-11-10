@@ -10,4 +10,6 @@ export interface BoardRenderer {
   /** 3D only: straight-down plan view. */
   top?: boolean;
   setTopView?(on: boolean): void;
+  /** 3D only: resolves once the first build and the shader compile are done. */
+  ready?: Promise<void>;
 }
