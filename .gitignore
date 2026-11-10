@@ -6,4 +6,3 @@ node_modules/
 CatanVault/.obsidian/*
 !CatanVault/.obsidian/app.json
 *.log
-showcase/frames/

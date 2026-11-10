@@ -7,28 +7,6 @@ Miễn phí, không quảng cáo, không cần tài khoản, không cần cài �
 | | |
 |---|---|
 | 🎮 **Chơi ngay** | https://kurusudes.github.io/CatanTestFriendos/ |
-| 🎞️ **Trailer (tiếng Anh)** | [Xem trên trình duyệt](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en) · [MP4](showcase/katanittes-trailer-en.mp4) |
-| 🎞️ **Trailer (tiếng Tây Ban Nha)** | [Xem trên trình duyệt](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html) · [MP4](showcase/katanittes-trailer.mp4) |
-| 🎬 **Giới thiệu tính năng** | [Xem trên trình duyệt](https://kurusudes.github.io/CatanTestFriendos/showcase/) · [MP4](showcase/katanittes.mp4) |
-
-[![Katanittes](showcase/poster.jpg)](https://kurusudes.github.io/CatanTestFriendos/showcase/trailer.html?lang=en)
-
-> Game chỉ có tiếng Việt. Trailer và video giới thiệu được làm từ trước nên vẫn ở tiếng Anh và tiếng Tây Ban Nha.
-
----
-
-## Trailer
-
-Trailer châm biếm dài 72 giây theo kiểu motion graphics: mở màn như trailer phim bom tấn ("Trong một thế giới... nơi bạn bè cướp cừu của bạn..."), dạo qua các chế độ chơi, lời khen giả của giới phê bình và, phần chính, một quảng cáo sòng bạc nhại lại góc trò chơi trong game, kèm hai máy mới (đua cừu và khu mỏ).
-
-![Góc ADHD, quảng cáo như sòng bạc](showcase/readme/trailer-casino.gif)
-
-| | | |
-|---|---|---|
-| ![Sa bàn 3D](showcase/readme/diorama.jpg) | ![Chế độ Bịt mắt](showcase/readme/blindfold.jpg) | ![Sương mù chiến tranh](showcase/readme/fog.jpg) |
-| ![Hai máy mới: đua cừu và khu mỏ](showcase/readme/adhd-machines.jpg) | ![Đạt $1600 để có pháo hoa](showcase/readme/adhd-ladder.jpg) | ![Giới phê bình nói gì](showcase/readme/reviews.jpg) |
-
-Cũng như trang giới thiệu, trailer là một trang web chạy trực tiếp: mỗi khung hình là một hàm thuần của đồng hồ, kể cả bàn cờ 3D thật và các ván bot thật, nên cùng một trang vừa phát được trên trình duyệt vừa quay được từng khung thành MP4. Nhạc nền chiptune và hiệu ứng âm thanh được tổng hợp bằng code và khớp với từng cảnh.
 
 ---
 
@@ -118,7 +96,6 @@ Một cửa sổ nhỏ chứa các trò may rủi để chơi trong lúc chờ t
 | Giao diện khác | `js/ui/lobby.js`, `editor.js`, `pixel.js`, `sfx.js`, `help.js` | Sảnh và phòng, trình tạo bản đồ, sprite pixel, âm thanh, trợ giúp |
 | Giao diện | `css/style.css`, `css/pixel.css` | Theme pixel (bảng màu Sweetie-16), font VT323 và Tiny5 (có tiếng Việt) |
 | Tài nguyên | `assets/`, `tools/blender/` | Texture, mô hình `kit.glb` và biểu tượng, cùng các script Blender tạo ra chúng |
-| Video | `showcase/` | Trang giới thiệu và trailer (`trailer.html?lang=en`), hàm animation dùng chung trong `motion.js` |
 | Test | `tests/` | Test luật cộng hàng trăm ván bot đấu bot có kiểm tra bất biến |
 
 ## Chạy trên máy

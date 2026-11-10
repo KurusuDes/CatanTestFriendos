@@ -1,26 +1,26 @@
 ---
-description: Cierra la sesión: documenta lo avanzado en el vault de Obsidian, crea las tareas pendientes, commit y push
+description: Đóng phiên: ghi lại tiến độ vào vault Obsidian, tạo các việc tồn đọng, commit và push
 ---
 
-Cierra la sesión de trabajo:
+Đóng phiên làm việc:
 
-1. **Qué se hizo.** Lee `CatanVault/01 - Active Context.md` para sacar el «Último commit documentado» y corre:
-   - `git log --reverse --format='%h %s' <ese hash>..HEAD`
+1. **Đã làm gì.** Đọc `CatanVault/01 - Active Context.md` để lấy «Último commit documentado» (commit cuối cùng đã được ghi lại), rồi chạy:
+   - `git log --reverse --format='%h %s' <hash đó>..HEAD`
    - `git status --porcelain`
-   Junta eso con lo que hablamos en esta conversación (pedidos, decisiones mías, lo que se verificó y lo que no).
-2. **Número de sesión.** Mira `CatanVault/Sesiones/`: la nueva es la siguiente a la más alta (`S01`, `S02`...).
-3. **Nota de sesión.** Crea `CatanVault/Sesiones/S{NN} - {AAAA-MM-DD} - {título corto}.md` con el mismo formato que las anteriores:
-   - frontmatter con `tags: [sesion]`, `fecha` y `commits`;
-   - qué se hizo, en bloques, con el hash de cada commit;
-   - decisiones que tomé yo (con mis palabras si importan);
-   - verificación: tests, capturas, lo que quedó sin probar;
-   - archivos tocados, solo los importantes.
-   Escribe para alguien que no estuvo en la sesión: frases completas, sin jerga interna.
-4. **Tareas.** En `CatanVault/02 - Tareas.md`:
-   - marca como hechas (`- [x] ... ✅ fecha [[S{NN} ...]]`, movidas a «Hechas») las que se completaron;
-   - crea las nuevas pendientes (`- [ ] ... ➕ fecha [[S{NN} ...]]`) de: cosas sin verificar, ideas que dejamos para después, pedidos míos que no se hicieron, bugs vistos y no arreglados. Una línea cada una, accionable. Si no hay ninguna, no inventes.
-5. **Active Context.** Reescribe `CatanVault/01 - Active Context.md`: última sesión (enlace), «Último commit documentado» (el último commit de trabajo de esta sesión, antes del commit de cierre), estado en un párrafo y siguiente paso.
-6. **Índice.** Si cambió la arquitectura (archivos o sistemas nuevos), actualiza la tabla de `CatanVault/00 - Index.md`.
-7. **Tests.** Si hay código sin commitear, corre `npm test`. Si falla, no hagas push: deja el commit hecho y avísame.
-8. **Commit y push.** `git add -A`, commit con mensaje `S{NN}: resumen` (cuerpo con viñetas por bloque; trailers `Co-Authored-By` y `Claude-Session` del system-reminder) y `git push origin main`. Ojo: el push publica el juego en GitHub Pages. Si el push falla, deja el commit y repórtalo.
-9. **Reporte** (tope 120 palabras): hash del commit, nota creada, tareas cerradas y creadas, siguiente paso. Sin repetir la sesión: ya está en la nota.
+   Kết hợp với những gì ta đã trao đổi trong cuộc trò chuyện này (các yêu cầu, quyết định của tôi, điều đã được kiểm chứng và điều chưa).
+2. **Số phiên.** Xem `CatanVault/Sesiones/`: phiên mới là số kế tiếp số cao nhất (`S01`, `S02`...).
+3. **Ghi chú phiên.** Tạo `CatanVault/Sesiones/S{NN} - {AAAA-MM-DD} - {tiêu đề ngắn}.md` theo cùng định dạng với các ghi chú trước:
+   - frontmatter gồm `tags: [sesion]`, `fecha` và `commits`;
+   - đã làm gì, chia theo khối, kèm hash của từng commit;
+   - các quyết định do tôi đưa ra (giữ nguyên lời tôi nếu quan trọng);
+   - kiểm chứng: test, ảnh chụp, những gì chưa được thử;
+   - các file đã động đến, chỉ những file quan trọng.
+   Viết cho người không có mặt trong phiên: câu đầy đủ, không dùng biệt ngữ nội bộ.
+4. **Việc cần làm.** Trong `CatanVault/02 - Tareas.md`:
+   - đánh dấu hoàn thành (`- [x] ... ✅ ngày [[S{NN} ...]]`, chuyển xuống mục «Hechas») những việc đã xong;
+   - tạo các việc tồn đọng mới (`- [ ] ... ➕ ngày [[S{NN} ...]]`) từ: những thứ chưa kiểm chứng, ý tưởng để lại sau, yêu cầu của tôi chưa làm, bug đã thấy mà chưa sửa. Mỗi việc một dòng, có thể hành động ngay. Nếu không có thì đừng bịa ra.
+5. **Active Context.** Viết lại `CatanVault/01 - Active Context.md`: phiên gần nhất (kèm liên kết), «Último commit documentado» (commit làm việc cuối cùng của phiên này, trước commit đóng phiên), trạng thái trong một đoạn và bước tiếp theo.
+6. **Chỉ mục.** Nếu kiến trúc thay đổi (file hoặc hệ thống mới), cập nhật bảng trong `CatanVault/00 - Index.md`.
+7. **Test.** Nếu còn code chưa commit, chạy `npm test`. Nếu lỗi thì đừng push: giữ nguyên commit đã tạo và báo tôi.
+8. **Commit và push.** `git add -A`, commit với thông điệp `S{NN}: tóm tắt` (phần thân gồm các gạch đầu dòng theo khối; trailer `Co-Authored-By` và `Claude-Session` lấy từ system-reminder) rồi `git push origin main`. Lưu ý: push sẽ xuất bản game lên GitHub Pages. Nếu push lỗi, giữ nguyên commit và báo lại.
+9. **Báo cáo** (tối đa 120 từ): hash commit, ghi chú đã tạo, các việc đã đóng và đã tạo, bước tiếp theo. Không nhắc lại phiên: nó đã nằm trong ghi chú.

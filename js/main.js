@@ -112,23 +112,9 @@ function menuScreen(root) {
       h('button', { class: 'btn primary', onclick: () => App.go('lobby') }, '🎮 Chơi trên một máy (chuyền máy + bot)'),
       h('button', { class: 'btn pink', onclick: () => App.go('online') }, '🌐 Chơi online với bạn bè'),
       h('button', { class: 'btn', onclick: () => App.go('editor') }, '✏️ Tạo bản đồ'),
-      h('button', { class: 'btn', onclick: () => quickBots() }, '👀 Xem bot đấu với nhau'),
-      h('button', { class: 'btn', onclick: () => showHelp() }, '📖 Cách chơi'),
-      h('div', { style: { display: 'flex', gap: '6px' } },
-        h('a', { class: 'btn', href: 'showcase/trailer.html', style: { textDecoration: 'none', flex: 1 } }, '🎞️ Trailer'),
-        h('a', { class: 'btn', href: 'showcase/', style: { textDecoration: 'none', flex: 1 } }, '🎬 Giới thiệu'))),
+      h('button', { class: 'btn', onclick: () => showHelp() }, '📖 Cách chơi')),
     h('div', { class: 'menu-foot' }, 'Làm ra để chơi cùng bạn bè · chạy trên máy tính và điện thoại · không cần cài đặt', creditLine())));
   menuDiorama(dio);
-}
-
-async function quickBots() {
-  const { defaultConfig, PLAYER_COLORS, BOT_NAMES } = await import('./engine/config.js');
-  const c = defaultConfig();
-  c.players = [0, 1, 2, 3].map(i => ({ name: BOT_NAMES[i], kind: 'bot', level: ['hard', 'normal', 'hard', 'easy'][i], color: PLAYER_COLORS[i] }));
-  c.modes.events = true;
-  c.map.shape = ['classic', 'star', 'ring', 'pangea'][Math.floor(Math.random() * 4)];
-  App.setSpeed(250);
-  App.startGame(c);
 }
 
 const RECENT_KEY = 'katanittes.recentRooms';
