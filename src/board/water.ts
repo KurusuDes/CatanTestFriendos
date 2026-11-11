@@ -4,7 +4,7 @@ import { patch, U } from './shaders';
 import type { Textures } from './assets';
 import type { BState } from './types';
 import type { Board3D } from './Board3D';
-import type { TerrainField } from './terrain';
+import { SEABED_PAD, SEABED_RES, type GenResult } from './terrainGen';
 
 function waterMaterial(tex: Textures, heightTex: THREE.DataTexture) {
   const m = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.05, metalness: 0.02, transparent: true, normalMap: tex.water, normalScale: new THREE.Vector2(0.35, 0.35) });
@@ -32,19 +32,17 @@ function waterMaterial(tex: Textures, heightTex: THREE.DataTexture) {
 }
 
 // ---- seabed heightmap for the water shader + the water plane (the caller adds it to the static group)
-export function buildWater(board: Board3D, st: BState, field: TerrainField): THREE.Mesh {
+export function buildWater(board: Board3D, st: BState, res: GenResult): THREE.Mesh {
   const b = st.board.bounds;
-  const HM = 256, pad = 3;
+  const HM = SEABED_RES, pad = SEABED_PAD;
   const rect = new THREE.Vector4(b.minX - pad, b.minY - pad, b.maxX - b.minX + 2 * pad, b.maxY - b.minY + 2 * pad);
+  // the worker made one byte per texel: expand to grey RGBA
   const hdata = new Uint8Array(HM * HM * 4);
-  for (let j = 0; j < HM; j++)
-    for (let i = 0; i < HM; i++) {
-      const hh = field.sample(rect.x + ((i + 0.5) / HM) * rect.z, rect.y + ((j + 0.5) / HM) * rect.w);
-      const v = Math.max(0, Math.min(255, Math.round(((hh + 1.2) / 2.7) * 255)));
-      const k = (j * HM + i) * 4;
-      hdata[k] = hdata[k + 1] = hdata[k + 2] = v;
-      hdata[k + 3] = 255;
-    }
+  for (let k = 0; k < HM * HM; k++) {
+    const v = res.seabed[k]!;
+    hdata[k * 4] = hdata[k * 4 + 1] = hdata[k * 4 + 2] = v;
+    hdata[k * 4 + 3] = 255;
+  }
   const htex = new THREE.DataTexture(hdata, HM, HM);
   htex.magFilter = htex.minFilter = THREE.LinearFilter;
   htex.needsUpdate = true;

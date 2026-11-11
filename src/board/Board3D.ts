@@ -34,7 +34,9 @@ import { placeProps } from './props';
 import { detailKey, dioramaParams, PARAMS, type Tier, type TierParams } from './quality';
 import { applyLowFx, effective, saveSettings, SETTINGS, type Settings } from './settings';
 import { LAYER_GRASS, LAYER_PIECES, OutlineOverlayShader, OutlineShader, patch, pieceColorMat, tiltShader, U } from './shaders';
-import { buildHexGrid, buildTerrainMesh, smooth, terrainKey, terrainOf, type TerrainField } from './terrain';
+import { buildHexGrid, buildTerrainMesh, smooth, terrainKey } from './terrain';
+import { gridHeight, spotKey, terrainOf, type GenInput, type GenResult, type HeightGrid, type TerrainField } from './terrainGen';
+import { generateIsland } from './terrainClient';
 import { buildWater } from './water';
 import type { BState, BoardViewState, BBounds, Interaction } from './types';
 
@@ -81,7 +83,9 @@ export class Board3D implements BoardRenderer {
   staticGroup: THREE.Group;
   dynGroup: THREE.Group;
   tokenGroup: THREE.Group | null = null;
-  staticKey = ''; // terrain key; setting it to '' forces a full static rebuild
+  staticKey = ''; // terrain key of the island on screen; setting it to '' forces a full static rebuild
+  private pendingKey: string | null = null; // key of the build in flight (the island is made in a worker)
+  private buildSeq = 0; // a result is used only if no newer build was asked for meanwhile
   tokenKey = ''; // numbers key; a change rebuilds only the number labels
   dynKey: string | undefined;
   spawns: { obj: THREE.Object3D; y: number; base: THREE.Vector3; t0: number }[] = [];
@@ -128,7 +132,13 @@ export class Board3D implements BoardRenderer {
   lastSt: BState | undefined;
   lastView: BoardViewState = {};
   bounds: BBounds | undefined;
-  field: TerrainField | undefined;
+  /** height of the island on screen at (x, z): present once the first island has landed (it reads the height grid) */
+  field: { sample(x: number, z: number): number } | undefined;
+  private hgrid: HeightGrid | undefined;
+  private builtTiles: GenInput['tiles'] = [];
+  private builtFaceDown = false;
+  private spots = new Map<string, number>(); // exact heights at vertices, tile centres and edge midpoints
+  private exact: TerrainField | undefined; // the exact field, made only for points outside the height grid
   water: THREE.Mesh | undefined;
   tokens: CSS2DObject[] = [];
   robberTile: { x: number; y: number } | null = null;
@@ -789,8 +799,16 @@ export class Board3D implements BoardRenderer {
   lens(fov: number) { lens(this, fov); this.invalidate(); }
   setTopView(on: boolean) { setTopView(this, on); this.invalidate(); }
 
+  /** Terrain height at (x, z): looked up on the height grid of the island (the terrain mesh itself). Outside the
+   *  grid (open sea) the exact field is used, as before. 0.3 until the first island has landed. */
   heightAt(x: number, z: number): number {
-    return this.field ? this.field.sample(x, z) : 0.3;
+    const g = this.hgrid;
+    if (!g) return 0.3;
+    const sp = this.spots.get(spotKey(x, z));
+    if (sp !== undefined) return sp;
+    const h = gridHeight(g, x, z);
+    if (h !== null) return h;
+    return (this.exact ||= terrainOf({ board: { tiles: this.builtTiles } }, this.builtFaceDown)).sample(x, z);
   }
 
   // ---------- build ----------
@@ -807,18 +825,19 @@ export class Board3D implements BoardRenderer {
     // their own key, so a number-only change (changing-land mode, revealed numbers) rebuilds just the labels
     const detail = this.detailSig();
     const key = terrainKey(bd, faceDown) + '|' + detail;
-    if (key !== this.staticKey) {
-      const first = !this.field;
-      this.staticKey = key;
-      this.builtDetail = detail;
-      this.buildStatic(st, faceDown);
-      if (first) this.frame();
-    } else {
-      const tk = tokenKey(bd);
-      if (tk !== this.tokenKey) {
-        this.tokenKey = tk;
-        buildTokens(this, st, faceDown);
-      }
+    // the island is generated in a worker: while a build is in flight the old island stays on screen
+    if (key !== (this.pendingKey ?? this.staticKey) || (this.staticKey === '' && this.pendingKey === null)) this.requestStatic(st, faceDown, key, detail);
+    // nothing to hang pieces on before the first island has landed (swapStatic runs this again)
+    if (this.field) this.applyDynamic(st, view);
+  }
+
+  private applyDynamic(st: BState, view: BoardViewState) {
+    const bd = st.board;
+    const faceDown = !!view.faceDown;
+    const tk = tokenKey(bd);
+    if (tk !== this.tokenKey) {
+      this.tokenKey = tk;
+      buildTokens(this, st, faceDown);
     }
     if (view.flipAt && view.flipAt !== this.lastFlip) {
       this.lastFlip = view.flipAt;
@@ -865,25 +884,68 @@ export class Board3D implements BoardRenderer {
     }
   }
 
-  buildStatic(st: BState, faceDown: boolean) {
+  /** Asks the worker for the island of this state; the latest request wins (older results are dropped). */
+  private requestStatic(st: BState, faceDown: boolean, key: string, detail: string) {
     const bd = st.board;
+    const p = this.params;
+    const input: GenInput = {
+      tiles: bd.tiles.map(t => ({ id: t.id, q: t.q, r: t.r, x: t.x, y: t.y, res: t.res, revealed: !!t.revealed })),
+      vertices: bd.vertices.map(v => ({ x: v.x, y: v.y })),
+      edges: bd.edges.map(e => ({ a: e.a, b: e.b })),
+      bounds: { minX: bd.bounds.minX, maxX: bd.bounds.maxX, minY: bd.bounds.minY, maxY: bd.bounds.maxY },
+      faceDown,
+      step: p.terrainStep,
+      grass: p.grass,
+      props: p.props,
+    };
+    const seq = ++this.buildSeq;
+    this.pendingKey = key;
+    generateIsland(input).then(
+      res => {
+        if (!this.alive || seq !== this.buildSeq) return; // stale: a newer build was asked for (or the board is gone)
+        this.swapStatic(st, input, res, key, detail);
+      },
+      e => {
+        console.error('island build failed', e);
+        if (seq === this.buildSeq) this.pendingKey = null;
+        this.markReady(); // never keep the loader up
+      },
+    );
+  }
+
+  /** The island is ready: replace the old one in one go (no blank frame) and bring the dynamic parts up to date. */
+  private swapStatic(st: BState, input: GenInput, res: GenResult, key: string, detail: string) {
+    const bd = st.board;
+    const first = !this.field;
     disposeChildren(this.staticGroup);
     this.tokenGroup = null;
     this.bobbers = [];
     this.tokens = [];
     this.labelRev++;
-    const field = (this.field = terrainOf(st, faceDown));
+    this.hgrid = { nx: res.nx, nz: res.nz, x0: res.x0, z0: res.z0, step: res.step, heights: res.heights };
+    this.builtTiles = input.tiles;
+    this.builtFaceDown = input.faceDown;
+    this.exact = undefined;
+    this.spots.clear();
+    for (let i = 0; i < res.exact.length; i += 3) this.spots.set(spotKey(res.exact[i]!, res.exact[i + 1]!), res.exact[i + 2]!);
+    this.field ||= { sample: (x, z) => this.heightAt(x, z) };
     const b = bd.bounds;
     const cx = (b.minX + b.maxX) / 2, cz = (b.minY + b.maxY) / 2;
     this.placeSun(cx, cz);
-    this.staticGroup.add(buildTerrainMesh(this, st, field));
-    this.water = buildWater(this, st, field);
+    this.staticGroup.add(buildTerrainMesh(this, res));
+    this.water = buildWater(this, st, res);
     this.staticGroup.add(this.water);
-    this.staticGroup.add(buildHexGrid(st, field));
-    placeProps(this, st);
-    placeGrass(this, st);
-    buildTokens(this, st, faceDown);
-    this.tokenKey = tokenKey(bd);
+    this.staticGroup.add(buildHexGrid(res));
+    placeProps(this, res.props);
+    placeGrass(this, res.grassLists);
     buildPorts(this, st);
+    this.tokenKey = ''; // the tokens belong to the old static group: applyDynamic builds them again
+    this.staticKey = key;
+    this.pendingKey = null;
+    this.builtDetail = detail;
+    if (first) this.frame();
+    this.shadowDirty = this.masksStale = this.labelsDirty = true;
+    this.invalidate();
+    if (this.lastSt) this.applyDynamic(this.lastSt, this.lastView);
   }
 }
