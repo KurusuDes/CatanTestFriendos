@@ -17,20 +17,34 @@ publicas un fork, te recomendamos **cambiarle el nombre** y no presentarlo como 
 
 ## Recursos propios
 
-Todo lo que hay en `assets/` (texturas, modelos 3D en `kit.glb`, iconos de recursos), los efectos
-de sonido (sintetizados en tiempo real en `js/ui/sfx.js`) y el material de `showcase/` son
+Todo lo que hay en `public/assets/` (texturas, modelos 3D en `kit.glb`, iconos de recursos), los efectos
+de sonido (sintetizados en tiempo real en `src/ui/sfx.ts`) y el material de `showcase/` son
 originales de este proyecto: se generan con los scripts de `tools/blender/` y se distribuyen bajo la
 misma licencia MIT que el código.
 
 ## Software y recursos de terceros
 
-No se incluyen en el repositorio; se cargan desde CDN en tiempo de ejecución.
+Se instalan con pnpm y se empaquetan con la página (Vite); no se cargan desde CDN.
+
+### En tiempo de ejecución (van dentro del bundle)
 
 | Componente | Uso | Licencia |
 |---|---|---|
-| [three.js](https://github.com/mrdoob/three.js) 0.170.0 | Motor 3D del tablero y los dados | MIT |
+| [three.js](https://github.com/mrdoob/three.js) 0.187.0 | Motor 3D del tablero y los dados | MIT |
+| [meshoptimizer](https://github.com/zeux/meshoptimizer) (decodificador WASM incluido con three.js en `examples/jsm/libs/meshopt_decoder.module.js`) | Descomprime `kit.glb` (`EXT_meshopt_compression`) | MIT |
 | [PeerJS](https://github.com/peers/peerjs) 1.5.4 | Conexión P2P (WebRTC) del modo online | MIT |
-| [Fredoka](https://fonts.google.com/specimen/Fredoka), [Nunito](https://fonts.google.com/specimen/Nunito), [Pixelify Sans](https://fonts.google.com/specimen/Pixelify+Sans), [Silkscreen](https://fonts.google.com/specimen/Silkscreen), [Tiny5](https://fonts.google.com/specimen/Tiny5), [VT323](https://fonts.google.com/specimen/VT323) (Google Fonts) | Tipografías de la interfaz | SIL Open Font License 1.1 |
+| [Preact](https://github.com/preactjs/preact) 11 | Interfaz | MIT |
+| [@preact/signals](https://github.com/preactjs/signals) 2.11 | Estado reactivo de la interfaz | MIT |
+| [Comlink](https://github.com/GoogleChromeLabs/comlink) 4.4 | Comunicación con los Web Workers | Apache-2.0 |
+| Be Vietnam Pro y Baloo 2, vía [@fontsource](https://github.com/fontsource/font-files) (paquetes `@fontsource/be-vietnam-pro` y `@fontsource/baloo-2` 5.3) | Tipografías de la interfaz | SIL Open Font License 1.1 |
+
+### Solo en tiempo de compilación (no se distribuyen)
+
+| Componente | Uso | Licencia |
+|---|---|---|
+| [Vite](https://github.com/vitejs/vite), [TypeScript](https://github.com/microsoft/TypeScript), [Vitest](https://github.com/vitest-dev/vitest), [tsx](https://github.com/privatenumber/tsx), [happy-dom](https://github.com/capricorn86/happy-dom), [stats-gl](https://github.com/RenaudRohlinger/stats-gl) | Compilación, pruebas y medición | Ver la licencia de cada paquete (MIT, salvo TypeScript: Apache-2.0) |
+| [gltfpack](https://github.com/zeux/meshoptimizer) 1.3 | Comprime `kit.glb` con meshopt (`pnpm assets`) | MIT |
+| [sharp](https://github.com/lovell/sharp) 0.35 | Genera las texturas de baja resolución (`pnpm assets`); sus binarios incluyen libvips (LGPL-3.0-or-later) | Apache-2.0 |
 
 El modo online usa el servidor de señalización público de PeerJS para emparejar a los jugadores;
 las partidas en sí viajan directamente entre navegadores.

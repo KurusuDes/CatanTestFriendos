@@ -36,7 +36,7 @@ Bản dịch của [[02 - Tareas]]. Khi đánh dấu xong, hãy làm ở file g�
 - [ ] Đổi mô tả repo trên GitHub, hiện vẫn ghi «Catan x Kchudites» (quyết định nội dung; có đề xuất trong ghi chú) ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
 - [ ] Đưa trailer phát ngay trong README: nén MP4 tiếng Anh xuống dưới 10 MB, tải lên từ trình soạn thảo github.com và để GIF bên dưới như phần phụ ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
 - [ ] Làm tên trộm dễ thấy hơn: to và cao hơn, có viền hoặc quầng sáng, và vết đỏ trên ô của nó đậm hơn (đã hứa trên Reddit) ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
-- [ ] Quyết định có tạo tài khoản Metered miễn phí cho relay TURN và đặt `METERED_APP` và `METERED_KEY` trong `js/net.js` không (không có TURN thì hai người chơi sau NAT nghiêm ngặt không kết nối được) ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
+- [ ] Quyết định có tạo tài khoản Metered miễn phí cho relay TURN và đặt `METERED_APP` và `METERED_KEY` trong `src/net/session.ts` không (không có TURN thì hai người chơi sau NAT nghiêm ngặt không kết nối được) ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
 - [ ] Sửa trong các README câu «there's no game server»: giải thích máy chủ chào hỏi của PeerJS và các STUN ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
 - [ ] Rà soát hiệu năng game: đo FPS và thời gian mỗi khung hình trên trình duyệt và đề xuất cải thiện cụ thể ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
 - [ ] Đăng lên Reddit ba câu trả lời đã soạn (tên trộm, NAT, may rủi); câu về tên trộm đăng sau khi sửa xong ➕ 2026-10-14 [[S08 - 2026-10-14 - Primeros comentarios de usuarios]]
