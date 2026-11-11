@@ -128,6 +128,8 @@ export function scaleTokens(board: Board3D) {
   if (tk === board.tk) return;
   board.tk = tk;
   board.labels.domElement.style.setProperty('--tk', String(tk));
+  if (board.tokenSprites) board.tokenSprites.setTk(tk);
+  if (board.portSprites) board.portSprites.setTk(tk);
 }
 
 // world point -> page coordinates (null when it is behind the camera)

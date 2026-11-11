@@ -157,7 +157,7 @@ input[type=range] { accent-color: var(--sand); }
 .confetti { width: 8px; height: 8px; }
 
 /* ---------- 3D pixel labels ---------- */
-.labels-3d { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.labels-3d { position: absolute; inset: 0; pointer-events: none; overflow: hidden; contain: layout style paint; }
 /* even, fixed size + whole-pixel positions = crisp digits */
 .tok3d { font-family: var(--num); background: #f7ecd0; color: var(--ink); width: 40px; height: 40px; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
   box-shadow: 0 0 0 3px var(--ink), inset -3px -3px 0 #d7c49b, 4px 5px 0 1px rgba(0,0,0,.35); font-weight: 800; font-size: 19px; line-height: 18px; padding-top: 3px; text-align: center; }

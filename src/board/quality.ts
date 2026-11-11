@@ -47,6 +47,9 @@ export const PARAMS: Record<Tier, TierParams> = {
   low: { maxPR: 0.75, samples: 0, composer: false, halfFloat: false, shadow: { type: 'basic', size: 512 }, ao: false, outline: 'off', vignette: false, terrainStep: 0.1, grass: 0, props: 0.5, wind: false, clouds: false, foam: false, ambientFps: 0, lowTextures: true },
 };
 
+/** Number tokens and port signs: GPU quads (labelsprites.ts) on the light tiers, CSS2D DOM labels on high / ultra. */
+export const spriteLabels = (t: Tier): boolean => t === 'low' || t === 'medium';
+
 /** What changes the geometry of the island (the static build must be redone when it changes). */
 export function detailKey(t: Tier): string {
   const p = PARAMS[t];

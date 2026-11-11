@@ -27,13 +27,14 @@ import { disposeChildren, disposeTree } from './dispose';
 import { dropPing, float, flipPlates, ping, playerPoints, rollDice, shake, tilePoint, updateFloaters, updatePings, updatePlates, type Floater, type Ping, type Plate } from './effects';
 import { updateFog } from './fog';
 import { buildTokens, tokenKey } from './labels';
+import type { LabelSet } from './labelsprites';
 import { placeGrass } from './grass';
-import { buildDynamic } from './pieces';
+import { buildDynamic, type PieceSet, type Spawn } from './pieces';
 import { buildPorts } from './ports';
 import { placeProps } from './props';
-import { detailKey, dioramaParams, PARAMS, type Tier, type TierParams } from './quality';
+import { detailKey, dioramaParams, PARAMS, spriteLabels, type Tier, type TierParams } from './quality';
 import { applyLowFx, effective, saveSettings, SETTINGS, type Settings } from './settings';
-import { LAYER_GRASS, LAYER_PIECES, OutlineOverlayShader, OutlineShader, patch, pieceColorMat, tiltShader, U } from './shaders';
+import { LAYER_GRASS, LAYER_LABELS, LAYER_PIECES, OutlineOverlayShader, OutlineShader, patch, pieceColorMat, tiltShader, U } from './shaders';
 import { buildHexGrid, buildTerrainMesh, smooth, terrainKey, terrainOf, type TerrainField } from './terrain';
 import { buildWater } from './water';
 import type { BState, BoardViewState, BBounds, Interaction } from './types';
@@ -83,11 +84,10 @@ export class Board3D implements BoardRenderer {
   tokenGroup: THREE.Group | null = null;
   staticKey = ''; // terrain key; setting it to '' forces a full static rebuild
   tokenKey = ''; // numbers key; a change rebuilds only the number labels
-  dynKey: string | undefined;
-  spawns: { obj: THREE.Object3D; y: number; base: THREE.Vector3; t0: number }[] = [];
+  pieceSet: PieceSet | undefined;
+  spawns: Spawn[] = [];
   plates: Plate[] = [];
   bobbers: { obj: THREE.Object3D; y: number; ph: number }[] = [];
-  prevPieces = new Set<string>();
   floaters: Floater[] = [];
   pings: Ping[] | undefined;
   pingGeo: Record<string, THREE.BufferGeometry> | undefined;
@@ -131,6 +131,9 @@ export class Board3D implements BoardRenderer {
   field: TerrainField | undefined;
   water: THREE.Mesh | undefined;
   tokens: CSS2DObject[] = [];
+  /** number tokens / runes and port signs as GPU quads on the light tiers (labelsprites.ts); null = CSS2D labels */
+  tokenSprites: LabelSet | null = null;
+  portSprites: LabelSet | null = null;
   robberTile: { x: number; y: number } | null = null;
   inter: Interaction | null | undefined;
   lastFlip: number | undefined;
@@ -155,6 +158,7 @@ export class Board3D implements BoardRenderer {
   private lastTriangles = 0;
   private suggested = false;
   private builtDetail = '';
+  private builtLabels = false;
 
   static SETTINGS_TILT(): boolean { return SETTINGS.tiltShift; }
   static SETTINGS_PIXEL() { return SETTINGS.pixel; }
@@ -230,6 +234,7 @@ export class Board3D implements BoardRenderer {
     this.camera = new THREE.PerspectiveCamera(FOV, 1, 0.3, 600);
     this.camera.layers.enable(LAYER_PIECES);
     this.camera.layers.enable(LAYER_GRASS);
+    this.camera.layers.enable(LAYER_LABELS);
     const rtOpts = { minFilter: THREE.NearestFilter, magFilter: THREE.NearestFilter };
     this.maskVis = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, depthBuffer: true });
     this.maskAll = new THREE.WebGLRenderTarget(1, 1, { ...rtOpts, depthBuffer: false });
@@ -258,7 +263,6 @@ export class Board3D implements BoardRenderer {
     this.spawns = [];
     this.plates = [];
     this.bobbers = [];
-    this.prevPieces = new Set();
     this.floaters = [];
 
     this.controls = new OrbitControls(this.camera, this.canvas);
@@ -421,8 +425,14 @@ export class Board3D implements BoardRenderer {
     this.applyFx();
     this.setupPasses();
     // the island's own detail (terrain grid, grass, props) changed: rebuild it (the camera stays)
-    if (this.lastSt && this.builtDetail !== this.detailSig()) this.render(this.lastSt, this.lastView);
+    if (this.lastSt && (this.builtDetail !== this.detailSig() || this.builtLabels !== this.spriteLabels())) this.render(this.lastSt, this.lastView);
     this.invalidate();
+  }
+
+  /** number tokens and port signs as GPU quads (low / medium) instead of CSS2D labels; never on the menu diorama
+   *  (its labels are hidden) nor with the pixel filter (its normal pass would draw the quads) */
+  spriteLabels(): boolean {
+    return !this.diorama && spriteLabels(SETTINGS.quality) && SETTINGS.pixel <= 1;
   }
 
   private detailSig() {
@@ -645,8 +655,7 @@ export class Board3D implements BoardRenderer {
       this.spawns = this.spawns.filter(sp => {
         const k = Math.min(1, (now - sp.t0) / 450);
         const e = 1 - Math.pow(1 - k, 3);
-        sp.obj.position.y = sp.y + (1 - e) * 1.2;
-        sp.obj.scale.copy(sp.base).multiplyScalar(0.6 + e * 0.4);
+        sp.step(e);
         return k < 1;
       });
     }
@@ -663,6 +672,7 @@ export class Board3D implements BoardRenderer {
       ru.z += (target - ru.z) * 0.06;
       if (Math.abs(target - ru.z) < 0.004) ru.z = target;
     }
+    if (this.tokenSprites && this.tokenSprites.busy(performance.now() / 1000)) active = true; // the green blink
     if (this.camAnim) (active = true), updateCamAnim(this, now);
     if (this.floaters.length) updateFloaters(this, now); // DOM only: no frame needed
     return active || this.controls.autoRotate;
@@ -719,6 +729,9 @@ export class Board3D implements BoardRenderer {
       this.renderer.shadowMap.needsUpdate = true;
       this.shadowDirty = false;
     }
+    const nowSec = performance.now() / 1000;
+    if (this.tokenSprites) this.tokenSprites.update(this.renderer, nowSec);
+    if (this.portSprites) this.portSprites.update(this.renderer, nowSec);
     this.drawFrame();
     this.lastDrawCalls = this.renderer.info.render.calls;
     this.lastTriangles = this.renderer.info.render.triangles;
@@ -806,11 +819,13 @@ export class Board3D implements BoardRenderer {
     // terrain, props, grass and ports depend on the terrain key (+ the tier's detail); the numbers have
     // their own key, so a number-only change (changing-land mode, revealed numbers) rebuilds just the labels
     const detail = this.detailSig();
-    const key = terrainKey(bd, faceDown) + '|' + detail;
+    const labelMode = this.spriteLabels();
+    const key = terrainKey(bd, faceDown) + '|' + detail + '|' + (labelMode ? 's' : 'd');
     if (key !== this.staticKey) {
       const first = !this.field;
       this.staticKey = key;
       this.builtDetail = detail;
+      this.builtLabels = labelMode;
       this.buildStatic(st, faceDown);
       if (first) this.frame();
     } else {
@@ -855,6 +870,7 @@ export class Board3D implements BoardRenderer {
   markRolled(num: number | null | undefined, at: number | undefined) {
     const fresh = at && at !== this.rolledAt;
     if (fresh) this.rolledAt = at;
+    if (this.tokenSprites) this.tokenSprites.markRolled(num, !!fresh, performance.now() / 1000);
     for (const tk of this.tokens || []) {
       const on = num != null && tk.userData.num === num, el = tk.element.firstChild as HTMLElement;
       if (fresh && on) {
@@ -871,6 +887,7 @@ export class Board3D implements BoardRenderer {
     this.tokenGroup = null;
     this.bobbers = [];
     this.tokens = [];
+    this.tokenSprites = this.portSprites = null;
     this.labelRev++;
     const field = (this.field = terrainOf(st, faceDown));
     const b = bd.bounds;
