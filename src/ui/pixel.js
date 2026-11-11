@@ -448,9 +448,10 @@ function jitterEl(el) {
 function collectJit(node, out) {
   const el = node.nodeType === 1 ? node : node.parentElement;
   if (!el) return;
+  if (el.closest('.nopx')) return; // Preact-owned subtree: <Jit> renders the letters itself
   const up = el.closest(JIT_SEL);
   if (up) out.add(up);
-  if (node.nodeType === 1) for (const e of node.querySelectorAll(JIT_SEL)) out.add(e);
+  if (node.nodeType === 1) for (const e of node.querySelectorAll(JIT_SEL)) if (!e.closest('.nopx')) out.add(e);
 }
 
 function acceptText(n) {

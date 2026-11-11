@@ -23,9 +23,10 @@ import { h, storage, toast } from './ui/dom.js';
 import { lobbyScreen } from './ui/lobby.js';
 import { gameScreen } from './ui/gameView.js';
 import { editorScreen, decodeMap } from './ui/editor.js';
-import { showHelp, creditLine } from './ui/help.js';
+import { showHelp } from './ui/screens/Help';
 import { Net, HOST_SESSION, GUEST_SESSION } from './net.js';
-import { openFlagEditor, flagImg, myKingdom, saveMyKingdom, patternFlag } from './ui/flag.js';
+import { flagImg, myKingdom, saveMyKingdom, patternFlag } from './ui/flag.js';
+import { openFlagEditor } from './ui/flag/FlagEditor';
 import { autoPixelize } from './ui/pixel.js';
 import { SETTINGS } from '@board/settings';
 
@@ -137,7 +138,7 @@ function menuScreen(root) {
       h('button', { class: 'btn pink', onclick: () => App.go('online') }, '🌐 Chơi online với bạn bè'),
       h('button', { class: 'btn', onclick: () => App.go('editor') }, '✏️ Tạo bản đồ'),
       h('button', { class: 'btn', onclick: () => showHelp() }, '📖 Cách chơi')),
-    h('div', { class: 'menu-foot' }, 'Làm ra để chơi cùng bạn bè · chạy trên máy tính và điện thoại · không cần cài đặt', creditLine())));
+    h('div', { class: 'menu-foot' }, 'Làm ra để chơi cùng bạn bè · chạy trên máy tính và điện thoại · không cần cài đặt', h('div', { class: 'credits' }, 'Katanittes, của Sowtank · ', h('a', { href: 'https://github.com/KurusuDes/CatanTestFriendos', target: '_blank', rel: 'noopener' }, 'Mã nguồn trên GitHub'), ' · dự án của người hâm mộ, không chính thức'))));
   menuDiorama(dio);
 }
 

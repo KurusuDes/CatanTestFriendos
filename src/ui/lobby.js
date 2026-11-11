@@ -6,7 +6,8 @@ import { SHAPES, generateBoard } from '@engine/board';
 import { DEV_DECKS, TILE_INFO } from '@engine/constants';
 import { createGame } from '@engine/game';
 import { newSeed } from '@engine/rng';
-import { openFlagEditor, flagImg, patternFlag, validFlag, myKingdom, saveMyKingdom } from './flag.js';
+import { flagImg, patternFlag, validFlag, myKingdom, saveMyKingdom } from './flag.js';
+import { openFlagEditor } from './flag/FlagEditor';
 import { pixelize } from './pixel.js';
 
 const CFG_KEY = 'katanittes.lastConfig';
