@@ -7,12 +7,16 @@ export default defineConfig({
   resolve: { tsconfigPaths: true }, // @engine/*, @ui/* ... from tsconfig.json (native in Vite 8)
   build: {
     target: 'es2020',
-    rollupOptions: {
+    // three.js lives in its own chunk (~750 kB, loaded lazily with the 3D board): expected, so the
+    // limit sits just above it and anything else that grows past 800 kB still warns.
+    chunkSizeWarningLimit: 800,
+    rolldownOptions: {
       output: {
-        manualChunks(id: string) {
-          if (id.includes('/node_modules/three/')) return 'three';
-          if (id.includes('/node_modules/peerjs/') || id.includes('/node_modules/peerjs-js-binarypack/') || id.includes('/node_modules/webrtc-adapter/') || id.includes('/node_modules/sdp/')) return 'peerjs';
-          return undefined;
+        codeSplitting: {
+          groups: [
+            { name: 'three', test: /node_modules[\\/]three[\\/]/ },
+            { name: 'peerjs', test: /node_modules[\\/](peerjs|peerjs-js-binarypack|webrtc-adapter|sdp)[\\/]/ },
+          ],
         },
       },
     },

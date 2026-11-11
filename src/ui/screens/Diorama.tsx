@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { SETTINGS } from '@board/settings';
+import { defaultConfig } from '@engine/config';
+import { createGame } from '@engine/game';
 
 // live 3D island slowly orbiting behind the title. Not built at all on the `low` tier: a static CSS
 // gradient instead (class `static`), so the GPU stays idle on the menu.
@@ -8,7 +10,7 @@ const isStatic = (): boolean => SETTINGS.quality === 'low';
 
 /** builds the 3D island into `el`; returns a disposer (safe to call before the async build finishes) */
 async function buildDiorama(el: HTMLElement, alive: () => boolean): Promise<(() => void) | null> {
-  const [{ Board3D }, { createGame }, { defaultConfig }] = await Promise.all([import('@board/Board3D'), import('@engine/game'), import('@engine/config')]);
+  const { Board3D } = await import('@board/Board3D');
   if (!alive()) return null;
   const c = defaultConfig();
   c.map.shape = (['pangea', 'big', 'star', 'ring'] as const)[Math.floor(Math.random() * 4)]!;
