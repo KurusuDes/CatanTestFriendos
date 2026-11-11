@@ -181,7 +181,7 @@ export function Online(): JSX.Element {
               <div class="kingdom-info">
                 <label class="section-label">Tên</label>
                 <input ref={nameRef} type="text" class="hub-name" placeholder="Tên của bạn" value={name} maxLength={16}
-                  onInput={e => setName(e.currentTarget.value)} onChange={saveName} />
+                  onInput={e => setName(e.currentTarget.value)} onBlur={saveName} />
                 <div class="castle-line"><span class="swatch" style={{ background: k.color }} /><span>Màu lâu đài của bạn</span></div>
               </div>
             </div>
