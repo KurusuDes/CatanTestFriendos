@@ -5,13 +5,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 
-vi.mock('@ui/pixel.js', () => ({ pxURL: (n: string) => `sprite:${n}`, pxIcon: () => document.createElement('img'), pixelize: () => {}, ICON_SETS: ['render', 'pico', 'classic'], setIconSet: () => {}, iconSet: () => 'render' }));
+vi.mock('@ui/pixel', () => ({ pxURL: (n: string) => `sprite:${n}`, pxIcon: () => document.createElement('img'), pixelize: () => {}, ICON_SETS: ['render', 'pico', 'classic'], setIconSet: () => {}, iconSet: () => 'render' }));
 vi.mock('@ui/screens/Diorama', () => ({ Diorama: () => <div class="menu-bg3d" /> }));
 vi.mock('@board/BoardView', () => ({ BoardView: class { zoom = 1; render() {} dispose() {} resetView() {} setZoom() {} } }));
 // no WebGL in happy-dom: the game screen falls back to the flat board, as it does on a machine without GPU
 vi.mock('@board/Board3D', () => ({ Board3D: { create: () => Promise.reject(new Error('no webgl')) } }));
-vi.mock('@ui/sfx.js', () => ({ sfx: { on: false }, play: new Proxy({}, { get: () => () => {} }) }));
-vi.mock('@ui/adhd.js', () => ({
+vi.mock('@ui/sfx', () => ({ sfx: { on: false }, play: new Proxy({}, { get: () => () => {} }) }));
+vi.mock('@ui/adhd', () => ({
   mountAdhd: () => {}, updateAdhd: () => {}, disposeAdhd: () => {}, celebrate: () => {},
   adhdButton: () => Object.assign(document.createElement('button'), { className: 'btn adhd-toggle' }),
 }));

@@ -6,10 +6,10 @@
 import { RES, TILE_INFO, DEV_INFO, EVENTS } from '@engine/constants';
 import type { GameState, Fx, Res } from '@engine/types';
 import { App, store } from '@app/index';
-import { h, rich, toast } from '../dom.js';
-import { pxIcon, pixelize } from '../pixel.js';
-import { play } from '../sfx.js';
-import { celebrate } from '../adhd.js';
+import { h, rich, toast } from '@ui/dom';
+import { pxIcon, pixelize } from '@ui/pixel';
+import { play } from '@ui/sfx';
+import { celebrate } from '@ui/adhd';
 import { announces, boards, boardNudge, cardEmotes, confettiOn, diceAnim, gains, localHumans, modal, pick } from './signals';
 
 export const S = {

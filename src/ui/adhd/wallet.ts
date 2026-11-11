@@ -1,7 +1,7 @@
 // The wallet: one per seat, kept for this match in localStorage (same key and format as the old adhd.js).
 // Saves are debounced (a machine pays out many times a second); `flush` writes right away.
 import { App } from '@app/index';
-import { storage } from '@ui/dom.js';
+import { storage } from '@ui/dom';
 
 export const KEY = 'katanittes.adhd.v2';
 export const START = 100;

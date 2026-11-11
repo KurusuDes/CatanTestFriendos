@@ -1,6 +1,6 @@
 // Canvas helpers shared by the ADHD machines: canvas(), sprite()/drawSprite() (emoji -> pixel sprite, drawn
 // once loaded) and text() with a per-context font cache (assigning g.font every frame re-parses it).
-import { pxURL } from '@ui/pixel.js';
+import { pxURL } from '@ui/pixel';
 import { h } from './dom';
 
 export type Ctx = CanvasRenderingContext2D;

@@ -4,13 +4,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'preact/test-utils';
 
-vi.mock('@ui/pixel.js', () => ({
+vi.mock('@ui/pixel', () => ({
   pxURL: (n: string) => `sprite:${n}`,
   pxIcon: (n: string, _s?: number, title?: string) => Object.assign(document.createElement('img'), { alt: title || n, className: 'px' }),
   pixelize: () => {},
   autoPixelize: () => {},
 }));
-vi.mock('@ui/sfx.js', () => ({ play: new Proxy({}, { get: () => () => {} }), sfx: { on: false } }));
+vi.mock('@ui/sfx', () => ({ play: new Proxy({}, { get: () => () => {} }), sfx: { on: false } }));
 vi.mock('@engine/game', async importOriginal => ({
   ...(await importOriginal<typeof import('@engine/game')>()),
   pendingActors: (st: { pending?: number[] }) => st.pending || [],
@@ -18,7 +18,7 @@ vi.mock('@engine/game', async importOriginal => ({
 
 import { App } from '@app/index';
 import type { GameState } from '@engine/types';
-import { mountAdhd, disposeAdhd, adhdButton, updateAdhd } from '@ui/adhd.js';
+import { mountAdhd, disposeAdhd, adhdButton, updateAdhd } from '@ui/adhd';
 import { KEY, START, GOALS, loadWallet, saveWallet, walletSaver, loadStore } from '@ui/adhd/wallet';
 import { plinko } from '@ui/adhd/plinko';
 import { slots } from '@ui/adhd/slots';
@@ -27,7 +27,7 @@ import { sheep } from '@ui/adhd/sheep';
 import { mine, mineMult } from '@ui/adhd/mine';
 import { rocket } from '@ui/adhd/rocket';
 import type { MachineCore, Purse } from '@ui/adhd/machine';
-import * as legacy from './legacy/adhd.js';
+import * as legacy from './legacy/adhd';
 
 // ---- environment: fake canvas, controllable rAF and clock ----
 const fakeCtx = new Proxy({ fillRect: vi.fn() }, { get: (t: Record<string, unknown>, k: string) => (k in t ? t[k] : () => {}), set: (t: Record<string, unknown>, k: string, v) => ((t[k] = v), true) });

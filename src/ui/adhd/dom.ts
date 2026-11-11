@@ -1,6 +1,6 @@
 // Tiny typed DOM helpers for the imperative parts of the ADHD window (machines draw on canvases and
 // keep a few buttons / notes; Preact owns the frame around them).
-import { pxIcon } from '@ui/pixel.js';
+import { pxIcon } from '@ui/pixel';
 
 export type Kid = Node | string | number | null | false | undefined | Kid[];
 export type Props = Record<string, unknown>;

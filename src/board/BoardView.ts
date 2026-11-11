@@ -285,7 +285,7 @@ export class BoardView implements BoardRenderer {
       const holes = S('g', { filter: 'url(#fogBlur)' });
       for (const [x, y, r] of view.vision.circles) holes.append(S('circle', { cx: x * U, cy: y * U, r: r * U, fill: '#000' }));
       for (const [x1, y1, x2, y2, r] of view.vision.caps) holes.append(S('line', { x1: x1 * U, y1: y1 * U, x2: x2 * U, y2: y2 * U, stroke: '#000', 'stroke-width': r * 2 * U, 'stroke-linecap': 'round' }));
-      svg.firstChild.append(S('mask', { id: 'fogMask', maskUnits: 'userSpaceOnUse', ...box }, S('rect', { ...box, fill: '#fff' }), holes));
+      svg.firstChild!.appendChild(S('mask', { id: 'fogMask', maskUnits: 'userSpaceOnUse', ...box }, S('rect', { ...box, fill: '#fff' }), holes));
       svg.append(S('rect', { ...box, class: 'fog-layer', mask: 'url(#fogMask)' }));
     }
 

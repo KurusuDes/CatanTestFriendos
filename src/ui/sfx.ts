@@ -1,11 +1,11 @@
 // Tiny WebAudio synth so the game has feedback without shipping audio files.
-let ctx = null;
+let ctx: AudioContext | null = null;
 export const sfx = { on: true };
 
-function ac() {
+function ac(): AudioContext | null {
   if (!ctx) {
     try {
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
+      ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
     } catch {
       return null;
     }
@@ -14,7 +14,7 @@ function ac() {
   return ctx;
 }
 
-function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, when = 0, slide = 0) {
+function tone(freq: number, dur = 0.12, type: OscillatorType = 'sine', vol = 0.15, when = 0, slide = 0): void {
   if (!sfx.on) return;
   const a = ac();
   if (!a) return;
@@ -32,10 +32,10 @@ function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, when = 0, slide = 0) 
 }
 
 // one second of white noise, built once and replayed from a random offset
-let noiseBuf = null;
+let noiseBuf: AudioBuffer | null = null;
 const CURVE = Float32Array.from({ length: 16 }, (_, k) => (1 - k / 15) ** 2); // the old (1 - t)^2 decay
 
-function noise(dur = 0.2, vol = 0.12, when = 0) {
+function noise(dur = 0.2, vol = 0.12, when = 0): void {
   if (!sfx.on) return;
   const a = ac();
   if (!a) return;

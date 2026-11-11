@@ -1,5 +1,5 @@
 // 3. Coin flip: slide how much, pick a side, double or nothing (Auto repeats your last side)
-import { play } from '@ui/sfx.js';
+import { play } from '@ui/sfx';
 import { canvas, drawSprite } from './canvas';
 import { h } from './dom';
 import { BG, autoButton, btnRich, cell, fmt, note, rnd, say, type MachineCore, type Purse } from './machine';

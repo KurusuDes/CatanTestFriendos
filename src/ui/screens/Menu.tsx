@@ -2,7 +2,7 @@ import { useState } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { App, SAVE_KEY } from '@app/index';
 import { Net, HOST_SESSION, GUEST_SESSION } from '@net/index';
-import { storage, toast } from '@ui/dom.js';
+import { storage, toast } from '@ui/dom';
 import { Button } from '@ui/components/Button';
 import { FlagPole } from '@ui/components/FlagImg';
 import { Jit } from '@ui/components/Jit';

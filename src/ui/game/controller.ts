@@ -8,7 +8,7 @@
 import { effect, untracked } from '@preact/signals';
 import type { BlindPiece, BState } from '@board/types';
 import { App, store } from '@app/index';
-import { updateAdhd } from '../adhd.js';
+import { updateAdhd } from '@ui/adhd';
 import {
   announces, boardNudge, boardSig, boards, cardEmotes, confettiOn, cur, diceAnim, emoteOpen, gains, gv, inter, locked,
   metaTick, modal, offer, pick, seat, topView, unlockedFor,

@@ -1,7 +1,7 @@
 // Preact twin of pixel.js: the same sprite <img> that `pixelize` swaps in for an emoji. Preact screens
 // live inside a `.nopx` root (pixelize skips it), so they render the sprites themselves.
 import type { ComponentChildren, JSX } from 'preact';
-import { pxURL } from '@ui/pixel.js';
+import { pxURL } from '@ui/pixel';
 import { iconSetSignal } from '@ui/iconset';
 
 const EMOJI = /(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*️?|[⭐✨])/gu;

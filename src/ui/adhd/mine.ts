@@ -1,5 +1,5 @@
 // 5. The mine (no Auto): 16 rocks, 3 hide the robber. Every ore you dig raises the payout; cash out before he finds you
-import { play } from '@ui/sfx.js';
+import { play } from '@ui/sfx';
 import { canvas, drawSprite } from './canvas';
 import { h } from './dom';
 import { BG, betButton, cell, fmt, note, notEnough, rnd, round, say, type MachineCore, type Purse } from './machine';

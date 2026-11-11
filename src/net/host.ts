@@ -4,7 +4,7 @@ import type { Peer } from 'peerjs';
 import { applyAction, createGame } from '@engine/game';
 import type { Config, GameState } from '@engine/types';
 import { App } from '@app/index';
-import { toast, storage } from '../ui/dom.js';
+import { toast, storage } from '@ui/dom';
 import { tilesFingerprint } from './boardVersion';
 import { parseClientMessage, type ClientMessage, type Conn, type Meta } from './messages';
 import { redactFor, toWire } from './redact';

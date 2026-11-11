@@ -2,7 +2,7 @@
 // robber and the click hotspots.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { flagCanvas } from '@ui/flag';
+import { flagCanvas } from '@ui/flag/flag';
 import { goldOf, gild, tinted } from './assets';
 import { LAYER_PIECES, patch, pieceHook } from './shaders';
 import { disposeChildren, disposeTree, shared } from './dispose';

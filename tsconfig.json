@@ -7,8 +7,6 @@
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "strict": true,
-    "allowJs": true,
-    "checkJs": false,
     "noUncheckedIndexedAccess": true,
     "skipLibCheck": true,
     "isolatedModules": true,

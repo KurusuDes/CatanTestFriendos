@@ -2,7 +2,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const db = vi.hoisted(() => ({ store: new Map<string, string>(), writes: [] as string[] }));
-vi.mock('../src/ui/dom.js', () => ({
+vi.mock('@ui/dom', () => ({
   toast: vi.fn(),
   storage: (k: string, v?: unknown) => {
     if (v === undefined) return db.store.has(k) ? JSON.parse(db.store.get(k)!) : null;

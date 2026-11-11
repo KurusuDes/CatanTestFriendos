@@ -1,5 +1,5 @@
 // What every machine is, and the widgets they share (bet button, Auto button, the cell frame).
-import { toast } from '@ui/dom.js';
+import { toast } from '@ui/dom';
 import { h, setText, rich } from './dom';
 
 export const BG = '#0f1020';

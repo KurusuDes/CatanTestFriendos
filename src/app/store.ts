@@ -6,7 +6,7 @@ import { computed, signal, batch } from '@preact/signals';
 import { viewFor } from '@engine/game';
 import type { GameState, GameView } from '@engine/types';
 import type { Meta } from '@net/messages';
-import { storage } from '../ui/dom.js';
+import { storage } from '@ui/dom';
 
 export type ScreenName = string;
 

@@ -1,4 +1,4 @@
-import { storage } from '@ui/dom.js';
+import { storage } from '@ui/dom';
 import { myKingdom, patternFlag, type MyKingdom } from '@ui/flag/flag';
 
 export const NAME_KEY = 'katanittes.name';

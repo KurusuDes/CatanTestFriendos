@@ -5,8 +5,8 @@ import { COSTS, DEV_INFO, RES, TILE_INFO } from '@engine/constants';
 import type { BuildKind, DevType } from '@engine/types';
 import { App, store } from '@app/index';
 import { PixelIcon, px } from '@ui/components/PixelIcon';
-import { adhdButton } from '../adhd.js';
-import { play } from '../sfx.js';
+import { adhdButton } from '@ui/adhd';
+import { play } from '@ui/sfx';
 import { cur, countRender, costIcons, emoteOpen, jsonEq, legalCities, legalRoads, legalSettlements, locked, modal, pick, seat, select } from './signals';
 import { playDev, showHint, throwDice } from './actions';
 

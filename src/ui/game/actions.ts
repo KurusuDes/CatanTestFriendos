@@ -3,7 +3,7 @@ import { RES, TILE_INFO, DEV_INFO } from '@engine/constants';
 import type { Action, DevType, GameState, Hand } from '@engine/types';
 import { hint } from '@engine/bot';
 import { App, store } from '@app/index';
-import { toast } from '../dom.js';
+import { toast } from '@ui/dom';
 import { modal, pick } from './signals';
 
 export const resLine = (o: Partial<Hand>): string => RES.filter(r => o[r]).map(r => `${o[r]}${TILE_INFO[r].icon}`).join(' ');

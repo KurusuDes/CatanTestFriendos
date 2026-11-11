@@ -2,7 +2,7 @@ import type { JSX } from 'preact';
 import { useMemo } from 'preact/hooks';
 import { TILE_INFO } from '@engine/constants';
 import { px } from '@ui/components/PixelIcon';
-import { showHelp } from '@ui/help.js';
+import { showHelp } from '@ui/screens/Help';
 import { cur, countRender, diceAnim, eventDesc, modal, PHASE_TEXT, select } from './signals';
 
 function Die({ n, red }: { n: number; red?: boolean }): JSX.Element {

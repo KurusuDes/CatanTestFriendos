@@ -1,7 +1,7 @@
 // 6. Rocket (the last one, no Auto): the multiplier climbs from x0.00, cash out before it blows.
 // It mostly blows early: past x5 it's rare and the moon (x10, paid on its own) is 1 in 100. Cash out and a
 // ghost rocket keeps going, so you see how far it would have gone.
-import { play } from '@ui/sfx.js';
+import { play } from '@ui/sfx';
 import { canvas, drawSprite, text } from './canvas';
 import { h } from './dom';
 import { betButton, cell, fmt, note, notEnough, rnd, round, say, type MachineCore, type Purse } from './machine';

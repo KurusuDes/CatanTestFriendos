@@ -1,7 +1,7 @@
 // Kingdom banners (pure helpers, no UI). Players draw their flag in a tiny Gartic-Phone-like paint
 // editor (see FlagEditor.tsx) and pick the colour of their castle. A flag is stored as a small PNG
 // data URL (120x80); the old 12x12 pixel format (144 hex digits) is still understood.
-import { h, storage } from '../dom.js';
+import { h, storage } from '@ui/dom';
 
 export const FLAG_PAL = ['#1a1c2c', '#5d275d', '#b13e53', '#ef7d57', '#ffcd75', '#a7f070', '#38b764', '#257179',
   '#29366f', '#3b5dc9', '#41a6f6', '#73eff7', '#f4f4f4', '#94b0c2', '#566c86', '#333c57'];

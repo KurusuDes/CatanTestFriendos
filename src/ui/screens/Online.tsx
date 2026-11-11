@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { App } from '@app/index';
 import { Net, GUEST_SESSION, type LobbyInfo } from '@net/index';
-import { storage, toast } from '@ui/dom.js';
+import { storage, toast } from '@ui/dom';
 import { Button } from '@ui/components/Button';
 import { FlagPole } from '@ui/components/FlagImg';
 import { Jit } from '@ui/components/Jit';

@@ -1,7 +1,7 @@
 // The win: fireworks from the winner's buildings + a banner (everyone sees it).
 // Winners that land together wait their turn: one banner and one round of fireworks each, in order.
 import { App } from '@app/index';
-import { play } from '@ui/sfx.js';
+import { play } from '@ui/sfx';
 import { h, rich } from './dom';
 import { rnd } from './machine';
 

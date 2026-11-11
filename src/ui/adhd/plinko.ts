@@ -1,5 +1,5 @@
 // 1. Plinko: $1 a ball
-import { play } from '@ui/sfx.js';
+import { play } from '@ui/sfx';
 import { canvas, text } from './canvas';
 import { h } from './dom';
 import { BG, autoButton, cell, type MachineCore, type Purse } from './machine';

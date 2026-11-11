@@ -1,3 +1,5 @@
+// @ts-nocheck
+// Bản sao đóng băng của mã ADHD cũ (JS), giữ nguyên hành vi để test tương đương.
 // ADHD: a tiny arcade to kill time while the others play (🧠 button next to the reactions).
 // Per player and purely local: one wallet that starts at $100, and every goal reached adds the
 // next machine to the grid (Plinko → slots → coin → sheep race → mine → rocket), all playable at once; a machine
@@ -6,9 +8,9 @@
 // done, so it never hides the board nor the game. Only the final win is shared:
 // it is a game action, so everyone sees the fireworks and the banner, and the winner's pieces get gold trims (up to 5 wins).
 import { App } from '@app/index';
-import { h, clear, toast, storage } from '@ui/dom.js';
-import { pxURL } from '@ui/pixel.js';
-import { play } from '@ui/sfx.js';
+import { h, clear, toast, storage } from '@ui/dom';
+import { pxURL } from '@ui/pixel';
+import { play } from '@ui/sfx';
 import { pendingActors } from '@engine/game';
 
 const KEY = 'katanittes.adhd.v2';

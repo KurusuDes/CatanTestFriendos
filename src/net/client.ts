@@ -2,7 +2,7 @@
 // A guest never runs the rules engine: it only needs `viewFor`-style queries on the received state.
 import type { GameState } from '@engine/types';
 import { App } from '@app/index';
-import { toast, storage } from '../ui/dom.js';
+import { toast, storage } from '@ui/dom';
 import { parseHostMessage, type Conn, type HostMessage, type WireState } from './messages';
 import type { Net } from './index';
 import { CONNECT_MS, DEAD_MS, GUEST_SESSION, PING_MS, PREFIX, loadPeer, myToken, peerOptions, safeClose } from './session';

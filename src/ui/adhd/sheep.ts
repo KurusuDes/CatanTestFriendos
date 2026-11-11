@@ -1,5 +1,5 @@
 // 4. Sheep race: bet on one of four sheep; the long shot pays more (Auto backs the same one)
-import { play } from '@ui/sfx.js';
+import { play } from '@ui/sfx';
 import { canvas, drawSprite } from './canvas';
 import { h } from './dom';
 import { BG, autoButton, betButton, cell, fmt, note, notEnough, rnd, round, say, type MachineCore, type Purse } from './machine';

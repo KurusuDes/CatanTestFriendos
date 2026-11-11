@@ -1,7 +1,7 @@
 // Shared plumbing of an online session: PeerJS loading, ICE/TURN servers, persistent device token,
 // storage keys and the types both roles use.
 import type { Peer, PeerOptions } from 'peerjs';
-import { storage } from '../ui/dom.js';
+import { storage } from '@ui/dom';
 import type { Conn, VoteChoice } from './messages';
 
 export const PREFIX = 'kchx-v1-';

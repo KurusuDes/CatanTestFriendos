@@ -10,7 +10,7 @@ import { DEV_DECKS, TILE_INFO } from '@engine/constants';
 import { createGame } from '@engine/game';
 import { newSeed } from '@engine/rng';
 import type { BotLevel, Config, CustomMap, DevDeckId, GameState, PlayerConfig, ShapeId, TileKind } from '@engine/types';
-import { h, storage, toast } from '@ui/dom.js';
+import { h, storage, toast } from '@ui/dom';
 import { Button } from '@ui/components/Button';
 import { FlagImg } from '@ui/components/FlagImg';
 import { PixelIcon, px } from '@ui/components/PixelIcon';

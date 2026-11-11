@@ -12,7 +12,7 @@
 import type { Peer } from 'peerjs';
 import type { Action, Config, GameState, Tile } from '@engine/types';
 import { App, createSaver, type Saver } from '@app/index';
-import { toast, storage } from '../ui/dom.js';
+import { toast, storage } from '@ui/dom';
 import { BoardVersion } from './boardVersion';
 import { attachClient, clientConnect, clientJoin } from './client';
 import {

@@ -18,7 +18,7 @@ import '@fontsource/baloo-2/vietnamese-800.css';
 import '@fontsource/baloo-2/latin-800.css';
 import './styles/style.css';
 import './styles/pixel.css';
-import { App } from './app.js';
+import { App } from '@app/index';
 import { gameScreen } from './ui/game/GameScreen';
 import { preactScreen } from './ui/components/mount';
 import { Menu } from './ui/screens/Menu';
@@ -32,7 +32,7 @@ App.screens = { menu: preactScreen(Menu), lobby: preactScreen(Lobby), game: game
 const params = new URLSearchParams(location.search);
 if (params.get('mapa')) {
   try {
-    App.go('editor', decodeMap(params.get('mapa')));
+    App.go('editor', decodeMap(params.get('mapa')!));
   } catch {
     App.go('menu');
   }
@@ -44,7 +44,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has('perf')) {
   import('stats-gl').then(({ default: Stats }) => {
     const stats = new Stats({ trackGPU: true });
     document.body.append(stats.dom);
-    let patched = null;
+    let patched: unknown = null;
     const tick = () => {
       const b = window.__board3d;
       if (b && b.renderer && patched !== b.renderer) {
