@@ -1,6 +1,7 @@
 // Pixel-art helpers for the UI: hand-made 16x16 sprites (Sweetie-16 palette) for the
 // resources, plus an automatic "pixelizer" that turns any emoji into a crunchy sprite
 // so every icon in the interface shares the same retro look.
+import { iconSetSignal } from './iconset';
 
 const PAL = {
   k: '#1a1c2c', p: '#5d275d', r: '#b13e53', R: '#ef7d57', y: '#ffcd75', Y: '#d69a3a', G: '#a7f070', g: '#38b764',
@@ -288,9 +289,11 @@ let iconSetName = (() => {
     return 'render';
   }
 })();
+iconSetSignal.value = iconSetName;
 export const iconSet = () => iconSetName;
 export function setIconSet(name) {
   iconSetName = pickSet(name);
+  iconSetSignal.value = iconSetName;
   try {
     localStorage.setItem(SET_KEY, iconSetName);
   } catch {}
@@ -502,31 +505,9 @@ function processRoots(roots) {
   }
 }
 
-// Replace every emoji inside `root` by its pixel-art sprite.
+// Replace every emoji inside `root` by its pixel-art sprite (and wobble its .jit elements). There is no
+// body-wide observer any more: Preact components render sprites themselves (PixelIcon / px) and
+// imperative DOM (toast, balloons, flying cards...) calls this once on the element it creates.
 export function pixelize(root) {
   if (root) processRoots([root]);
-}
-
-// Watch a subtree and keep it pixelized as it re-renders (only the nodes that changed).
-export function autoPixelize(root) {
-  pixelize(root);
-  let pending = new Set();
-  let scheduled = false;
-  const mo = new MutationObserver(records => {
-    for (const r of records) {
-      if (r.type === 'characterData') pending.add(r.target);
-      else for (const n of r.addedNodes) if (n.nodeType === 1 || n.nodeType === 3) pending.add(n);
-    }
-    if (scheduled || !pending.size) return;
-    scheduled = true;
-    requestAnimationFrame(() => {
-      scheduled = false;
-      const roots = [...pending].filter(n => n.isConnected && !(n.parentElement && n.parentElement.closest('.labels-3d')));
-      pending = new Set();
-      processRoots(roots);
-      mo.takeRecords(); // our own replacements need no second pass
-    });
-  });
-  mo.observe(root, { childList: true, subtree: true, characterData: true });
-  return mo;
 }

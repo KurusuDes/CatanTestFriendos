@@ -1,4 +1,5 @@
 import { TILE_INFO } from '@engine/constants';
+import { pixelize } from './pixel.js';
 
 export function h(tag, props, ...children) {
   const el = document.createElement(tag);
@@ -44,21 +45,6 @@ export function clear(el) {
   return el;
 }
 
-// Re-render `el` only when its markup really changed. Rebuilding identical DOM on every state
-// update (bots move several times a second) swaps the button under the finger between press and
-// release, so clicks get lost, and it resets scroll and hover. The signature is taken from the
-// fresh markup because the live one gets emojis swapped for pixel sprites afterwards.
-export function sync(el, ...children) {
-  const next = h('div', null, ...children);
-  const sig = next.innerHTML;
-  if (sig === el._sig && el.firstChild) return false;
-  const scrolls = [...el.querySelectorAll('[data-keep-scroll], .modal')].map(x => x.scrollTop);
-  el._sig = sig;
-  clear(el).append(...next.childNodes);
-  [...el.querySelectorAll('[data-keep-scroll], .modal')].forEach((x, i) => scrolls[i] && (x.scrollTop = scrolls[i]));
-  return true;
-}
-
 // "@2 roba :wood:" -> colored name + emoji
 export function rich(msg, players) {
   const frag = document.createDocumentFragment();
@@ -84,6 +70,7 @@ export function toast(msg, kind = 'info', ms = 2600) {
   }
   const t = h('div', { class: 'toast ' + kind }, msg);
   toastBox.append(t);
+  pixelize(t); // no body-wide observer: this element swaps its own emojis for sprites
   setTimeout(() => t.classList.add('out'), ms);
   setTimeout(() => t.remove(), ms + 400);
 }

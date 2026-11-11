@@ -2,6 +2,7 @@
 // live inside a `.nopx` root (pixelize skips it), so they render the sprites themselves.
 import type { ComponentChildren, JSX } from 'preact';
 import { pxURL } from '@ui/pixel.js';
+import { iconSetSignal } from '@ui/iconset';
 
 const EMOJI = /(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*️?|[⭐✨])/gu;
 
@@ -13,6 +14,7 @@ export interface PixelIconProps {
 }
 
 export function PixelIcon({ emoji, size = 20, class: cls }: PixelIconProps): JSX.Element {
+  void iconSetSignal.value; // re-render when the icon set changes (game menu)
   const name = emoji.replace(/️/g, '');
   return <img class={cls ? `px ${cls}` : 'px'} src={pxURL(name, size)} width={size} height={size} alt={emoji} draggable={false} />;
 }

@@ -19,15 +19,13 @@ import '@fontsource/baloo-2/latin-800.css';
 import './styles/style.css';
 import './styles/pixel.css';
 import { App } from './app.js';
-import { gameScreen } from './ui/gameView.js';
+import { gameScreen } from './ui/game/GameScreen';
 import { preactScreen } from './ui/components/mount';
 import { Menu } from './ui/screens/Menu';
 import { Online } from './ui/screens/Online';
 import { Lobby } from './ui/screens/Lobby';
 import { Editor, decodeMap } from './ui/screens/Editor';
-import { autoPixelize } from './ui/pixel.js';
 
-autoPixelize(document.body);
 App.screens = { menu: preactScreen(Menu), lobby: preactScreen(Lobby), game: gameScreen, editor: preactScreen(Editor), online: preactScreen(Online) };
 
 // shared map link: ?mapa=<code>
