@@ -1,5 +1,6 @@
 // Prop placement (forests, sheep, improvements...): pure, returns the instance lists. Runs in the terrain worker.
-import { prng, type GenTile, type TerrainField } from './terrainGen';
+import { prng, type GenTile } from './terrainBase';
+import type { TerrainField } from './terrainGen';
 
 export type PropLists = Record<string, [number, number, number, number, number][]>;
 

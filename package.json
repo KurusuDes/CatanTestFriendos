@@ -14,6 +14,7 @@
     "baseline": "tsx scripts/baseline.ts",
     "determinism": "tsx scripts/determinism.ts",
     "assets": "node tools/optimize-assets.mjs",
+    "check:imports": "tsx scripts/check-imports.ts",
     "verify:kit": "tsx scripts/verify-kit.ts"
   },
   "packageManager": "pnpm@12.15.0",

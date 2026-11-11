@@ -1,5 +1,6 @@
 // Grass and wheat tuft placement: pure, returns the instance lists. Runs in the terrain worker.
-import { INR, NORMALS, pixelToHex, prng, type GenTile, type TerrainField } from './terrainGen';
+import { INR, NORMALS, pixelToHex, prng, type GenTile } from './terrainBase';
+import type { TerrainField } from './terrainGen';
 
 export type GrassLists = Record<string, [number, number, number, number, number][]>;
 
