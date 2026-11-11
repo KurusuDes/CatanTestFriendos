@@ -20,7 +20,7 @@ async function buildDiorama(el: HTMLElement, alive: () => boolean): Promise<(() 
     b.dispose();
     return null;
   }
-  b.render(st as unknown as Parameters<typeof b.render>[0], {});
+  b.render(st, {});
   b.labels.domElement.style.display = 'none';
   b.controls.enabled = false;
   b.controls.autoRotate = true;

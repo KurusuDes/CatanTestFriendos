@@ -1,34 +1,11 @@
-// Minimal structural types for what the board reads from the game state. The engine gets its own
-// full types later; these only describe the fields used here.
-export interface BTile {
-  id: number;
-  q: number;
-  r: number;
-  x: number;
-  y: number;
-  res: string;
-  num: number | null;
-  revealed: boolean;
-  numRevealed?: boolean;
-}
-export interface BVertex {
-  x: number;
-  y: number;
-  port?: number | null;
-}
-export interface BEdge {
-  a: number;
-  b: number;
-}
-export interface BPort {
-  id: number;
-  edge: number;
-  x: number;
-  y: number;
-  nx: number;
-  ny: number;
-  type: string;
-}
+// What the board reads from the game state: narrow views derived from the engine types, so the
+// two can never drift apart (a full engine GameState is assignable to BState without casts).
+import type { Edge, Port, Player, Tile, Vertex } from '@engine/types';
+
+export type BTile = Pick<Tile, 'id' | 'q' | 'r' | 'x' | 'y' | 'res' | 'num' | 'revealed'> & Partial<Pick<Tile, 'numRevealed'>>;
+export type BVertex = Pick<Vertex, 'x' | 'y'> & Partial<Pick<Vertex, 'port'>>;
+export type BEdge = Pick<Edge, 'a' | 'b'>;
+export type BPort = Pick<Port, 'id' | 'edge' | 'type'> & { x: number; y: number; nx: number; ny: number };
 export interface BBounds {
   minX: number;
   maxX: number;
@@ -45,12 +22,7 @@ export interface BBoard {
   robber: number;
   robberHidden?: boolean;
 }
-export interface BPlayer {
-  color: string;
-  name?: string;
-  flag?: string;
-  adhdWins?: number;
-}
+export type BPlayer = Pick<Player, 'color'> & Partial<Pick<Player, 'name' | 'flag' | 'adhdWins'>>;
 export interface BBuilding {
   owner: number;
   type: string;

@@ -6,7 +6,7 @@
 //   2. runs the imperative fx ONCE for the new state (sounds, flying cards, announcements...),
 //   3. repaints the board (one `render(view, boardView)` call) and tells the ADHD arcade what changed.
 import { effect, untracked } from '@preact/signals';
-import type { BlindPiece, BState } from '@board/types';
+import type { BlindPiece } from '@board/types';
 import { App, store } from '@app/index';
 import { updateAdhd } from '@ui/adhd';
 import {
@@ -44,8 +44,7 @@ function paintBoard(): void {
   const vst = lock ? { ...g, buildings: {}, roads: {}, vision: { circles: [], caps: [] } } : g;
   const flipAt = S.flipPending ? S.flipAt : 0;
   S.flipPending = false;
-  // BState types a player's flag as `string | undefined`, the engine has `string | null`: same data
-  untracked(() => b.render(vst as unknown as BState, {
+  untracked(() => b.render(vst, {
     vision: st.config.modes.fog && v >= 0 ? vst.vision || { circles: [], caps: [] } : null,
     faceDown: st.config.modes.flipped,
     flipAt,
