@@ -44,7 +44,9 @@ interface Adhd {
   saver: Saver;
 }
 let A: Adhd | null = null;
-let btnHost: HTMLElement | null = null;
+// toggle buttons handed to gameView (its action bar is built off-screen and may drop what it built)
+let btnHosts: HTMLElement[] = [];
+let btnOn = false;
 
 // what the Preact parts show: texts that change often are signals bound straight to text nodes
 const visibleS = signal(false);
@@ -71,6 +73,7 @@ export function mountAdhd(wrap: HTMLElement, getBoard: () => BoardLike | null | 
   A = a;
   seatS.value = null;
   visibleS.value = ghostS.value = false;
+  btnOn = false;
   setFxContext({ wrap, getBoard });
   setSpriteHook(markDirty);
   render(<AdhdWindow />, host);
@@ -91,25 +94,27 @@ function teardown(): void {
   setSpriteHook(() => {});
   visibleS.value = ghostS.value = false;
   seatS.value = null;
+  btnOn = false;
+  for (const b of btnHosts) render(<AdhdButton on={false} />, b);
 }
 
 export function disposeAdhd(): void {
   teardown();
-  if (btnHost) {
-    render(null, btnHost);
-    btnHost = null;
-  }
+  for (const b of btnHosts) render(null, b);
+  btnHosts = [];
 }
 
-/** the toggle button gameView appends to the hand bar: one element, re-appended on every bar render */
+/** the toggle button gameView appends to the hand bar. Like the old one it is a new element on every call
+ *  (the bar is built off-screen and compared with the live one; it keeps whichever it likes), so we track the
+ *  ones still on screen to flip their `on` class and unmount the rest. */
 export function adhdButton(): HTMLElement {
-  if (!btnHost) {
-    btnHost = document.createElement('span');
-    btnHost.className = 'nopx';
-    btnHost.style.display = 'contents';
-    render(<AdhdButton />, btnHost);
-  }
-  return btnHost;
+  btnHosts = btnHosts.filter(b => b.isConnected || (render(null, b), false));
+  const host = document.createElement('span');
+  host.className = 'nopx'; // pixelize skips it: the button renders its own sprite
+  host.style.display = 'contents';
+  render(<AdhdButton on={!!A && A.visible} />, host);
+  btnHosts.push(host);
+  return host;
 }
 
 // called on every render: whose wallet, and whether you have something to do in the game (your turn,
@@ -138,6 +143,8 @@ function apply(a: Adhd): void {
   a.ghost = ghost;
   visibleS.value = vis;
   ghostS.value = ghost;
+  if (btnOn !== vis) for (const b of btnHosts) render(<AdhdButton on={vis} />, b);
+  btnOn = vis;
   // see-through (your turn): nobody is playing, so the loop stops; draw the settled state once
   if (ghost && !wasGhost) for (const g of a.games) g && g.frame(performance.now());
   if (vis && !ghost && !a.raf) {
@@ -326,10 +333,10 @@ function Slot({ i }: { i: number }) {
   return <div ref={host} style={{ display: 'contents' }}>{level <= i && <div class="adhd-slot" />}</div>;
 }
 
-function AdhdButton() {
+function AdhdButton({ on }: { on: boolean }) {
   return (
     <button
-      class={'btn adhd-toggle' + (visibleS.value ? ' on' : '')}
+      class={'btn adhd-toggle' + (on ? ' on' : '')}
       title="ADHD: trò chơi nhỏ trong lúc chờ"
       onClick={e => {
         e.stopPropagation();
