@@ -5,8 +5,8 @@ import * as THREE from 'three';
 // ---------- player pieces: sharp through the tilt-shift + a thin x-ray outline ----------
 // Every frame two small masks are drawn: `vis` = the pieces you can actually see (depth-tested
 // against the landscape) and `all` = every piece ignoring occlusion, both in the owner's colour.
-// Layers: 0 landscape, 1 player pieces, 2 grass (left out of the depth pre-pass).
-export const LAYER_PIECES = 1, LAYER_GRASS = 2;
+// Layers: 0 landscape, 1 player pieces, 2 grass (left out of the depth pre-pass), 3 sprite labels.
+export const LAYER_PIECES = 1, LAYER_GRASS = 2, LAYER_LABELS = 3; // 3: sprite labels (never in the mask / depth passes)
 export const PASS_VS = 'varying vec2 vUv;\nvoid main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
 // tilt-shift that leaves the pieces crisp and never smears their colour onto the blurred land
 export function tiltShader(dir: string) {
@@ -83,7 +83,11 @@ export const OutlineOverlayShader = {
 // terrain still counts as visible (only real occluders like hills and trees hide a piece)
 const MASK_VS = `uniform float uPull;
 void main() {
-  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vec4 p = vec4(position, 1.0);
+  #ifdef USE_INSTANCING
+    p = instanceMatrix * p;
+  #endif
+  vec4 mv = modelViewMatrix * p;
   mv.xyz -= normalize(mv.xyz) * uPull;
   gl_Position = projectionMatrix * mv;
 }`;

@@ -3,7 +3,9 @@ import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { probLook } from '@engine/constants';
 import { disposeTree } from './dispose';
+import { LAYER_LABELS } from './shaders';
 import type { BBoard, BState } from './types';
+import { LabelSet, portCell, runeCell, tokenCell, type LabelItem } from './labelsprites';
 import type { Board3D } from './Board3D';
 
 export function css2d(cls: string, html: string, tag = 'div'): CSS2DObject {
@@ -28,8 +30,10 @@ export function buildTokens(b: Board3D, st: BState, faceDown: boolean): void {
   const group = (b.tokenGroup = new THREE.Group());
   b.staticGroup.add(group);
   b.tokens = [];
+  b.tokenSprites = null;
   b.labelRev++; // the labels are new: fog visibility has to be applied to them again
   const field = b.field!;
+  if (b.spriteLabels()) return buildTokenSprites(b, bd, group, field, faceDown);
   // ---- tokens + face-down runes (pixel UI labels)
   for (const t of bd.tiles) {
     const h = field.sample(t.x, t.y);
@@ -53,3 +57,26 @@ export function buildTokens(b: Board3D, st: BState, faceDown: boolean): void {
     group.add(tok);
   }
 }
+
+/** The same tokens and runes as one set of GPU quads (low / medium tiers, see labelsprites.ts). */
+function buildTokenSprites(b: Board3D, bd: BBoard, group: THREE.Group, field: { sample(x: number, z: number): number }, faceDown: boolean): void {
+  const items: LabelItem[] = [];
+  for (const t of bd.tiles) {
+    const h = field.sample(t.x, t.y);
+    if (!t.revealed) {
+      // masked on online clients: nothing of the tile (res / num) is read here
+      if (faceDown) items.push({ x: t.x, y: h + 0.05, z: t.y, cell: runeCell(), zoomScaled: false });
+      continue;
+    }
+    if (t.res === 'desert') continue;
+    const num = t.numRevealed ? t.num : null;
+    items.push({ x: t.x, y: Math.max(h, 0.3) + 0.12, z: t.y, cell: tokenCell(num), green: num != null ? tokenCell(num, true) : undefined, num, zoomScaled: true });
+  }
+  if (!items.length) return;
+  const set = (b.tokenSprites = new LabelSet(items, b.tk ?? 1, b.invalidate));
+  group.add(set.mesh);
+  set.mesh.layers.set(LAYER_LABELS);
+  b.labelsDirty = true;
+}
+
+export { portCell };

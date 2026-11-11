@@ -3,6 +3,8 @@
 import * as THREE from 'three';
 import { pxIcon } from '@ui/pixel';
 import { css2d } from './labels';
+import { LabelSet, portCell, type LabelItem } from './labelsprites';
+import { LAYER_LABELS } from './shaders';
 import { shared } from './dispose';
 import type { BState } from './types';
 import type { Board3D } from './Board3D';
@@ -17,6 +19,7 @@ const TIP_GEO = shared(new THREE.SphereGeometry(0.045, 8, 6));
 
 export function buildPorts(b: Board3D, st: BState): void {
   const bd = st.board;
+  const sprites = b.spriteLabels(), items: LabelItem[] = [];
   for (const port of bd.ports) {
     const E = bd.edges[port.edge]!;
     const hub = new THREE.Vector3(port.x - port.nx * 0.12, 0.07, port.y - port.ny * 0.12);
@@ -42,8 +45,18 @@ export function buildPorts(b: Board3D, st: BState): void {
     boat.rotation.y = -Math.atan2(port.ny, port.nx) + Math.PI / 2;
     boat.scale.setScalar(1.35);
     b.bobbers.push({ obj: boat, y: 0.0, ph: port.id * 1.7 });
+    if (sprites) {
+      items.push({ x: port.x, y: 0.55, z: port.y, cell: portCell(port.type === 'any' ? 'any' : port.type), zoomScaled: true });
+      b.staticGroup.add(boat);
+      continue;
+    }
     const sign = css2d('tok3d-at', `<div class="port3d">${port.type === 'any' ? '<b>3:1</b>' : `${pxIcon(port.type, 16).outerHTML}<b>2:1</b>`}</div>`);
     sign.position.set(port.x, 0.55, port.y);
     b.staticGroup.add(boat, sign);
+  }
+  if (items.length) {
+    const set = (b.portSprites = new LabelSet(items, b.tk ?? 1, b.invalidate));
+    set.mesh.layers.set(LAYER_LABELS);
+    b.staticGroup.add(set.mesh);
   }
 }

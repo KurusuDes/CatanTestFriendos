@@ -19,7 +19,18 @@ export function visionKey(vis: Vision, bd: BBounds): string {
 export function updateFog(b: Board3D, st: BState, view: BoardViewState): void {
   const vis = view.vision;
   U.uFogOn.value = vis ? 1 : 0;
-  if (!vis) return;
+  if (!vis) {
+    // no fog: every label shows again (they may have been hidden by an earlier vision)
+    if (b.fogLabelKey) {
+      b.fogLabelKey = '';
+      b.fogKey = '';
+      b.staticGroup.traverse(o => {
+        if ((o as any).isCSS2DObject) o.visible = true;
+        else if (o.userData.labelSet) o.userData.labelSet.showAll();
+      });
+    }
+    return;
+  }
   const bd = st.board.bounds;
   const pad = 8;
   const rect = { x: bd.minX - pad, z: bd.minY - pad, w: bd.maxX - bd.minX + pad * 2, h: bd.maxY - bd.minY + pad * 2 };
@@ -62,5 +73,6 @@ export function updateFog(b: Board3D, st: BState, view: BoardViewState): void {
   const edge = -0.377 * sigma;
   b.staticGroup.traverse(o => {
     if ((o as any).isCSS2DObject) o.visible = visibility(vis, o.position.x, o.position.z) > edge;
+    else if (o.userData.labelSet) o.userData.labelSet.applyVisibility((x: number, z: number) => visibility(vis, x, z) > edge);
   });
 }
