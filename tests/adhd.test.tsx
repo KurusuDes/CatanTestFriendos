@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 // ADHD arcade: the Preact window (levels, wallet, ghost mode, loop) and, for every machine, a replay against the
-// frozen pre-Preact code (tests/legacy/adhd.js): same RNG + same clock => same bets, payouts and messages.
+// frozen pre-Preact code (tests/legacy/adhd.ts): same RNG + same clock => same bets, payouts and messages.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act } from 'preact/test-utils';
 
@@ -8,7 +8,6 @@ vi.mock('@ui/pixel', () => ({
   pxURL: (n: string) => `sprite:${n}`,
   pxIcon: (n: string, _s?: number, title?: string) => Object.assign(document.createElement('img'), { alt: title || n, className: 'px' }),
   pixelize: () => {},
-  autoPixelize: () => {},
 }));
 vi.mock('@ui/sfx', () => ({ play: new Proxy({}, { get: () => () => {} }), sfx: { on: false } }));
 vi.mock('@engine/game', async importOriginal => ({

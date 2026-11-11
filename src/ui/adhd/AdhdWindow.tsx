@@ -44,7 +44,7 @@ interface Adhd {
   saver: Saver;
 }
 let A: Adhd | null = null;
-// toggle buttons handed to gameView (its action bar is built off-screen and may drop what it built)
+// toggle buttons handed to the action bar (it is built off-screen and may drop what it built)
 let btnHosts: HTMLElement[] = [];
 let btnOn = false;
 
@@ -104,7 +104,7 @@ export function disposeAdhd(): void {
   btnHosts = [];
 }
 
-/** the toggle button gameView appends to the hand bar. Like the old one it is a new element on every call
+/** the toggle button the action bar appends to the hand bar. Like the old one it is a new element on every call
  *  (the bar is built off-screen and compared with the live one; it keeps whichever it likes), so we track the
  *  ones still on screen to flip their `on` class and unmount the rest. */
 export function adhdButton(): HTMLElement {

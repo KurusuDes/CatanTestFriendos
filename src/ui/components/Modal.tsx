@@ -16,7 +16,7 @@ export function Modal({ onClose, class: cls, style, children }: ModalProps): JSX
   );
 }
 
-/** Mounts a Preact modal on <body> from imperative code (gameView, handlers). Returns `close`. */
+/** Mounts a Preact modal on <body> from imperative code (game controller, handlers). Returns `close`. */
 export function openModal(view: (close: () => void) => ComponentChildren): () => void {
   const host = document.createElement('div');
   host.className = 'nopx'; // pixelize must not touch Preact's DOM

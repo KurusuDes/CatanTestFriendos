@@ -152,7 +152,7 @@ function EmoteToggle(): JSX.Element {
   );
 }
 
-/** the ADHD arcade's own button (an imperative element of adhd.js), mounted once */
+/** the ADHD arcade's own button (an imperative element from @ui/adhd), mounted once */
 function AdhdButton(): JSX.Element {
   const host = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {

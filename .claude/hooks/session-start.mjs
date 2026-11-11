@@ -7,9 +7,9 @@ import { join, dirname } from 'node:path';
 const vault = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'CatanVault');
 const read = f => { try { return readFileSync(join(vault, f), 'utf8'); } catch { return null; } };
 
-const ctx = read('01 - Active Context.md');
+const ctx = read('01 - Active Context (VI).md');
 if (ctx) console.log(`===== 01 - ACTIVE CONTEXT (hook SessionStart) =====\n${ctx.trim()}\n`);
-const tasks = read('02 - Tareas.md');
+const tasks = read('02 - Tareas (VI).md');
 if (tasks) {
   const open = tasks.split(/\r?\n/).filter(l => /^\s*- \[ \]/.test(l));
   console.log(`===== TAREAS ABIERTAS (${open.length}) =====\n${open.join('\n') || '(ninguna)'}`);

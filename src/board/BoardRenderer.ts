@@ -1,4 +1,4 @@
-// What gameView/lobby need from a board: the 3D renderer and the 2D SVG fallback both fit this.
+// What the game screen and lobby need from a board: the 3D renderer and the 2D SVG fallback both fit this.
 import type { BState, BoardViewState } from './types';
 
 export interface BoardRenderer {

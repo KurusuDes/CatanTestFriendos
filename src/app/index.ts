@@ -23,7 +23,7 @@ const SOUND_KEY = 'katanittes.sound';
 
 export type ScreenFn = (root: HTMLElement, arg?: unknown) => void;
 
-/** The public surface of `App` (what src/ui and src/main.js rely on). */
+/** The public surface of `App` (what src/ui and src/main.ts rely on). */
 export interface AppApi {
   screens: Record<string, ScreenFn>;
   screen: string | null;
