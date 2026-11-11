@@ -156,7 +156,11 @@ function EmoteToggle(): JSX.Element {
 function AdhdButton(): JSX.Element {
   const host = useRef<HTMLSpanElement>(null);
   useLayoutEffect(() => {
-    host.current?.replaceChildren(adhdButton());
+    const el = host.current;
+    if (!el) return;
+    const btn = adhdButton(); // a fresh element per call (T10: a span wrapping a Preact button)
+    el.append(btn);
+    return () => btn.remove();
   }, []);
   return <span ref={host} style={{ display: 'contents' }} />;
 }

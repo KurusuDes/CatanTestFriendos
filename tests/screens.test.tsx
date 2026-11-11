@@ -5,9 +5,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 
-vi.mock('@ui/pixel.js', () => ({ pxURL: (n: string) => `sprite:${n}`, pxIcon: () => document.createElement('img'), pixelize: () => {}, autoPixelize: () => {} }));
+vi.mock('@ui/pixel.js', () => ({ pxURL: (n: string) => `sprite:${n}`, pxIcon: () => document.createElement('img'), pixelize: () => {}, ICON_SETS: ['render', 'pico', 'classic'], setIconSet: () => {}, iconSet: () => 'render' }));
 vi.mock('@ui/screens/Diorama', () => ({ Diorama: () => <div class="menu-bg3d" /> }));
-vi.mock('@board/BoardView', () => ({ BoardView: class { render() {} dispose() {} } }));
+vi.mock('@board/BoardView', () => ({ BoardView: class { zoom = 1; render() {} dispose() {} resetView() {} setZoom() {} } }));
+// no WebGL in happy-dom: the game screen falls back to the flat board, as it does on a machine without GPU
+vi.mock('@board/Board3D', () => ({ Board3D: { create: () => Promise.reject(new Error('no webgl')) } }));
+vi.mock('@ui/sfx.js', () => ({ sfx: { on: false }, play: new Proxy({}, { get: () => () => {} }) }));
+vi.mock('@ui/adhd.js', () => ({
+  mountAdhd: () => {}, updateAdhd: () => {}, disposeAdhd: () => {}, celebrate: () => {},
+  adhdButton: () => Object.assign(document.createElement('button'), { className: 'btn adhd-toggle' }),
+}));
 vi.mock('@ui/flag/flag', async importOriginal => ({ ...(await importOriginal<typeof import('@ui/flag/flag')>()), flagURL: () => 'flag:url' }));
 
 import { App } from '@app/index';
@@ -18,6 +25,12 @@ import { Online } from '@ui/screens/Online';
 import { Lobby } from '@ui/screens/Lobby';
 import { Editor, encodeMap, decodeMap } from '@ui/screens/Editor';
 import { HelpModal, showHelp } from '@ui/screens/Help';
+import { gameScreen } from '@ui/game/GameScreen';
+import { Rich } from '@ui/game/Rich';
+import { renders } from '@ui/game/signals';
+import { applyAction, legalSetupRoads, legalSetupSettlements, pendingActors } from '@engine/game';
+import { botAct } from '@engine/bot';
+import { makeConfig } from '../scripts/sim.ts';
 
 let root: HTMLElement;
 beforeEach(() => {
@@ -179,5 +192,118 @@ describe('screens', () => {
     expect(root.classList.contains('nopx')).toBe(false);
     expect(root.childElementCount).toBe(0);
     App.onLeave = null;
+  });
+});
+
+describe('GameScreen', () => {
+  const tick = () => act(async () => { await new Promise(r => setTimeout(r, 0)); });
+  const snap = () => ({ ...renders });
+  const delta = (a: Record<string, number>) => Object.fromEntries(Object.entries(renders).map(([k, n]) => [k, n - (a[k] || 0)]).filter(([, n]) => n));
+
+  beforeEach(() => {
+    vi.spyOn(App, 'scheduleBots').mockImplementation(() => {});
+    App.screens.game = gameScreen;
+    App.screens.menu = () => {};
+  });
+  afterEach(() => {
+    App.onLeave?.();
+    App.onLeave = null;
+    App.state = null;
+    vi.restoreAllMocks();
+  });
+
+  it('<Rich> turns @n and :res: into a coloured name and a sprite', () => {
+    act(() => render(<Rich msg="@1 lấy :wood: 🎲" players={[{ name: 'A', color: '#111' }, { name: 'B', color: '#222' }]} />, root));
+    expect(root.querySelector('b.pname')!.textContent).toBe('B');
+    expect(root.querySelectorAll('img.px').length).toBe(2);
+    expect(root.querySelector('.ico')!.getAttribute('title')).toBe('Gỗ');
+  });
+
+  it('mounts every region, a move updates only what changed, and leaving cleans up', async () => {
+    const cfg = makeConfig(1);
+    cfg.players[0]!.kind = 'human';
+    cfg.players = cfg.players.slice(0, 3);
+    act(() => App.startGame(cfg));
+    await tick();
+    expect(root.classList.contains('nopx')).toBe(true);
+    for (const sel of ['.topbar', '.turn-info', '.board-wrap', '.banner', '.zoom-ctrl', '.players', '.bank-info', '.log', '.actionbar']) expect(root.querySelector(sel), sel).toBeTruthy();
+    expect(root.querySelectorAll('.players .pcard').length).toBe(3);
+    expect(root.querySelector('.board-loading')).toBeFalsy(); // the loader goes away once the (fallback) board is up
+
+    // bots place their houses until it is the human's turn
+    const st = App.state!;
+    for (let guard = 0; guard < 20 && pendingActors(st)[0] !== 0; guard++) {
+      const pid = pendingActors(st)[0]!;
+      act(() => { applyAction(st, botAct(st, pid)!); App.changed(); });
+    }
+    await tick();
+    expect(root.querySelector('.banner')!.textContent).toContain('Đặt nhà của bạn');
+    expect(root.querySelectorAll('.log > div').length).toBeGreaterThan(0);
+
+    // the human places a house: players' VP and the log change, the top bar does not
+    const before = snap(), logBefore = root.querySelectorAll('.log > div').length;
+    const vp0 = root.querySelectorAll('.pcard .vp')[0]!.textContent;
+    act(() => { App.dispatch({ type: 'placeSettlement', pid: 0, vid: legalSetupSettlements(st, 0)[0]! }); });
+    const d = delta(before);
+    expect(root.querySelectorAll('.log > div').length).toBe(logBefore + 1);
+    expect(root.querySelectorAll('.pcard .vp')[0]!.textContent).not.toBe(vp0);
+    expect(d.Log).toBe(1);
+    expect(d.PlayerCard).toBe(1); // only the card of the player who built
+    expect(d.TopBar ?? 0).toBe(0);
+    expect(d.TurnInfo ?? 0).toBe(0);
+    expect(d.Dice ?? 0).toBe(0);
+    expect(root.querySelector('.banner')!.textContent).toContain('Đặt đường của bạn');
+
+    // the road, then the in-game menu opens and Escape closes it
+    act(() => { App.dispatch({ type: 'placeRoad', pid: 0, eid: legalSetupRoads(st, 0)[0]! }); });
+    act(() => (document.querySelector('[title="Menu"]') as HTMLElement).click());
+    expect(document.querySelector('.overlay .modal h2')!.textContent).toContain('Menu');
+    act(() => { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); });
+    expect(document.querySelector('.overlay')).toBeFalsy();
+
+    // leaving unmounts the tree and the global listeners go with it
+    App.onLeave!();
+    App.onLeave = null;
+    expect(root.childElementCount).toBe(0);
+    expect(root.classList.contains('nopx')).toBe(false);
+  });
+
+  it('the toolbar follows the phase: roll button on your turn, then build buttons', async () => {
+    const cfg = makeConfig(2);
+    cfg.players = cfg.players.slice(0, 2);
+    cfg.players[0]!.kind = 'human';
+    act(() => App.startGame(cfg));
+    await tick();
+    const st = App.state!;
+    // play the whole setup (bots decide for everybody), stop at the first roll
+    act(() => {
+      for (let guard = 0; guard < 40 && st.phase === 'setup'; guard++) {
+        const pid = pendingActors(st)[0]!;
+        applyAction(st, botAct(st, pid)!);
+      }
+      App.changed();
+    });
+    await tick();
+    expect(st.phase).toBe('roll');
+    if (st.current !== 0) {
+      act(() => { applyAction(st, botAct(st, st.current)!); App.changed(); });
+    }
+    expect(root.querySelectorAll('.actionbar .rcard').length).toBe(5);
+    // our turn at the roll phase (when the bot opened, play it out until it is ours)
+    for (let guard = 0; guard < 60 && !(st.current === 0 && st.phase === 'roll'); guard++) {
+      act(() => {
+        const pid = pendingActors(st)[0]!;
+        const a = botAct(st, pid);
+        applyAction(st, a!);
+        App.changed();
+      });
+    }
+    await tick();
+    expect(root.querySelector('.roll-btn')).toBeTruthy();
+    act(() => { App.dispatch({ type: 'roll', pid: 0, power: 0 }); });
+    await tick();
+    expect(root.querySelector('.roll-btn')).toBeFalsy();
+    expect(root.querySelector('.dice .die')).toBeTruthy();
+    expect(root.querySelectorAll('.dice-sum').length).toBe(1);
   });
 });
