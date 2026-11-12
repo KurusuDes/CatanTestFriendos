@@ -1,5 +1,5 @@
 // Imperative effects of the game screen: sounds, toasts, cards flying between tiles / hands / the bank
-// (Web Animations), emote balloons on the 3D board, pings. Everything here runs ONCE per new state
+// (Web Animations), pings. Everything here runs ONCE per new state
 // (`processFx`, keyed by the identity of `state.fx`, which the engine replaces on every action), never
 // per re-render; the DOM it builds lives outside Preact (appended to <body>, like the old screen did)
 // and is pixelized explicitly on creation.
@@ -7,10 +7,9 @@ import { RES, TILE_INFO, DEV_INFO, EVENTS } from '@engine/constants';
 import type { GameState, Fx, Res } from '@engine/types';
 import { App, store } from '@app/index';
 import { h, rich, toast } from '@ui/dom';
-import { pxIcon, pixelize } from '@ui/pixel';
+import { pxIcon } from '@ui/pixel';
 import { play } from '@ui/sfx';
-import { celebrate } from '@ui/adhd';
-import { announces, boards, boardNudge, cardEmotes, confettiOn, diceAnim, gains, localHumans, modal, pick } from './signals';
+import { announces, boards, boardNudge, confettiOn, diceAnim, gains, localHumans, modal, pick } from './signals';
 
 export const S = {
   /** bumped on mount/unmount: delayed callbacks of a previous game screen check it and give up */
@@ -25,7 +24,6 @@ export const S = {
   lastCurrent: null as number | null,
   lastFx: null as Fx[] | null,
   winnerShown: false,
-  sent: [] as number[],
   pinged: [] as number[],
   seq: 0,
 };
@@ -39,7 +37,6 @@ export function resetFx(): void {
   S.lastCurrent = null;
   S.lastFx = null;
   S.winnerShown = false;
-  S.sent = [];
   S.pinged = [];
 }
 
@@ -79,7 +76,6 @@ function handleFx(st: GameState): void {
   const v = store.viewer.peek();
   // the cards wait for the 3D dice to land before flying off the tiles
   const rolledNow = st.fx.some(f => f.kind === 'dice');
-  const host = !App.isClient();
   for (const f of st.fx) {
     switch (f.kind) {
       case 'dice': {
@@ -90,8 +86,6 @@ function handleFx(st: GameState): void {
         S.diceLand = (boards.d3 ? boards.d3.rollDice(f.dice, S.rolledAt, f.power) : 1250) - 100;
         play.dice(f.power);
         if (S.rolled === 7) later(350, () => play.robber());
-        const cur = st.players[st.current];
-        if (host && S.rolled === 7 && cur && cur.kind === 'bot' && Math.random() < 0.3) botEmote(st.current, ['😈', '🦹', '😏']);
         break;
       }
       case 'gain': {
@@ -113,7 +107,6 @@ function handleFx(st: GameState): void {
         flyCards(res ? [res] : ['wood'], f.from, f.to, v, { hidden: res == null || (f.from !== v && f.to !== v) });
         if (res && f.from === v) toast(h('span', null, rich(`🫳 @${f.to} cướp của bạn ${TILE_INFO[res].icon}`, st.players)), 'error');
         else if (res && f.to === v) toast(h('span', null, rich(`🫳 Bạn cướp của @${f.from}: ${TILE_INFO[res].icon}`, st.players)), 'good');
-        if (host && st.players[f.from]!.kind === 'bot' && Math.random() < 0.45) botEmote(f.from, ['😡', '😤', '💀', '😭']);
         break;
       }
       case 'robber':
@@ -165,10 +158,6 @@ function handleFx(st: GameState): void {
       case 'win':
         play.win();
         confetti();
-        if (host && st.players[f.pid] && st.players[f.pid]!.kind === 'bot') botEmote(f.pid, ['😎', '🏆', '🎉']);
-        break;
-      case 'cheer':
-        celebrate(f.pid, f.n);
         break;
       case 'flipAll':
         S.flipAt = Date.now();
@@ -294,48 +283,6 @@ function flyCard(res: Res, from: Pt, target: () => Element | null, o: FlyOpts = 
     bumpEl(c);
     if (o.sound) play.gain();
   };
-}
-
-// ---------------- reactions: emojis that float up from your buildings ----------------
-export const EMOTES = ['😂', '🤣', '😎', '😡', '😭', '😱', '🤔', '🙏', '👏', '🔥', '💀', '😈', '👀', '❤️', '🤝', '🎉', '🐑', '🌾', '🧱', '🌲', '⛰️', '🎲', '🦹', '🏆'];
-export const ONLY_EMOJI = /^(\p{Extended_Pictographic}|️|‍){1,4}$/u;
-
-function botEmote(pid: number, options: string[]): void {
-  const e = options[Math.floor(Math.random() * options.length)]!;
-  later(500 + Math.random() * 900, () => store.state.peek() && App.emote(pid, e));
-}
-
-export function sendEmote(e: string): void {
-  const v = store.viewer.peek();
-  if (v == null || v < 0) return toast('Chỉ người chơi mới thả cảm xúc được', 'error');
-  const now = Date.now();
-  S.sent = S.sent.filter(t => now - t < 4000);
-  if (S.sent.length >= 5) return toast('Từ từ thôi 😅', 'error', 1500);
-  S.sent.push(now);
-  App.emote(v, e);
-}
-
-export function showEmote(seat: number, e: string): void {
-  const st = store.state.peek();
-  if (!st || !st.players[seat]) return;
-  const p = st.players[seat]!;
-  const short = ONLY_EMOJI.test(e);
-  play.pop();
-  // on the player's card (always visible, even when their buildings are off screen)
-  const entry = { pid: seat, e, at: Date.now() };
-  cardEmotes.value = [...cardEmotes.value.filter(x => x.pid !== seat), entry];
-  later(3100, () => (cardEmotes.value = cardEmotes.value.filter(x => x !== entry)));
-  // and as balloons rising from all their buildings at once (a little staggered, so it ripples)
-  const b = boards.d3;
-  const pts = b ? b.playerPoints(seat) : [];
-  pts.forEach((pt, i) => later(i && 60 + Math.random() * 260, () => {
-    if (!b || !b.alive) return;
-    const el = h('div', { class: 'balloon ' + (short ? 'emoji' : 'talk'), style: { '--pc': p.color } },
-      h('div', { class: 'balloon-body' }, h('span', null, e)),
-      h('i', { class: 'balloon-knot' }), h('i', { class: 'balloon-string' }));
-    b.float(el, pt, short ? { rise: 110 + Math.random() * 30, life: 3300 } : { rise: 70, life: 4600, wobble: 3 });
-    pixelize(el);
-  }));
 }
 
 export function showPing(seat: number, x: number, z: number): void {

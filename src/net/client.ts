@@ -154,9 +154,6 @@ function onClientData(net: Net, raw: unknown) {
     case 'mark':
       App.deliverPing(msg.seat, msg.x, msg.z);
       return;
-    case 'emote':
-      App.deliverEmote(msg.seat, msg.e);
-      return;
     case 'meta':
       net.meta = msg.meta;
       App.notifyMeta(msg.meta);

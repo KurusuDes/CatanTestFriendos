@@ -62,7 +62,6 @@ export function createGame(configIn: Config): GameState {
       res: zeroRes(), dev: [], knights: 0, roadLen: 0,
       roadsLeft: R.maxRoads, settlementsLeft: R.maxSettlements, citiesLeft: R.maxCities,
       stats: { gained: 0, stolen: 0, lost: 0 },
-      adhdWins: 0,
     })),
     buildings: {},
     roads: {},
@@ -1211,16 +1210,8 @@ H.retirePlayer = (s, a) => {
   }
 };
 
-// someone beat the ADHD arcade (the minigames for the wait): any seat, any time. It counts the wins
-// of this match (their pieces get gold trims) and sets off the fireworks for everyone
-H.adhdWin = (s, a) => {
-  const p = s.players[a.pid]!;
-  p.adhdWins = (p.adhdWins || 0) + 1;
-  s.fx.push({ kind: 'cheer', pid: a.pid, n: p.adhdWins });
-};
-
 // actions that leave the trade on the table when the current player makes them
-const TRADE_ACTIONS = new Set(['proposeTrade', 'respondTrade', 'confirmTrade', 'cancelTrade', 'adhdWin']);
+const TRADE_ACTIONS = new Set(['proposeTrade', 'respondTrade', 'confirmTrade', 'cancelTrade']);
 
 export function applyAction(s: GameState, a: Action): ApplyResult {
   s.fx = [];

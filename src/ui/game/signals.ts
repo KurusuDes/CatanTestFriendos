@@ -72,12 +72,9 @@ export const metaTick = signal(0);
 /** the 3D dice play their roll animation (the topbar dice shake) on each new throw; 0 = none yet */
 export const diceAnim = signal(0);
 export const topView = signal(false);
-export const emoteOpen = signal<{ top: number; left: number } | null>(null);
 
 interface Gain { id: number; pid: number; text: string }
-interface CardEmote { pid: number; e: string; at: number }
 export const gains = signal<Gain[]>([]);
-export const cardEmotes = signal<CardEmote[]>([]);
 interface Announcement { id: number; icon: string; title: string; desc: string }
 export const announces = signal<Announcement[]>([]);
 export const confettiOn = signal(0);

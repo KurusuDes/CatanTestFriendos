@@ -11,10 +11,6 @@ vi.mock('@board/BoardView', () => ({ BoardView: class { zoom = 1; render() {} di
 // no WebGL in happy-dom: the game screen falls back to the flat board, as it does on a machine without GPU
 vi.mock('@board/Board3D', () => ({ Board3D: { create: () => Promise.reject(new Error('no webgl')) } }));
 vi.mock('@ui/sfx', () => ({ sfx: { on: false }, play: new Proxy({}, { get: () => () => {} }) }));
-vi.mock('@ui/adhd', () => ({
-  mountAdhd: () => {}, updateAdhd: () => {}, disposeAdhd: () => {}, celebrate: () => {},
-  adhdButton: () => Object.assign(document.createElement('button'), { className: 'btn adhd-toggle' }),
-}));
 vi.mock('@ui/flag/flag', async importOriginal => ({ ...(await importOriginal<typeof import('@ui/flag/flag')>()), flagURL: () => 'flag:url' }));
 
 import { App } from '@app/index';

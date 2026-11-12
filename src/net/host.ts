@@ -104,25 +104,9 @@ function onHostData(net: Net, conn: Conn, raw: unknown) {
       const a = msg.action;
       if (ADMIN.has(a.type) || a.pid !== g.seat) return conn.send({ type: 'error', msg: 'Đó không phải lượt của bạn.' });
       if (st.players[g.seat]!.retired) return conn.send({ type: 'error', msg: 'Bạn đã bị cho rời ván.' });
-      if (a.type === 'adhdWin') {
-        // beating the arcade takes minutes: a burst of wins is someone spamming the fireworks
-        const now = Date.now();
-        if (now - (g.cheered || 0) < 15000) return;
-        g.cheered = now;
-      }
       const r = applyAction(st, a);
       if (!r.ok) conn.send({ type: 'error', msg: r.error });
       else App.changed();
-      return;
-    }
-    case 'emote': {
-      if (g.seat == null || !App.state) return;
-      // a friend can't flood the table: at most 5 reactions every 4 seconds
-      const now = Date.now();
-      g.emotes = (g.emotes || []).filter(t => now - t < 4000);
-      if (g.emotes.length >= 5) return;
-      g.emotes.push(now);
-      App.emote(g.seat, msg.e);
       return;
     }
     case 'mark': {

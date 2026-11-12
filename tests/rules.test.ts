@@ -342,18 +342,6 @@ t('retirarse durante la colocación inicial y relevo por bot', () => {
   ok(!act(s, { type: 'retirePlayer', pid: 3 }).ok, 'deben quedar 2');
 });
 
-t('ADHD: la victoria cuenta para cualquiera, en cualquier momento, y no corta el trato', () => {
-  const s = fresh();
-  give(s, 0, { wood: 1 });
-  ok(act(s, { type: 'proposeTrade', pid: 0, give: { wood: 1 }, get: { brick: 1 } }).ok, 'oferta');
-  ok(act(s, { type: 'adhdWin', pid: 0 }).ok);
-  ok(act(s, { type: 'adhdWin', pid: 2 }).ok, 'fuera de turno también');
-  ok(act(s, { type: 'adhdWin', pid: 0 }).ok);
-  eq(s.players.map(p => p.adhdWins), [2, 0, 1, 0]);
-  ok(s.trade, 'el trato sigue en la mesa');
-  eq(s.fx, [{ kind: 'cheer', pid: 0, n: 2 }]);
-});
-
 t('historial de tiradas: quién y cuánto, como mucho 30', () => {
   const s = fresh();
   for (let i = 0; i < 35; i++) {

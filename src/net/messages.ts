@@ -62,7 +62,6 @@ export type HostMessage =
   | { type: 'error'; msg: string }
   | { type: 'init'; board: StaticBoard; config: Config; flags: (string | null)[] }
   | { type: 'mark'; seat: number; x: number; z: number }
-  | { type: 'emote'; seat: number; e: string }
   | { type: 'meta'; meta: Meta }
   | { type: 'state'; state: WireState; seat: number | null; meta: Meta };
 
@@ -71,7 +70,6 @@ export type ClientMessage =
   | { type: 'hello'; name: string; token: string; flag?: string | null; color?: string | null }
   | { type: 'pong' }
   | { type: 'action'; action: Action }
-  | { type: 'emote'; e: string }
   | { type: 'mark'; x: number; z: number }
   | { type: 'vote'; choice: VoteChoice; voteId?: string }
   | { type: 'bye' };
@@ -85,7 +83,7 @@ const isArr = (v: unknown): v is unknown[] => Array.isArray(v);
 
 const ACTION_TYPES: ReadonlySet<string> = new Set<ActionType>([
   'placeSettlement', 'placeRoad', 'roll', 'discard', 'moveRobber', 'build', 'endRoadBuilding', 'buyDev', 'playDev',
-  'bankTrade', 'proposeTrade', 'respondTrade', 'confirmTrade', 'cancelTrade', 'endTurn', 'setController', 'retirePlayer', 'adhdWin',
+  'bankTrade', 'proposeTrade', 'respondTrade', 'confirmTrade', 'cancelTrade', 'endTurn', 'setController', 'retirePlayer',
 ]);
 
 /** Shape check only (type known, pid numeric): the engine validates the rest and rejects garbage with an error. */
@@ -127,7 +125,6 @@ export function parseHostMessage(raw: unknown): HostMessage | null {
     case 'closed': return m as HostMessage;
     case 'init': return isStaticBoard(m.board) && isRec(m.config) && (m.flags === undefined || isArr(m.flags)) ? ({ ...m, flags: m.flags ?? [] } as HostMessage) : null;
     case 'mark': return isNum(m.seat) && isNum(m.x) && isNum(m.z) ? (m as HostMessage) : null;
-    case 'emote': return isNum(m.seat) && isStr(m.e) ? ({ type: 'emote', seat: m.seat, e: m.e.slice(0, 40) }) : null;
     case 'meta': return isMeta(m.meta) ? (m as HostMessage) : null;
     case 'state': return isWireState(m.state) && (m.seat === null || m.seat === undefined || isNum(m.seat)) && (m.meta === undefined || isMeta(m.meta)) ? ({ ...m, seat: m.seat ?? null } as HostMessage) : null;
     default: return null;
@@ -142,7 +139,6 @@ export function parseClientMessage(raw: unknown): ClientMessage | null {
     case 'pong':
     case 'bye': return m as ClientMessage;
     case 'action': return isAction(m.action) ? (m as ClientMessage) : null;
-    case 'emote': return isStr(m.e) ? (m as ClientMessage) : null;
     case 'mark': return isNum(m.x) && isNum(m.z) ? (m as ClientMessage) : null;
     case 'vote': return isStr(m.choice) && (VOTE_CHOICES as readonly string[]).includes(m.choice) && (m.voteId === undefined || isStr(m.voteId)) ? (m as ClientMessage) : null;
     default: return null;

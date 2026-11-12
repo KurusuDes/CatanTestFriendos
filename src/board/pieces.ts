@@ -1,29 +1,14 @@
-// Player pieces (added / removed / replaced one by one when they change): roads, joints, buildings, banners, gold trims, the
+// Player pieces (added / removed / replaced one by one when they change): roads, joints, buildings, banners, the
 // robber and the click hotspots.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { flagCanvas } from '@ui/flag/flag';
-import { goldOf, gild, tinted } from './assets';
+import { tinted } from './assets';
 import { LAYER_PIECES, patch, pieceHook } from './shaders';
 import { disposeChildren, disposeTree, shared } from './dispose';
 import { diffPlan, interKey, planPieces, type PieceSpec, type PlanInput } from './pieceplan';
-import type { BPlayer, BState, BoardViewState } from './types';
+import type { BState, BoardViewState } from './types';
 import type { Board3D } from './Board3D';
-
-const KNOB_HOUSE = [0, 0.27, 0] as const, KNOB_CITY = [0, 0.57, 0] as const; // on top of the roof, in model units
-const KNOB_GEO = shared(new THREE.SphereGeometry(0.024, 12, 8));
-const KNOB_STEM = shared(new THREE.CylinderGeometry(0.006, 0.01, 0.04, 8).translate(0, -0.02, 0));
-let knobBase: THREE.MeshStandardMaterial | null = null;
-function goldKnob(x: number, y: number, z: number, glow: boolean) {
-  knobBase = knobBase || new THREE.MeshStandardMaterial({ name: 'Knob' });
-  const mat = goldOf(knobBase, glow);
-  const g = new THREE.Group();
-  const ball = new THREE.Mesh(KNOB_GEO, mat), stem = new THREE.Mesh(KNOB_STEM, mat);
-  ball.castShadow = stem.castShadow = true;
-  g.add(ball, stem);
-  g.position.set(x, y, z);
-  return g;
-}
 
 // ---------- kingdom banners waving on every building ----------
 // shared constants: never disposed
@@ -89,16 +74,7 @@ interface JointMats {
   bed: THREE.Material;
 }
 const jm = new Map<string, JointMats>();
-function jointMats(board: Board3D, color: string, gold = 0): JointMats {
-  if (gold) {
-    // gold road edges: the bed under the planks turns gold (and shines at level 5)
-    const key = color + '|' + gold;
-    if (!jm.has(key)) {
-      const m = jointMats(board, color);
-      jm.set(key, { top: m.top, bed: goldOf(m.bed, gold >= 5) });
-    }
-    return jm.get(key)!;
-  }
+function jointMats(board: Board3D, color: string): JointMats {
   if (!jm.has(color)) {
     const mats: Partial<JointMats> = {};
     tinted(board.kit.road, { Player: color, Banner: color, PlayerWood: color }).traverse(obj => {
@@ -120,14 +96,8 @@ function jointMats(board: Board3D, color: string, gold = 0): JointMats {
   return jm.get(color)!;
 }
 
-// how gilded a player's pieces are: their ADHD wins this match, up to 5
-function goldLevel(_board: Board3D, p: BPlayer | undefined) {
-  return p ? Math.min(5, p.adhdWins || 0) : 0;
-}
-
-
 // ---------- incremental pieces (3D-6) ----------
-// Roads and joints are InstancedMeshes, one per (player colour x part x gold class): the whole road network
+// Roads and joints are InstancedMeshes, one per (player colour x part): the whole road network
 // is a few dozen draw calls instead of hundreds, in the main pass, the shadow pass and the mask passes alike.
 // Houses, cities, ghosts and the robber stay clones (shared geometry, cached materials).
 
@@ -207,13 +177,13 @@ class InstGroup {
   }
 }
 
-// the road model's two submeshes (bed + player planks) with their tinted / gilded materials, once per colour and gold class
+// the road model's two submeshes (bed + player planks) with their tinted materials, once per colour
 const roadParts = new Map<string, { geo: THREE.BufferGeometry; mat: THREE.Material }[]>();
-function roadPartsOf(kit: Board3D['kit'], color: string, lv: number) {
-  const key = color + '|' + lv;
+function roadPartsOf(kit: Board3D['kit'], color: string) {
+  const key = color;
   let parts = roadParts.get(key);
   if (!parts) {
-    const o = gild(tinted(kit.road, { Player: color, Banner: color, PlayerWood: color }), lv >= 2 ? ['Wood'] : [], lv >= 5);
+    const o = tinted(kit.road, { Player: color, Banner: color, PlayerWood: color });
     parts = [];
     o.traverse(obj => {
       const m = obj as THREE.Mesh;
@@ -280,7 +250,7 @@ export class PieceSet {
 
     const flags = st.players.map(p => (p.flag ? p.flag.length + ':' + hashStr(p.flag) : ''));
     const next = new Map<string, Spec>(
-      planPieces({ st: st as PlanInput['st'], blindOwn: view.blindOwn, gold: pid => goldLevel(b, st.players[pid]), flag: pid => flags[pid] || '' }),
+      planPieces({ st: st as PlanInput['st'], blindOwn: view.blindOwn, flag: pid => flags[pid] || '' }),
     );
     if (robberOn) next.set('robber' + rt!.id, { kind: 'robber', key: 'robber' + rt!.id, sig: '', tile: rt! });
 
@@ -357,14 +327,14 @@ export class PieceSet {
     const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -Math.atan2(c.y - a.y, c.x - a.x), Math.atan2(yb - ya, len), 'YZX'));
     const scale = new THREE.Vector3(1.08, 2.2, 2.1);
     if (s.ghost) {
-      const o = gild(tinted(b.kit.road, this.colors(s.color)), [], false);
+      const o = tinted(b.kit.road, this.colors(s.color));
       o.position.copy(pos);
       o.quaternion.copy(quat);
       this.ghostify(o);
       o.scale.copy(scale);
       return this.addObject(s, o, s.color, spawn);
     }
-    const ents = roadPartsOf(b.kit, s.color, s.lv).map((p, i) => ({ g: this.group(`r|${s.color}|${s.lv}|${i}`, p.geo, p.mat, s.color), k: s.key + '#' + i }));
+    const ents = roadPartsOf(b.kit, s.color).map((p, i) => ({ g: this.group(`r|${s.color}|${i}`, p.geo, p.mat, s.color), k: s.key + '#' + i }));
     const place = (e: number, first: boolean) => {
       _p.set(pos.x, pos.y + (1 - e) * 1.2, pos.z);
       _s.copy(scale).multiplyScalar(0.6 + e * 0.4);
@@ -380,15 +350,14 @@ export class PieceSet {
 
   private createJoint(s: Extract<PieceSpec, { kind: 'joint' }>, st: BState, vy: (v: number) => number, spawn: boolean) {
     const b = this.board, bd = st.board;
-    const m = jointMats(b, s.color, s.lv), V = bd.vertices[s.vid]!, y0 = vy(s.vid);
+    const m = jointMats(b, s.color), V = bd.vertices[s.vid]!, y0 = vy(s.vid);
     const P = new THREE.Vector3(V.x, y0 + 0.01 + s.owner * 0.002, V.y);
-    const id = (part: string, geo: THREE.BufferGeometry, mat: THREE.Material) => this.group(`j|${s.color}|${s.lv}|${part}`, geo, mat, s.color);
+    const id = (part: string, geo: THREE.BufferGeometry, mat: THREE.Material) => this.group(`j|${s.color}|${part}`, geo, mat, s.color);
     // [group, instance key, matrix relative to the joint's origin]
     const ents: [InstGroup, string, THREE.Matrix4][] = [
       [id('cb', JOINT_CYL, m.bed), s.key + '#cb', mat4(0, 0.0285, 0, 0.085, 0.057, 0.085)],
       [id('ct', JOINT_CYL, m.top), s.key + '#ct', mat4(0, 0.078, 0, 0.1, 0.024, 0.1)],
     ];
-    if (s.lv >= 2) ents.push([id('cb', JOINT_CYL, m.bed), s.key + '#st', mat4(0, 0.096, 0, 0.055, 0.014, 0.055)]); // a gold stud
     for (const o of s.others) {
       const O = bd.vertices[o]!, dx = O.x - V.x, dz = O.y - V.y, len = Math.hypot(dx, dz);
       _q.setFromEuler(_e.set(0, -Math.atan2(dz, dx), Math.atan2(vy(o) - y0, len), 'YZX'));
@@ -413,10 +382,8 @@ export class PieceSet {
   }
 
   private createBuilding(s: Extract<PieceSpec, { kind: 'building' }>, st: BState, vy: (v: number) => number, spawn: boolean) {
-    const kit = this.board.kit, V = st.board.vertices[s.vid]!, pl = st.players[s.owner]!, lv = s.lv, city = s.type === 'city';
-    const trims = [...(lv >= 1 ? ['Timber'] : []), ...(lv >= 3 ? ['Glass', 'StoneDark'] : [])];
-    const o = gild(tinted(city ? kit.city : kit.house, this.colors(pl.color)), trims, lv >= 5);
-    if (lv >= 4) o.add(city ? goldKnob(KNOB_CITY[0], KNOB_CITY[1], KNOB_CITY[2], lv >= 5) : goldKnob(KNOB_HOUSE[0], KNOB_HOUSE[1], KNOB_HOUSE[2], lv >= 5));
+    const kit = this.board.kit, V = st.board.vertices[s.vid]!, pl = st.players[s.owner]!, city = s.type === 'city';
+    const o = tinted(city ? kit.city : kit.house, this.colors(pl.color));
     o.position.set(V.x, vy(s.vid) - 0.01, V.y);
     o.rotation.y = ((s.vid * 2.39996) % 6.28) * 0.4;
     if (pl.flag) {

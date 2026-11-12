@@ -1,15 +1,14 @@
 // Incremental pieces of the 3D board (3D-6) and sprite labels (3D-10). Usage: pnpm test
 import { test, expect } from 'vitest';
-import { diffPlan, goldClass, interKey, planPieces } from '@board/pieceplan';
+import { diffPlan, interKey, planPieces } from '@board/pieceplan';
 import { spriteLabels } from '@board/quality';
 import { NUMS, PORT_TYPES, portCell, runeCell, tokenCell, ATLAS_H, ATLAS_W } from '@board/labelsprites';
 
 // a line of vertices 0-1-2-3 joined by edges 0:(0,1) 1:(1,2) 2:(2,3)
 const edges = [{ a: 0, b: 1 }, { a: 1, b: 2 }, { a: 2, b: 3 }];
 const players = [{ color: '#f00' }, { color: '#00f' }];
-const mk = (roads: Record<number, number>, buildings: Record<number, { owner: number; type: string }> = {}, gold = [0, 0]) => ({
+const mk = (roads: Record<number, number>, buildings: Record<number, { owner: number; type: string }> = {}) => ({
   st: { board: { edges }, roads, buildings, players } as any,
-  gold: (p: number) => gold[p]!,
   flag: () => '',
 });
 const sigs = (m: Map<string, { sig: string }>) => new Map([...m].map(([k, v]) => [k, v.sig]));
@@ -42,19 +41,6 @@ test('settlement -> city is a new piece (drop-in) and the old one goes away', ()
   const d = diffPlan(prev, planPieces(mk({}, { 2: { owner: 0, type: 'city' } })));
   expect(d.added).toEqual(['b2city']);
   expect(d.removed).toEqual(['b2settlement']);
-});
-
-test('gold levels rebuild only that player\'s pieces, and only when the look changes', () => {
-  const roads = { 0: 0, 2: 1 };
-  const b = { 0: { owner: 0, type: 'city' } };
-  const prev = sigs(planPieces(mk(roads, b, [0, 0])));
-  expect(diffPlan(prev, planPieces(mk(roads, b, [1, 0]))).changed).toEqual(['b0city']); // level 1 = beams only
-  const d2 = diffPlan(prev, planPieces(mk(roads, b, [2, 0])));
-  expect(d2.changed).toContain('r0');
-  expect(d2.changed).not.toContain('r2');
-  expect(goldClass(1)).toBe(0);
-  expect(goldClass(4)).toBe(2);
-  expect(goldClass(5)).toBe(5);
 });
 
 test('ghosts (blind mode) are separate pieces', () => {

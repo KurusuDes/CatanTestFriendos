@@ -5,8 +5,7 @@ import { RES, TILE_INFO } from '@engine/constants';
 import { App } from '@app/index';
 import { FlagImg } from '@ui/components/FlagImg';
 import { px } from '@ui/components/PixelIcon';
-import { cardEmotes, countRender, cur, gains, jsonEq, metaTick, actors, select, seat } from './signals';
-import { ONLY_EMOJI } from './fx';
+import { countRender, cur, gains, jsonEq, metaTick, actors, select, seat } from './signals';
 
 const LEVEL: Record<string, string> = { easy: 'bot dễ', normal: 'bot thường', hard: 'bot khó' };
 
@@ -30,7 +29,6 @@ function cardData(pid: number) {
     roadAward: st.longestRoad.owner === pid, armyAward: st.largestArmy.owner === pid,
     discard: st.pendingDiscards[pid] || 0,
     gain: gains.value.filter(g => g.pid === pid).map(g => g.text).join(' '),
-    said: (cardEmotes.value.find(x => x.pid === pid) || null),
   };
 }
 
@@ -57,7 +55,6 @@ function PlayerCard({ pid }: { pid: number }): JSX.Element {
         {d.discard > 0 && <span style={{ color: 'var(--red)' }}>{px(`🗑️ ${d.discard}`, 15)}</span>}
       </div>
       {d.gain && <div class="gainfx" key={d.gain}>{px(d.gain, 17)}</div>}
-      {d.said && <div class={'pc-emote' + (ONLY_EMOJI.test(d.said.e) ? ' big' : '')} key={d.said.at}>{px(d.said.e, ONLY_EMOJI.test(d.said.e) ? 23 : 15)}</div>}
     </div>
   );
 }

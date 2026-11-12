@@ -1,4 +1,4 @@
-// Tiny typed event emitter (emote / ping / meta), alongside the legacy `App.onEmote` style callback slots.
+// Tiny typed event emitter (ping / meta), alongside the legacy `App.onPing` style callback slots.
 type Listener<A extends unknown[]> = (...args: A) => void;
 
 export class Emitter<E extends { [K in keyof E]: unknown[] }> {
@@ -29,7 +29,6 @@ export class Emitter<E extends { [K in keyof E]: unknown[] }> {
 }
 
 export interface AppEvents {
-  emote: [seat: number, text: string];
   ping: [seat: number, x: number, z: number];
   meta: [];
 }

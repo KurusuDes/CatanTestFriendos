@@ -6,7 +6,7 @@ import { App, type ScreenFn } from '@app/index';
 import { preactScreen } from '@ui/components/mount';
 import { ActionBar } from './ActionBar';
 import { BoardHost } from './BoardHost';
-import { Announces, Confetti, EmotePicker, PassScreen } from './Floating';
+import { Announces, Confetti, PassScreen } from './Floating';
 import { Log } from './Log';
 import { ModalHost } from './Modals';
 import { Bank, Players } from './Players';
@@ -32,7 +32,6 @@ function GameScreen(): JSX.Element {
       </div>
       <div><ModalHost /></div>
       <PassScreen />
-      <EmotePicker />
       <Announces />
       <Confetti />
     </>

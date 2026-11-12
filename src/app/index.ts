@@ -36,7 +36,6 @@ interface AppApi {
   listeners: Array<(st: GameState) => void>;
   // callback slots (set by the UI)
   onLeave: (() => void) | null;
-  onEmote: ((seat: number, text: string) => void) | null;
   onPing: ((seat: number, x: number, z: number) => void) | null;
   onMeta: (() => void) | null;
   onLobby: (() => void) | null;
@@ -49,9 +48,7 @@ interface AppApi {
   startGame(config: Config): void;
   resume(): boolean;
   dispatch(action: Action): boolean;
-  emote(seat: number, text: string): void;
   ping(seat: number, x: number, z: number): void;
-  cheer(seat: number): void;
   changed(): void;
   scheduleBots(): void;
   leaveGame(): void;
@@ -61,8 +58,7 @@ interface AppApi {
   /** net layer: the table meta (presence / vote) changed */
   notifyMeta(m?: Meta): void;
   notifyLobby(): void;
-  /** hand an emote / ping to the UI (callback slot + typed event) */
-  deliverEmote(seat: number, text: string): void;
+  /** hand a ping to the UI (callback slot + typed event) */
   deliverPing(seat: number, x: number, z: number): void;
 }
 
@@ -80,7 +76,6 @@ export const App: AppApi = {
   config: null,
   mySeat: null,
   onLeave: null,
-  onEmote: null,
   onPing: null,
   onMeta: null,
   onLobby: null,
@@ -166,16 +161,6 @@ export const App: AppApi = {
     return true;
   },
 
-  // a reaction (emoji or short message) from a seat: online it goes through the host,
-  // who relays it to everyone (bots emote from the host too)
-  emote(seat, e) {
-    e = String(e || '').trim().slice(0, 40);
-    if (!e || !App.state) return;
-    if (App.isClient()) return App.net!.sendEmote(e);
-    if (App.isOnline()) App.net!.relayEmote(seat, e);
-    App.deliverEmote(seat, e);
-  },
-
   // a 1 s marker a seat drops on the map (middle click), shared the same way
   ping(seat, x, z) {
     if (!App.state || !Number.isFinite(x) || !Number.isFinite(z)) return;
@@ -184,12 +169,6 @@ export const App: AppApi = {
     if (App.isClient()) return App.net!.sendPing(x, z);
     if (App.isOnline()) App.net!.relayPing(seat, x, z);
     App.deliverPing(seat, x, z);
-  },
-
-  // someone beat the ADHD arcade: it's a game action (the win counts for their gold trims), and its
-  // `cheer` fx sets off the fireworks and the banner for everyone
-  cheer(seat) {
-    if (App.state && App.state.phase !== 'gameOver') App.dispatch({ type: 'adhdWin', pid: seat });
   },
 
   // called after every state change (local apply, or state received from host)
@@ -282,11 +261,6 @@ export const App: AppApi = {
 
   notifyLobby() {
     if (App.onLobby) App.onLobby();
-  },
-
-  deliverEmote(seat, text) {
-    if (App.onEmote) App.onEmote(seat, text);
-    App.events.emit('emote', seat, text);
   },
 
   deliverPing(seat, x, z) {

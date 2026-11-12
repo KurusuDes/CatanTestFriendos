@@ -1,4 +1,4 @@
-// GPU resource hygiene. Anything cached and reused across rebuilds (kit models, tinted/gold
+// GPU resource hygiene. Anything cached and reused across rebuilds (kit models, tinted
 // materials, shared geometries) is flagged `userData.shared` and is never disposed here.
 import * as THREE from 'three';
 

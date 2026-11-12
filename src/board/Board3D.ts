@@ -20,7 +20,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import type { BoardRenderer } from './BoardRenderer';
-import { ensureTerrainNormals, loadKit, loadTextures, goldGlow, type Kit, type Textures } from './assets';
+import { ensureTerrainNormals, loadKit, loadTextures, type Kit, type Textures } from './assets';
 import { FOV, frame, framing, lens, pickGround, resetView, scaleTokens, setTopView, setZoom, toScreen, updateCamAnim } from './camera';
 import { Dice3D } from './dice3d';
 import { disposeChildren, disposeTree } from './dispose';
@@ -782,10 +782,6 @@ export class Board3D implements BoardRenderer {
     for (const b of this.bobbers) {
       b.obj.position.y = b.y + Math.sin(t * 1.4 + b.ph) * 0.025;
       b.obj.rotation.z = Math.sin(t * 1.1 + b.ph) * 0.05;
-    }
-    if (goldGlow.size) {
-      const shine = 0.22 + 0.4 * Math.max(0, Math.sin(t * 2.4)) ** 3;
-      for (const m of goldGlow) m.emissiveIntensity = shine;
     }
     if (moved || this.labelsDirty) scaleTokens(this);
 

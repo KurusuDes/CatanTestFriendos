@@ -8,10 +8,8 @@ import type { BoardRenderer } from '@board/BoardRenderer';
 import { Jit } from '@ui/components/Jit';
 import { px } from '@ui/components/PixelIcon';
 import { toast } from '@ui/dom';
-import { mountAdhd, disposeAdhd } from '@ui/adhd';
 import { Banner, Offer, RollLog } from './BoardOverlays';
 import { boardPing } from './fx';
-import { syncAdhd } from './controller';
 import { boards, boardSig, countRender, pick, topView } from './signals';
 
 export function BoardHost(): JSX.Element {
@@ -23,8 +21,6 @@ export function BoardHost(): JSX.Element {
     const el = wrap.current!;
     let dead = false;
     let board: BoardRenderer | null = null;
-    mountAdhd(el, () => boards.d3);
-    syncAdhd();
     (async () => {
       try {
         const { Board3D } = await import('@board/Board3D');
@@ -48,7 +44,6 @@ export function BoardHost(): JSX.Element {
     })();
     return () => {
       dead = true;
-      disposeAdhd();
       boardSig.value = null;
       boards.any = boards.d3 = null;
       if (board) board.dispose();

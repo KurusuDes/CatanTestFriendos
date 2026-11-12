@@ -180,12 +180,6 @@ export class Net {
     attachClient(this, conn);
   }
 
-  sendEmote(e: string) {
-    if (this.conn && this.conn.open) this.conn.send({ type: 'emote', e });
-  }
-  relayEmote(seat: number, e: string) {
-    for (const g of this.guests) if (g.conn && g.conn.open) g.conn.send({ type: 'emote', seat, e });
-  }
   sendPing(x: number, z: number) {
     if (this.conn && this.conn.open) this.conn.send({ type: 'mark', x, z });
   }

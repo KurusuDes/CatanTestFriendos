@@ -81,7 +81,7 @@ describe('redactFor', () => {
         expect(r.pendingDiscards).toEqual(s.pendingDiscards);
         for (const p of r.players) {
           const real = s.players[p.id]!;
-          for (const k of ['name', 'color', 'kind', 'level', 'retired', 'knights', 'roadLen', 'roadsLeft', 'settlementsLeft', 'citiesLeft', 'stats', 'adhdWins'] as const) expect(p[k]).toEqual(real[k]);
+          for (const k of ['name', 'color', 'kind', 'level', 'retired', 'knights', 'roadLen', 'roadsLeft', 'settlementsLeft', 'citiesLeft', 'stats'] as const) expect(p[k]).toEqual(real[k]);
           // (in fog the opponents' pieces out of sight are not sent, so their visible VP is lower by design)
           if (!s.config.modes.fog) expect(victoryPoints(r, p.id, false)).toBe(victoryPoints(s, p.id, false));
         }

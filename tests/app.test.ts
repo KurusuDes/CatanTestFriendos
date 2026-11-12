@@ -167,14 +167,14 @@ describe('local game with bots through App', () => {
   test('typed events fire alongside the callback slots', () => {
     App.startGame(botConfig());
     const slot = vi.fn(), ev = vi.fn();
-    App.onEmote = slot;
-    const off = App.events.on('emote', ev);
-    App.emote(0, '  hi  ');
-    expect(slot).toHaveBeenCalledWith(0, 'hi');
-    expect(ev).toHaveBeenCalledWith(0, 'hi');
+    App.onPing = slot;
+    const off = App.events.on('ping', ev);
+    App.ping(0, 1.234, 2);
+    expect(slot).toHaveBeenCalledWith(0, 1.23, 2);
+    expect(ev).toHaveBeenCalledWith(0, 1.23, 2);
     off();
-    App.emote(0, 'again');
+    App.ping(0, 3, 4);
     expect(ev).toHaveBeenCalledTimes(1);
-    App.onEmote = null;
+    App.onPing = null;
   });
 });

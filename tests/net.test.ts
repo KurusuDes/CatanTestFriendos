@@ -201,7 +201,7 @@ describe('message validators', () => {
     expect(parseClientMessage(null)).toBeNull();
     expect(parseClientMessage([])).toBeNull();
     expect(parseHostMessage({ type: 'state', state: {}, seat: 1 })).toBeNull();
-    expect(parseHostMessage({ type: 'emote', seat: 1, e: 'x'.repeat(100) })).toEqual({ type: 'emote', seat: 1, e: 'x'.repeat(40) });
+    expect(parseHostMessage({ type: 'emote', seat: 1, e: 'x' })).toBeNull();
     expect(parseHostMessage({ type: 'meta', meta: { presence: {}, vote: null } })).not.toBeNull();
     expect(parseHostMessage({ type: 'unknown' })).toBeNull();
   });

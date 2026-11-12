@@ -44,7 +44,7 @@ export function HelpModal({ onClose }: { onClose: () => void }): JSX.Element {
       <ul>
         <li>Lăn chuột hoặc chụm hai ngón: phóng to/thu nhỏ. Kéo: di chuyển bản đồ.</li>
         <L>🎲 Chạm «Tung xúc xắc» để tung ngay, hoặc nhấn giữ để lấy đà rồi thả ra: xúc xắc sẽ văng mạnh hơn.</L>
-        <L>🖱️ Nút chuột giữa: cắm một lá cờ nhỏ màu của bạn lên bản đồ cho mọi người cùng thấy. 😀: thả cảm xúc bay lên từ mọi công trình của bạn.</L>
+        <L>🖱️ Nút chuột giữa: cắm một lá cờ nhỏ màu của bạn lên bản đồ cho mọi người cùng thấy.</L>
         <L>Esc: hủy xây. 💡: nhờ bot khó gợi ý.</L>
       </ul>
       <h3>Thông tin</h3>

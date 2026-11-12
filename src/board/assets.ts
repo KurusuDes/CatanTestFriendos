@@ -1,5 +1,5 @@
 // Kit models, terrain/water/cloud textures and the shared recoloured material caches
-// (tint per player colour, gold trims). Everything created here is shared across boards and
+// (tint per player colour). Everything created here is shared across boards and
 // flagged `userData.shared`, so disposeTree never frees it.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -183,42 +183,6 @@ export function tinted(src: THREE.Object3D, colors: Colors): THREE.Object3D {
       }
       return tintCache.get(key)!;
     };
-    m.material = Array.isArray(m.material) ? m.material.map(swap) : swap(m.material);
-  });
-  return o;
-}
-
-// ---------- gold trims: every ADHD win of the match gilds a bit more of that player's pieces ----------
-// 1 beams · 2 road edges and studs · 3 windows, chimney and plinth · 4 a gold knob on the roof · 5 the gold shines
-const GOLD = new THREE.Color('#ffc94a');
-const goldCache = new Map<string, THREE.MeshStandardMaterial>();
-export const goldGlow = new Set<THREE.MeshStandardMaterial>(); // level-5 gold: its shine pulses (see tick)
-export function goldOf(mt: THREE.Material, glow: boolean): THREE.MeshStandardMaterial {
-  const key = mt.uuid + (glow ? 'G' : 'g');
-  if (!goldCache.has(key)) {
-    const n = mt.clone() as THREE.MeshStandardMaterial;
-    n.color = GOLD.clone();
-    n.map = null;
-    n.metalness = 0.75;
-    n.roughness = 0.28;
-    n.transparent = false;
-    n.opacity = 1;
-    // a little light of its own, so the gold still reads as gold in the shade
-    n.emissive = new THREE.Color('#ffb84a');
-    n.emissiveIntensity = mt.name === 'Glass' ? 0.6 : 0.22;
-    n.userData.patched = false;
-    patch(n, { key: 'gold' });
-    if (glow) goldGlow.add(n);
-    goldCache.set(key, shared(n));
-  }
-  return goldCache.get(key)!;
-}
-export function gild(o: THREE.Object3D, names: string[], glow: boolean): THREE.Object3D {
-  if (!names.length) return o;
-  o.traverse(obj => {
-    const m = obj as THREE.Mesh;
-    if (!m.isMesh) return;
-    const swap = (mt: THREE.Material): THREE.Material => (names.includes(mt.name) ? goldOf(mt, glow) : mt);
     m.material = Array.isArray(m.material) ? m.material.map(swap) : swap(m.material);
   });
   return o;

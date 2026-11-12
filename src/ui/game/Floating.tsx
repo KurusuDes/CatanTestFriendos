@@ -1,10 +1,9 @@
-// Screen-level layers: privacy hand-over screen, emote picker, announcements and confetti.
+// Screen-level layers: privacy hand-over screen, announcements and confetti.
 import type { JSX } from 'preact';
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'preact/hooks';
+import { useMemo } from 'preact/hooks';
 import { Jit } from '@ui/components/Jit';
 import { PixelIcon, px } from '@ui/components/PixelIcon';
-import { announces, confettiOn, countRender, cur, emoteOpen, locked, seat, select, unlockedFor } from './signals';
-import { EMOTES, sendEmote } from './fx';
+import { announces, confettiOn, countRender, cur, locked, seat, select, unlockedFor } from './signals';
 
 /** hot-seat privacy: hand the device to the next player */
 export function PassScreen(): JSX.Element {
@@ -25,36 +24,6 @@ export function PassScreen(): JSX.Element {
           <p style={{ color: '#bbb', fontWeight: 700, fontSize: '18px' }}>Đưa máy cho người này. Những người khác, không nhìn nhé!</p>
           <button type="button" class="btn primary big">Là tôi, hiện ra</button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-/** the emoji picker opens above the 😀 button next to your hand; picking one sends it and closes it */
-export function EmotePicker(): JSX.Element | null {
-  const at = emoteOpen.value;
-  const box = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = box.current;
-    if (!el || !at) return;
-    el.style.bottom = innerHeight - at.top + 10 + 'px';
-    el.style.left = Math.max(8, Math.min(at.left, innerWidth - el.offsetWidth - 8)) + 'px';
-  }, [at]);
-  // click outside closes it (the 😀 button toggles by itself); the listener lives only while it is open
-  useEffect(() => {
-    if (!at) return;
-    const down = (e: PointerEvent) => {
-      const t = e.target as Element | null;
-      if (box.current && t && !box.current.contains(t) && !t.closest('.emote-toggle')) emoteOpen.value = null;
-    };
-    document.addEventListener('pointerdown', down);
-    return () => document.removeEventListener('pointerdown', down);
-  }, [!!at]);
-  if (!at) return null;
-  return (
-    <div class="emote-pop" ref={box} onClick={e => e.stopPropagation()}>
-      <div class="emote-grid">
-        {EMOTES.map(e => <button type="button" class="emote-btn" title={e} onClick={() => { sendEmote(e); emoteOpen.value = null; }}>{px(e, 22)}</button>)}
       </div>
     </div>
   );

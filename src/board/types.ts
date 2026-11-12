@@ -22,7 +22,7 @@ export interface BBoard {
   robber: number;
   robberHidden?: boolean;
 }
-export type BPlayer = Pick<Player, 'color'> & Partial<Pick<Player, 'name' | 'flag' | 'adhdWins'>>;
+export type BPlayer = Pick<Player, 'color'> & Partial<Pick<Player, 'name' | 'flag'>>;
 export interface BBuilding {
   owner: number;
   type: string;

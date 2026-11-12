@@ -31,8 +31,6 @@ export interface Guest {
   sentStatic?: boolean;
   /** what this guest last received as `board.tiles` (see BoardVersion) */
   tilesKey?: string | number | null;
-  cheered?: number;
-  emotes?: number[];
   pings?: number[];
 }
 

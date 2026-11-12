@@ -4,28 +4,25 @@
 // On every commit (a move, a bot move, a state from the host) the effect, in this order:
 //   1. mirrors the seat we render for into `store.viewer`,
 //   2. runs the imperative fx ONCE for the new state (sounds, flying cards, announcements...),
-//   3. repaints the board (one `render(view, boardView)` call) and tells the ADHD arcade what changed.
+//   3. repaints the board (one `render(view, boardView)` call).
 import { effect, untracked } from '@preact/signals';
 import type { BlindPiece } from '@board/types';
 import { App, store } from '@app/index';
-import { updateAdhd } from '@ui/adhd';
 import {
-  announces, boardNudge, boardSig, boards, cardEmotes, confettiOn, cur, diceAnim, emoteOpen, gains, gv, inter, locked,
-  metaTick, modal, offer, pick, seat, topView, unlockedFor,
+  announces, boardNudge, boardSig, boards, confettiOn, cur, diceAnim, gains, gv, inter, locked,
+  metaTick, modal, pick, seat, topView, unlockedFor,
 } from './signals';
-import { S, processFx, resetFx, showEmote, showPing } from './fx';
+import { S, processFx, resetFx, showPing } from './fx';
 
 function resetSignals(): void {
   modal.value = null;
   pick.value = null;
   unlockedFor.value = null;
   gains.value = [];
-  cardEmotes.value = [];
   announces.value = [];
   confettiOn.value = 0;
   diceAnim.value = 0;
   topView.value = false;
-  emoteOpen.value = null;
   boardSig.value = null;
   boards.any = boards.d3 = null;
 }
@@ -56,13 +53,6 @@ function paintBoard(): void {
   }));
 }
 
-/** whose wallet the arcade shows, and whether something in the game wants your attention */
-export function syncAdhd(): void {
-  const st = cur();
-  if (!st) return;
-  updateAdhd(st, locked.value ? -1 : seat.value, offer.value != null);
-}
-
 export function startController(): () => void {
   resetFx();
   resetSignals();
@@ -79,20 +69,15 @@ export function startController(): () => void {
     });
     first = false;
     paintBoard();
-    syncAdhd();
   });
   const stopEvents = [
-    App.events.on('emote', showEmote),
     App.events.on('ping', showPing),
     App.events.on('meta', () => void metaTick.value++),
   ];
   const onKey = (e: KeyboardEvent) => {
     if (App.screen !== 'game' || e.key !== 'Escape') return;
-    if (emoteOpen.value) emoteOpen.value = null;
-    else {
-      pick.value = null;
-      modal.value = null;
-    }
+    pick.value = null;
+    modal.value = null;
   };
   document.addEventListener('keydown', onKey);
   return () => {

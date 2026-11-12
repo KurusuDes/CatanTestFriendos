@@ -1,13 +1,12 @@
 import type { ComponentChildren, JSX } from 'preact';
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'preact/hooks';
+import { useEffect, useMemo, useRef } from 'preact/hooks';
 import * as G from '@engine/game';
 import { COSTS, DEV_INFO, RES, TILE_INFO } from '@engine/constants';
 import type { BuildKind, DevType } from '@engine/types';
 import { App, store } from '@app/index';
 import { PixelIcon, px } from '@ui/components/PixelIcon';
-import { adhdButton } from '@ui/adhd';
 import { play } from '@ui/sfx';
-import { cur, countRender, costIcons, emoteOpen, jsonEq, legalCities, legalRoads, legalSettlements, locked, modal, pick, seat, select } from './signals';
+import { cur, countRender, costIcons, jsonEq, legalCities, legalRoads, legalSettlements, locked, modal, pick, seat, select } from './signals';
 import { playDev, showHint, throwDice } from './actions';
 
 // ---------------- the dice button: tap to throw, hold to charge a harder throw ----------------
@@ -83,7 +82,7 @@ export function SpeedControl({ auto }: { auto?: boolean }): JSX.Element {
   );
 }
 
-// ---------------- hand, dev cards, emotes, adhd ----------------
+// ---------------- hand, dev cards ----------------
 function Hand(): JSX.Element {
   countRender('Hand');
   const sel = useMemo(() => select(() => {
@@ -137,32 +136,6 @@ function DevCards(): JSX.Element | null {
       })}
     </div>
   );
-}
-
-function EmoteToggle(): JSX.Element {
-  return (
-    <button type="button" class="btn emote-toggle" title="Thả cảm xúc" onClick={e => {
-      e.stopPropagation();
-      if (emoteOpen.value) emoteOpen.value = null;
-      else {
-        const r = e.currentTarget.getBoundingClientRect();
-        emoteOpen.value = { top: r.top, left: r.left };
-      }
-    }}>{px('😀', 20)}</button>
-  );
-}
-
-/** the ADHD arcade's own button (an imperative element from @ui/adhd), mounted once */
-function AdhdButton(): JSX.Element {
-  const host = useRef<HTMLSpanElement>(null);
-  useLayoutEffect(() => {
-    const el = host.current;
-    if (!el) return;
-    const btn = adhdButton(); // a fresh element per call (T10: a span wrapping a Preact button)
-    el.append(btn);
-    return () => btn.remove();
-  }, []);
-  return <span ref={host} style={{ display: 'contents' }} />;
 }
 
 // ---------------- the actions ----------------
@@ -290,7 +263,7 @@ export function ActionBar(): JSX.Element {
     <footer class="actionbar">
       {mode === 'spectator' && [<div class="waiting">{px('👀 Chế độ xem: các bot tự chơi với nhau.', 18)}</div>, <SpeedControl auto />]}
       {mode === 'locked' && <div class="waiting">{px('🙈 Đang chờ người chơi nhìn màn hình...', 18)}</div>}
-      {mode === 'player' && [<Hand />, <EmoteToggle />, <AdhdButton />, <DevCards />, <Actions />]}
+      {mode === 'player' && [<Hand />, <DevCards />, <Actions />]}
     </footer>
   );
 }

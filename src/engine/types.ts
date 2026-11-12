@@ -211,7 +211,6 @@ export interface Player {
   settlementsLeft: number;
   citiesLeft: number;
   stats: { gained: number; stolen: number; lost: number };
-  adhdWins: number;
   /** turn of the last trade proposal and how many were made that turn */
   tradeTurn?: number;
   tradeCount?: number;
@@ -352,8 +351,7 @@ export type Action =
   | { type: 'cancelTrade'; pid: number }
   | { type: 'endTurn'; pid: number }
   | { type: 'setController'; pid: number; kind: SeatKind }
-  | { type: 'retirePlayer'; pid: number }
-  | { type: 'adhdWin'; pid: number };
+  | { type: 'retirePlayer'; pid: number };
 
 export type ActionType = Action['type'];
 export type ActionOf<T extends ActionType> = Extract<Action, { type: T }>;
@@ -382,7 +380,6 @@ export type Fx =
   | { kind: 'bankTrade'; pid: number; give: Res; n: number; get: Res }
   | { kind: 'trade'; a: number; b: number; give: Hand; get: Hand }
   | { kind: 'controller'; pid: number; to: SeatKind }
-  | { kind: 'retired'; pid: number }
-  | { kind: 'cheer'; pid: number; n: number };
+  | { kind: 'retired'; pid: number };
 
 export type ApplyResult = { ok: true; blocked?: true } | { ok: false; error: string };

@@ -53,19 +53,7 @@ Miễn phí, không quảng cáo, không cần tài khoản, không cần cài �
 - **Tự kết nối lại:** rớt mạng thì vẫn quay về đúng ghế.
 - Khi có người mất kết nối, cả bàn **bỏ phiếu**: chờ, để bot chơi thay hoặc cho người đó rời ván.
 - Nếu chủ phòng rớt mạng, họ có thể **mở lại phòng** với cùng mã và chơi tiếp.
-- **Thả cảm xúc:** emoji bay lên từ mọi công trình của bạn, và nút chuột giữa cắm một lá cờ nhỏ trên bản đồ cho mọi người cùng thấy.
-
-### Góc ADHD
-Một cửa sổ nhỏ chứa các trò may rủi để chơi trong lúc chờ tới lượt, bằng **tiền ảo**:
-- Sáu máy, mở khóa dần khi số dư tăng ($150, $250, $400, $650, $1000):
-  - **Plinko**, **máy đánh bạc** và **tung đồng xu** (gấp đôi hoặc trắng tay).
-  - **Đua cừu:** cược vào một trong bốn con cừu; con được kỳ vọng trả x2.6, con ít ai tin trả x10.
-  - **Khu mỏ:** 16 viên đá, 3 viên giấu kẻ trộm. Mỗi viên đập được lại tăng tiền thưởng; hãy rút trước khi gặp hắn.
-  - **Tên lửa:** rút trước khi nó nổ; có thể lên tới x10 nhưng hiếm lắm, và sau khi bạn rút, một tên lửa ma cho thấy nó lẽ ra bay được tới đâu.
-- Máy nào đã chinh phục sẽ có nút **Tự động** (trừ khu mỏ và tên lửa).
-- Đạt **$1600** thì pháo hoa bắn lên từ nhà của bạn, kèm một dải thông báo mọi người đều thấy (nhiều người thắng cùng lúc thì lần lượt từng dải).
-- Mỗi lần thắng trong ván lại thêm **viền vàng** cho công trình của bạn, tối đa 5 mức: xà nhà, mép đường và đinh tán, cửa sổ, núm vàng trên mái và cuối cùng là ánh lấp lánh.
-- Khi tới lượt bạn (hoặc có lời mời giao dịch) cửa sổ **trở nên trong suốt và bỏ qua thao tác** cho tới khi bạn đi xong, để bạn luôn thấy ván đấu phía sau và không bấm nhầm.
+- **Cờ hiệu:** nút chuột giữa cắm một lá cờ nhỏ trên bản đồ cho mọi người cùng thấy.
 
 ### Bàn cờ và giao diện
 - **Bàn cờ sa bàn 3D** làm bằng three.js: địa hình liền mạch pha trộn 8 texture PBR, bầu trời vật lý với ánh sáng từ ảnh môi trường, nước có bọt theo độ sâu, cỏ và lúa đung đưa trong gió, bóng mây, đổ bóng môi trường và camera hiệu ứng mô hình (tilt-shift).
@@ -95,7 +83,6 @@ Một cửa sổ nhỏ chứa các trò may rủi để chơi trong lúc chờ t
 | Màn hình | `src/ui/screens/` (`Menu`, `Lobby`, `Online`, `Editor`, `Help`) | Menu, sảnh và phòng, trình tạo bản đồ, trợ giúp |
 | Màn hình ván | `src/ui/game/` | Thẻ người chơi, bài trên tay, hành động, xúc xắc, giao dịch, thẻ bay |
 | Bàn cờ 3D | `src/board/` (`Board3D.ts`, `terrain*.ts`, `pieces.ts`, `fog.ts`, `dice3d.ts`, `quality.ts`...), `src/workers/` | Địa hình, biến thể ô, công trình, sương mù, xúc xắc 3D, mức chất lượng, worker |
-| Góc ADHD | `src/ui/adhd/` | Sáu trò chơi nhỏ, số dư, mở khóa, pháo hoa |
 | Giao diện chung | `src/ui/components/`, `src/ui/flag/`, `src/ui/pixel.ts`, `sfx.ts`, `dom.ts` | Thành phần dùng chung, cờ, sprite pixel, âm thanh, tiện ích DOM |
 | Kiểu dáng | `src/styles/style.css`, `src/styles/pixel.css` | Theme pixel (bảng màu Sweetie-16) |
 | Tài nguyên | `public/assets/`, `tools/` (`optimize-assets.mjs`, `source/`, `blender/`) | Texture, mô hình `kit.glb` (nén), biểu tượng, và script tạo ra chúng; xem `docs/assets.md` |
