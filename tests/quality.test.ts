@@ -34,6 +34,9 @@ test('the table gets lighter tier by tier', () => {
   expect(l!.outline).toBe('off');
   expect(m!.outline).toBe('half');
   expect(detailKey('low')).not.toBe(detailKey('medium'));
+  expect([u!.surfaceNormals, h!.surfaceNormals, m!.surfaceNormals, l!.surfaceNormals]).toEqual([true, true, false, false]);
+  expect([u!.canvasAA, h!.canvasAA, m!.canvasAA, l!.canvasAA]).toEqual([false, false, true, false]);
+  expect(detailKey('high')).not.toBe(detailKey('medium'));
 });
 
 test('the menu diorama is always light', () => {

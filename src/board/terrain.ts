@@ -10,12 +10,17 @@ import type { GenResult } from './terrainGen';
 export { pixelToHex, INR, NORMALS, L, TINT, vnoise, fbm, smooth, prng, TILE_LOOKS, LOOK_OVERRIDE, tileLook, terrainOf } from './terrainGen';
 export type { TerrainField } from './terrainGen';
 
+// strength of the splatted terrain normals (the old, never-active value was 1.1)
+const NORMAL_SCALE = 0.9;
+
 // terrain material: splat 8 array-texture layers + normals + wheat furrows
-export function terrainMaterial(tex: Textures) {
+// `normals` (tiers high / ultra): the normal map is read through the same splat as the albedo. Without it the
+// material keeps a 1 px flat normal map and the splat-normal code is not compiled at all.
+export function terrainMaterial(tex: Textures, normals: boolean) {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.93, metalness: 0 });
   m.normalMap = new THREE.DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1);
   m.normalMap.needsUpdate = true;
-  m.normalScale = new THREE.Vector2(1.1, 1.1);
+  m.normalScale = new THREE.Vector2(NORMAL_SCALE, NORMAL_SCALE);
   const base = m;
   base.onBeforeCompile = sh => {
     sh.uniforms.uAlb = { value: tex.alb };
@@ -24,6 +29,14 @@ export function terrainMaterial(tex: Textures) {
       sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
   vW0 = aW0; vW1 = aW1; vRow = aRow;
   vSplatUv = (modelMatrix * vec4(position, 1.0)).xz * 1.35;`);
+    if (normals) {
+      // `#include`s are resolved after onBeforeCompile: patch the chunk text, not the raw source. The tangent frame
+      // is built from the splat uv (world xz) instead of the geometry uv; the textures are not flipped (row 0 = top,
+      // v grows downwards) so v is negated to keep the green channel pointing the way the normal maps expect
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <normal_fragment_begin>', THREE.ShaderChunk.normal_fragment_begin.replace('vNormalMapUv', 'vec2(vSplatUv.x, -vSplatUv.y)'))
+        .replace('#include <normal_fragment_maps>', THREE.ShaderChunk.normal_fragment_maps.replace('texture2D( normalMap, vNormalMapUv ).xyz', 'splat(uNrm, vSplatUv).xyz'));
+    }
     sh.fragmentShader = 'precision highp sampler2DArray;\nuniform sampler2DArray uAlb;\nuniform sampler2DArray uNrm;\nvarying vec4 vW0;\nvarying vec4 vW1;\nvarying float vRow;\nvarying vec2 vSplatUv;\n' +
       `vec3 splat(sampler2DArray s, vec2 uv) {
         vec3 c = vec3(0.0);
@@ -44,10 +57,8 @@ export function terrainMaterial(tex: Textures) {
   float fur = smoothstep(0.18, 0.5, abs(fract(vRow * 7.5) - 0.5));
   salb = mix(salb, salb * vec3(0.62, 0.55, 0.45), vW1.z * (1.0 - fur) * 0.85);
   diffuseColor.rgb *= salb;`)
-        .replace('texture2D( normalMap, vNormalMapUv ).xyz', 'splat(uNrm, vSplatUv)');
   };
-  base.customProgramCacheKey = () => 'terrainSplat';
-  return patch(base, { clouds: true, key: 'terrain' });
+  return patch(base, { clouds: true, key: normals ? 'terrainN' : 'terrain' });
 }
 
 // ---- terrain mesh: one continuous heightfield (the caller adds it to the static group)
@@ -61,7 +72,7 @@ export function buildTerrainMesh(board: Board3D, res: GenResult): THREE.Mesh {
   geo.setAttribute('aW1', new THREE.BufferAttribute(res.aW1, 4));
   geo.setAttribute('aRow', new THREE.BufferAttribute(res.aRow, 1));
   geo.setIndex(new THREE.BufferAttribute(res.index, 1));
-  const terrain = new THREE.Mesh(geo, terrainMaterial(board.tex));
+  const terrain = new THREE.Mesh(geo, terrainMaterial(board.tex, board.params.surfaceNormals && board.tex.nrmLoaded));
   terrain.receiveShadow = terrain.castShadow = true;
   terrain.userData.own = true;
   return terrain;

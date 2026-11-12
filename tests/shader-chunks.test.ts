@@ -21,10 +21,28 @@ test.each(TARGETS)('MeshStandardMaterial %s %s contains %s (%s)', (mat, stage, t
   expect(lib[mat]![stage].includes(target)).toBe(true);
 });
 
-// the normal-map read lives inside a chunk (not in the raw fragment source), so the terrain/water
-// patches must target `#include <normal_fragment_maps>` and rewrite the chunk text themselves
-test('normal_fragment_maps still reads the normal map as the terrain/water patches expect', () => {
-  expect(chunk.normal_fragment_maps!.includes('texture2D( normalMap, vNormalMapUv ).xyz')).toBe(true);
+// Targets that live INSIDE a chunk (not in the raw fragment source): terrain.ts / water.ts first replace the
+// `#include <chunk>` line with the chunk's own text (THREE.ShaderChunk) and then patch that text. [chunk, target, use]
+// The original bug: the sampling line was searched in the raw shader, where it does not exist, so nothing happened.
+const CHUNK_TARGETS: [string, string, string][] = [
+  ['normal_fragment_maps', 'texture2D( normalMap, vNormalMapUv ).xyz', 'terrain.ts splat(uNrm, ...), water.ts two-scroll sample'],
+  ['normal_fragment_begin', 'vNormalMapUv', 'terrain.ts tangent frame from the splat uv'],
+];
+
+test.each(CHUNK_TARGETS)('chunk %s contains %s (%s)', (name, target) => {
+  expect(chunk[name]!.includes(target)).toBe(true);
+});
+
+// the include line that gets replaced by the chunk text must exist in the raw shader, and the normal map path
+// must be the tangent-space one (the materials set `normalMap`, which defines USE_NORMALMAP_TANGENTSPACE)
+test.each(['normal_fragment_maps', 'normal_fragment_begin'])('raw standard fragment shader includes <%s> (replaced by its chunk text)', name => {
+  expect(lib.standard!.fragmentShader.includes(`#include <${name}>`)).toBe(true);
+});
+
+test('the patched chunk keeps the tangent-space code path and normalScale', () => {
+  expect(chunk.normal_fragment_maps).toContain('USE_NORMALMAP_TANGENTSPACE');
+  expect(chunk.normal_fragment_maps).toContain('mapN.xy *= normalScale');
+  expect(chunk.normal_fragment_begin).toContain('getTangentFrame');
 });
 
 test('names used by the injected GLSL exist', () => {

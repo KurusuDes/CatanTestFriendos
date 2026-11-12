@@ -21,7 +21,9 @@ export interface Kit {
 }
 export interface Textures {
   alb: THREE.DataArrayTexture;
+  /** the 8 terrain normal layers, or a 1 px stand-in until `ensureTerrainNormals` has run (high / ultra only) */
   nrm: THREE.DataArrayTexture;
+  nrmLoaded: boolean;
   water: THREE.Texture;
   clouds: THREE.Texture;
 }
@@ -110,36 +112,51 @@ async function loadLayered(name: string, low: boolean): Promise<DecodedImage> {
   return loadImagePixels(ASSET(`textures/${name}`));
 }
 
-// The terrain shader's normal-map splat is not wired in: the `texture2D( normalMap, vNormalMapUv ).xyz`
-// replace in terrain.ts matches nothing (three resolves #include after onBeforeCompile, so the raw
-// fragment source only has `#include <normal_fragment_maps>`). The 8 normal layers were therefore decoded
-// and uploaded for nothing; a 1-pixel stand-in keeps the sampler valid. Flip this on together with that fix.
-const TERRAIN_NORMALS = false;
+// The terrain normal layers (~11 MB on the GPU, 8 extra reads per pixel) are only wanted by the tiers with
+// `surfaceNormals` (high / ultra): the others keep a 1 px stand-in and never load the 8-layer file.
+const DUMMY_NRM = (): DecodedImage => ({ data: new Uint8ClampedArray([128, 128, 255, 255]), w: 1, h: 1 });
+function layeredArray(px: DecodedImage, srgb: boolean, low: boolean) {
+  const layers = px.h / px.w;
+  const t = new THREE.DataArrayTexture(new Uint8Array(px.data.buffer as ArrayBuffer), px.w, px.w, layers);
+  t.format = THREE.RGBAFormat;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.minFilter = px.w > 1 ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
+  t.magFilter = THREE.LinearFilter;
+  t.generateMipmaps = px.w > 1;
+  t.anisotropy = low ? 2 : 8;
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.needsUpdate = true;
+  return shared(t);
+}
+
+const nrmPromises = new Map<boolean, Promise<THREE.DataArrayTexture>>();
+/** Loads the real terrain normal array (worker decode path as the albedo) into `tex` (once per size set). */
+export async function ensureTerrainNormals(tex: Textures, low = false): Promise<void> {
+  if (tex.nrmLoaded) return;
+  let p = nrmPromises.get(low);
+  if (!p) {
+    p = loadLayered('terrain_normal.jpg', low).then(px => layeredArray(px, false, low));
+    nrmPromises.set(low, p);
+  }
+  try {
+    tex.nrm = await p;
+    tex.nrmLoaded = true;
+  } catch (e) {
+    nrmPromises.delete(low);
+    console.warn('terrain normals failed to load', e);
+  }
+}
 
 const texPromises = new Map<boolean, Promise<Textures>>();
 export function loadTextures(low = false): Promise<Textures> {
   let p = texPromises.get(low);
   if (!p) {
-    const nrmPixels: Promise<DecodedImage> = TERRAIN_NORMALS ? loadLayered('terrain_normal.jpg', low) : Promise.resolve({ data: new Uint8ClampedArray([128, 128, 255, 255]), w: 1, h: 1 });
-    p = Promise.all([loadLayered('terrain_albedo.jpg', low), nrmPixels,
+    p = Promise.all([loadLayered('terrain_albedo.jpg', low), Promise.resolve(DUMMY_NRM()),
       new THREE.TextureLoader().loadAsync(ASSET('textures/water_normal.jpg')), new THREE.TextureLoader().loadAsync(ASSET('textures/clouds.jpg'))]).then(([a, n, water, clouds]) => {
-      const arr = (px: DecodedImage, srgb: boolean) => {
-        const layers = px.h / px.w;
-        const t = new THREE.DataArrayTexture(new Uint8Array(px.data.buffer as ArrayBuffer), px.w, px.w, layers);
-        t.format = THREE.RGBAFormat;
-        t.wrapS = t.wrapT = THREE.RepeatWrapping;
-        t.minFilter = px.w > 1 ? THREE.LinearMipmapLinearFilter : THREE.LinearFilter;
-        t.magFilter = THREE.LinearFilter;
-        t.generateMipmaps = px.w > 1;
-        t.anisotropy = low ? 2 : 8;
-        if (srgb) t.colorSpace = THREE.SRGBColorSpace;
-        t.needsUpdate = true;
-        return shared(t);
-      };
       water.wrapS = water.wrapT = THREE.RepeatWrapping;
       clouds.wrapS = clouds.wrapT = THREE.RepeatWrapping;
       U.uClouds.value = clouds;
-      return { alb: arr(a, true), nrm: arr(n, false), water: shared(water), clouds: shared(clouds) };
+      return { alb: layeredArray(a, true, low), nrm: layeredArray(n, false, low), nrmLoaded: false, water: shared(water), clouds: shared(clouds) };
     });
     texPromises.set(low, p);
   }

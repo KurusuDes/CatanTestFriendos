@@ -20,7 +20,7 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { VignetteShader } from 'three/addons/shaders/VignetteShader.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 import type { BoardRenderer } from './BoardRenderer';
-import { loadKit, loadTextures, goldGlow, type Kit, type Textures } from './assets';
+import { ensureTerrainNormals, loadKit, loadTextures, goldGlow, type Kit, type Textures } from './assets';
 import { FOV, frame, framing, lens, pickGround, resetView, scaleTokens, setTopView, setZoom, toScreen, updateCamAnim } from './camera';
 import { Dice3D } from './dice3d';
 import { disposeChildren, disposeTree } from './dispose';
@@ -61,7 +61,7 @@ export class Board3D implements BoardRenderer {
   kit: Kit;
   tex: Textures;
   zoom = 1;
-  renderer: THREE.WebGLRenderer;
+  renderer!: THREE.WebGLRenderer; // assigned by makeRenderer
   maxPR: number;
   /** live parameters: the tier's table + the player's chips; the adaptive ladder lowers them during the session */
   params: TierParams;
@@ -73,6 +73,9 @@ export class Board3D implements BoardRenderer {
   scene: THREE.Scene;
   sunDir: THREE.Vector3;
   envRT: THREE.WebGLRenderTarget;
+  private envSky!: Sky;
+  /** is the canvas context multisampled (WebGLRenderer `antialias`)? */
+  canvasAA = false;
   camera: THREE.PerspectiveCamera;
   maskVis: THREE.WebGLRenderTarget;
   maskAll: THREE.WebGLRenderTarget;
@@ -179,6 +182,8 @@ export class Board3D implements BoardRenderer {
   static async create(container: HTMLElement, opts: BoardOptions = {}): Promise<Board3D> {
     const low = opts.diorama ? true : PARAMS[SETTINGS.quality].lowTextures;
     const [kit, tex] = await Promise.all([loadKit(), loadTextures(low)]);
+    // the terrain normal layers are only fetched for the tiers that use them (high / ultra), never for the diorama
+    if (!opts.diorama && PARAMS[SETTINGS.quality].surfaceNormals) await ensureTerrainNormals(tex, low);
     return new Board3D(container, kit, tex, opts);
   }
 
@@ -190,23 +195,11 @@ export class Board3D implements BoardRenderer {
     this.zoom = 1;
     this.diorama = !!opts.diorama;
     const P = (this.params = this.diorama ? dioramaParams(effective()) : effective());
-    const r = (this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: this.diorama ? 'low-power' : 'high-performance' }));
     // sharp on retina screens; the frame-time watcher lowers it when the GPU can't keep up
     this.maxPR = Math.min(window.devicePixelRatio || 1, P.maxPR);
-    r.setPixelRatio(this.maxPR);
     this.perf = { t: 0, n: 0, sum: 0, slow: 0, grace: 0 };
-    // draw-call counts of a whole frame (masks + composer passes), reset by hand once per frame
-    r.info.autoReset = false;
-    r.shadowMap.enabled = true;
-    r.shadowMap.type = P.shadow.type === 'pcf' ? THREE.PCFShadowMap : THREE.BasicShadowMap; // PCFSoft was removed in r186
-    // the scene barely moves: shadows are redrawn only when something changes (see tick)
-    r.shadowMap.autoUpdate = false;
     this.shadowDirty = true;
-    r.toneMapping = THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = 0.92;
-    r.outputColorSpace = THREE.SRGBColorSpace;
-    this.canvas = r.domElement;
-    this.canvas.className = 'board-3d';
+    this.canvas = this.makeRenderer(P.canvasAA).domElement;
     container.append(this.canvas);
     // the vignette for the tiers without a vignette pass: a CSS gradient costs next to nothing
     this.vignetteEl = document.createElement('div');
@@ -232,13 +225,9 @@ export class Board3D implements BoardRenderer {
     su.sunPosition!.value.copy(sunDir);
     this.sunDir = sunDir;
     scene.add(sky);
-    const pm = new THREE.PMREMGenerator(r);
-    const envScene = new THREE.Scene();
-    envScene.add(sky.clone());
-    this.envRT = pm.fromScene(envScene, 0.02);
-    scene.environment = this.envRT.texture;
+    this.envSky = sky;
+    this.envRT = this.bakeEnvironment();
     scene.environmentIntensity = 0.55;
-    pm.dispose();
     scene.fog = new THREE.Fog('#bfd3db', 34, 95);
 
     this.camera = new THREE.PerspectiveCamera(FOV, 1, 0.3, 600);
@@ -280,13 +269,7 @@ export class Board3D implements BoardRenderer {
     // middle button = drop a 1 s marker there (zoom stays on the wheel)
     this.controls.mouseButtons.MIDDLE = -1 as unknown as THREE.MOUSE;
     this.controls.addEventListener('change', this.invalidate);
-    this.canvas.addEventListener('pointerdown', e => {
-      if (e.button !== 1) return;
-      e.preventDefault();
-      const p = this.pickGround(e.clientX, e.clientY);
-      if (p && this.onPing) this.onPing(p.x, p.z);
-    });
-    this.canvas.addEventListener('mousedown', e => e.button === 1 && e.preventDefault()); // no autoscroll
+    this.bindCanvas();
 
     this.fogCanvas = document.createElement('canvas');
     this.fogCanvas.width = this.fogCanvas.height = 512;
@@ -311,6 +294,74 @@ export class Board3D implements BoardRenderer {
       this.tick();
     };
     loop();
+  }
+
+  /** A WebGL renderer configured for the board. `antialias` (MSAA of the canvas itself) is a context attribute: it
+   *  can only be chosen here, at creation (see recreateRenderer for a tier change across that boundary). */
+  private makeRenderer(aa: boolean): THREE.WebGLRenderer {
+    const P = this.params;
+    const r = (this.renderer = new THREE.WebGLRenderer({ antialias: aa, powerPreference: this.diorama ? 'low-power' : 'high-performance' }));
+    this.canvasAA = aa;
+    r.setPixelRatio(this.maxPR);
+    // draw-call counts of a whole frame (masks + composer passes), reset by hand once per frame
+    r.info.autoReset = false;
+    r.shadowMap.enabled = true;
+    r.shadowMap.type = P.shadow.type === 'pcf' ? THREE.PCFShadowMap : THREE.BasicShadowMap; // PCFSoft was removed in r186
+    // the scene barely moves: shadows are redrawn only when something changes (see tick)
+    r.shadowMap.autoUpdate = false;
+    r.toneMapping = THREE.ACESFilmicToneMapping;
+    r.toneMappingExposure = 0.92;
+    r.outputColorSpace = THREE.SRGBColorSpace;
+    r.domElement.className = 'board-3d';
+    return r;
+  }
+
+  /** the sky as image based lighting (PMREM), baked with the current renderer */
+  private bakeEnvironment(): THREE.WebGLRenderTarget {
+    const pm = new THREE.PMREMGenerator(this.renderer);
+    const envScene = new THREE.Scene();
+    envScene.add(this.envSky.clone());
+    const rt = pm.fromScene(envScene, 0.02);
+    this.scene.environment = rt.texture;
+    pm.dispose();
+    return rt;
+  }
+
+  private bindCanvas() {
+    this.canvas.addEventListener('pointerdown', e => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      const p = this.pickGround(e.clientX, e.clientY);
+      if (p && this.onPing) this.onPing(p.x, p.z);
+    });
+    this.canvas.addEventListener('mousedown', e => e.button === 1 && e.preventDefault()); // no autoscroll
+  }
+
+  /** A tier change across the canvas-MSAA boundary (medium <-> the others): the context attribute can't change, so
+   *  the renderer and its canvas are replaced. Materials and textures re-upload by themselves on the new context;
+   *  what we own on the old one (masks, shadow map, environment, composer) is freed first. The passes are rebuilt
+   *  by the applyTier that called this. */
+  private recreateRenderer(aa: boolean) {
+    const old = this.renderer, oldCanvas = this.canvas;
+    if (this.composer) this.composer.dispose();
+    this.composer = null;
+    this.disposeOverlay();
+    this.maskVis.dispose();
+    this.maskAll.dispose();
+    this.envRT.dispose();
+    this.sun.shadow.map?.dispose();
+    this.sun.shadow.map = null;
+    this.controls.disconnect();
+    old.dispose();
+    old.forceContextLoss();
+    const r = this.makeRenderer(aa);
+    this.canvas = r.domElement;
+    oldCanvas.replaceWith(this.canvas);
+    this.controls.connect(this.canvas);
+    this.bindCanvas();
+    this.envRT = this.bakeEnvironment();
+    this.canvasRect = null;
+    this.shadowDirty = this.masksStale = this.labelsDirty = true;
   }
 
   /** Ask for a frame (cheap, idempotent). Anything that changes what the board shows calls this. */
@@ -430,13 +481,21 @@ export class Board3D implements BoardRenderer {
     this.params = this.diorama ? dioramaParams(effective()) : effective();
     this.perf.slow = this.perf.grace = 0;
     this.maxPR = Math.min(window.devicePixelRatio || 1, this.params.maxPR);
+    if (this.params.canvasAA !== this.canvasAA) this.recreateRenderer(this.params.canvasAA);
     this.applyPixelRatio(this.maxPR);
     this.applyShadow();
     this.applyFx();
     this.setupPasses();
-    // the island's own detail (terrain grid, grass, props) changed: rebuild it (the camera stays)
-    if (this.lastSt && (this.builtDetail !== this.detailSig() || this.builtLabels !== this.spriteLabels())) this.render(this.lastSt, this.lastView);
+    // the island's own detail (terrain grid, grass, props, surface normals) changed: rebuild it (the camera stays).
+    // Going up to high / ultra first needs the terrain normal layers (a one-off download + decode)
+    const rebuild = () => {
+      if (!this.alive) return;
+      if (this.lastSt && (this.builtDetail !== this.detailSig() || this.builtLabels !== this.spriteLabels())) this.render(this.lastSt, this.lastView);
+      this.invalidate();
+    };
     this.invalidate();
+    if (this.params.surfaceNormals && !this.tex.nrmLoaded) void ensureTerrainNormals(this.tex, this.params.lowTextures).then(rebuild);
+    else rebuild();
   }
 
   /** number tokens and port signs as GPU quads (low / medium) instead of CSS2D labels; never on the menu diorama
@@ -645,6 +704,8 @@ export class Board3D implements BoardRenderer {
       triangles: this.lastTriangles,
       pixelRatio: this.renderer.getPixelRatio(),
       composer: !!c,
+      canvasAA: this.canvasAA,
+      msaaSamples: this.renderer.getContext().getParameter(this.renderer.getContext().SAMPLES) as number,
       passes: c ? c.passes.filter(p => p.enabled).length : 1 + (this.overlay ? 1 : 0),
       outline: this.params.outline,
       ambientFps: this.params.ambientFps,

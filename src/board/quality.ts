@@ -37,14 +37,20 @@ export interface TierParams {
   ambientFps: number;
   /** use the 256 px terrain textures when they exist */
   lowTextures: boolean;
+  /** terrain normal splat (8 layers) + two-scroll animated sea normals: extra texture reads per pixel and ~11 MB of
+   *  GPU memory, so only the two best tiers (a shader define: the other tiers do not compile the code at all) */
+  surfaceNormals: boolean;
+  /** MSAA of the canvas itself (a context attribute, fixed when the renderer is created). Only for the tier that
+   *  renders straight to the canvas but can afford it: high / ultra get MSAA from the composer target, low has none */
+  canvasAA: boolean;
 }
 
 export const PARAMS: Record<Tier, TierParams> = {
   // PCFSoftShadowMap was removed in three r186: `pcf` is the best filter left
-  ultra: { maxPR: 2, samples: 4, composer: true, halfFloat: true, shadow: { type: 'pcf', size: 2048 }, ao: true, outline: 'full', vignette: true, terrainStep: 0.045, grass: 1, props: 1, wind: true, clouds: true, foam: true, ambientFps: 60, lowTextures: false },
-  high: { maxPR: 1.5, samples: 4, composer: true, halfFloat: true, shadow: { type: 'pcf', size: 1024 }, ao: false, outline: 'full', vignette: true, terrainStep: 0.06, grass: 0.6, props: 1, wind: true, clouds: true, foam: true, ambientFps: 60, lowTextures: false },
-  medium: { maxPR: 1, samples: 2, composer: false, halfFloat: false, shadow: { type: 'basic', size: 1024 }, ao: false, outline: 'half', vignette: true, terrainStep: 0.075, grass: 0.3, props: 0.75, wind: true, clouds: true, foam: true, ambientFps: 30, lowTextures: false },
-  low: { maxPR: 0.75, samples: 0, composer: false, halfFloat: false, shadow: { type: 'basic', size: 512 }, ao: false, outline: 'off', vignette: false, terrainStep: 0.1, grass: 0, props: 0.5, wind: false, clouds: false, foam: false, ambientFps: 0, lowTextures: true },
+  ultra: { maxPR: 2, samples: 4, composer: true, halfFloat: true, shadow: { type: 'pcf', size: 2048 }, ao: true, outline: 'full', vignette: true, terrainStep: 0.045, grass: 1, props: 1, wind: true, clouds: true, foam: true, ambientFps: 60, lowTextures: false, surfaceNormals: true, canvasAA: false },
+  high: { maxPR: 1.5, samples: 4, composer: true, halfFloat: true, shadow: { type: 'pcf', size: 1024 }, ao: false, outline: 'full', vignette: true, terrainStep: 0.06, grass: 0.6, props: 1, wind: true, clouds: true, foam: true, ambientFps: 60, lowTextures: false, surfaceNormals: true, canvasAA: false },
+  medium: { maxPR: 1, samples: 2, composer: false, halfFloat: false, shadow: { type: 'basic', size: 1024 }, ao: false, outline: 'half', vignette: true, terrainStep: 0.075, grass: 0.3, props: 0.75, wind: true, clouds: true, foam: true, ambientFps: 30, lowTextures: false, surfaceNormals: false, canvasAA: true },
+  low: { maxPR: 0.75, samples: 0, composer: false, halfFloat: false, shadow: { type: 'basic', size: 512 }, ao: false, outline: 'off', vignette: false, terrainStep: 0.1, grass: 0, props: 0.5, wind: false, clouds: false, foam: false, ambientFps: 0, lowTextures: true, surfaceNormals: false, canvasAA: false },
 };
 
 /** Number tokens and port signs: GPU quads (labelsprites.ts) on the light tiers, CSS2D DOM labels on high / ultra. */
@@ -53,14 +59,14 @@ export const spriteLabels = (t: Tier): boolean => t === 'low' || t === 'medium';
 /** What changes the geometry of the island (the static build must be redone when it changes). */
 export function detailKey(t: Tier): string {
   const p = PARAMS[t];
-  return `${p.terrainStep}/${p.grass}/${p.props}`;
+  return `${p.terrainStep}/${p.grass}/${p.props}/${p.surfaceNormals ? 'n' : '-'}`;
 }
 
 /** The menu / lobby background board: always light, whatever the player chose (never a composer, hard 512
  *  shadows, 30 fps, low terrain detail). At the `low` tier the caller does not build it at all. */
 export function dioramaParams(p: TierParams): TierParams {
   return { ...p, maxPR: Math.min(p.maxPR, 1), samples: 0, composer: false, halfFloat: false, shadow: { type: 'basic', size: 512 }, ao: false, outline: 'off', vignette: false,
-    terrainStep: Math.max(p.terrainStep, 0.1), grass: 0, props: Math.min(p.props, 0.5), ambientFps: 30, lowTextures: true };
+    terrainStep: Math.max(p.terrainStep, 0.1), grass: 0, props: Math.min(p.props, 0.5), ambientFps: 30, lowTextures: true, surfaceNormals: false, canvasAA: false };
 }
 
 // ---------- automatic detection ----------
