@@ -3,13 +3,13 @@ import { rand, randInt, shuffle } from './rng';
 import type { Board, Config, Edge, MapConfig, Port, Res, Rng, SeaTile, ShapeId, Tile, TileKind, Vertex } from './types';
 
 /** axial hex coordinates [q, r] */
-export type Hex = [number, number];
+type Hex = [number, number];
 
 const SQ3 = Math.sqrt(3);
-export const DIRS: Hex[] = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
+const DIRS: Hex[] = [[1, 0], [1, -1], [0, -1], [-1, 0], [-1, 1], [0, 1]];
 export const hk = (q: number, r: number): string => q + ',' + r;
 export const hexCenter = (q: number, r: number) => ({ x: SQ3 * (q + r / 2), y: 1.5 * r });
-export const hexDist = (a: Hex, b: Hex): number => (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[0] + a[1] - b[0] - b[1])) / 2;
+const hexDist = (a: Hex, b: Hex): number => (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[0] + a[1] - b[0] - b[1])) / 2;
 
 function corner(q: number, r: number, i: number) {
   const c = hexCenter(q, r);
@@ -26,7 +26,7 @@ export function hexagon(R: number): Hex[] {
   return out;
 }
 
-export function rows(counts: number[]): Hex[] {
+function rows(counts: number[]): Hex[] {
   const out: Hex[] = [];
   const half = Math.floor(counts.length / 2);
   counts.forEach((c, i) => {
@@ -52,7 +52,7 @@ function weightedPick<T>(rng: Rng, items: T[], w: (it: T) => number): T {
 }
 
 // Random compact continent grown from the center.
-export function blob(rng: Rng, n: number): Hex[] {
+function blob(rng: Rng, n: number): Hex[] {
   const set = new Map<string, Hex>([[hk(0, 0), [0, 0]]]);
   while (set.size < n) {
     const cands = new Map<string, [number, number, number]>();
@@ -81,7 +81,7 @@ export function pixelToHex(x: number, y: number): Hex {
 }
 
 // Several islands separated by at least one sea hex.
-export function islands(rng: Rng, n: number, k: number): Hex[] {
+function islands(rng: Rng, n: number, k: number): Hex[] {
   const size = Math.ceil(n / k);
   const rad = 1.9 * Math.sqrt(size) + 1.4;
   const off = rand(rng) * Math.PI * 2;
@@ -185,7 +185,7 @@ function chaosResources(rng: Rng, count: number): Res[] {
 const BASE_TOKENS = [2, 3, 3, 4, 4, 5, 5, 6, 6, 8, 8, 9, 9, 10, 10, 11, 11, 12];
 const EXTRA_ORDER = [5, 9, 4, 10, 6, 8, 3, 11, 5, 9, 4, 10, 2, 12, 6, 8, 3, 11];
 
-export function genTokens(k: number): number[] {
+function genTokens(k: number): number[] {
   const out: number[] = [];
   while (out.length + BASE_TOKENS.length <= k) out.push(...BASE_TOKENS);
   for (let i = 0; out.length < k; i++) out.push(EXTRA_ORDER[i % EXTRA_ORDER.length]!);

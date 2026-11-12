@@ -282,7 +282,7 @@ const SPRITES_PICO: Record<string, string[]> = {
 //   'pico'    hand-drawn, PICO-8-like palette with a sticker border
 //   'classic' the original hand-drawn Sweetie-16 sprites
 export const ICON_SETS = ['render', 'pico', 'classic'] as const;
-export type IconSet = (typeof ICON_SETS)[number];
+type IconSet = (typeof ICON_SETS)[number];
 const SET_KEY = 'katanittes.icons';
 const pickSet = (n: string | null): IconSet => (ICON_SETS.find(x => x === n) ?? 'render');
 let iconSetName: IconSet = (() => {
@@ -293,7 +293,6 @@ let iconSetName: IconSet = (() => {
   }
 })();
 iconSetSignal.value = iconSetName;
-export const iconSet = () => iconSetName;
 export function setIconSet(name: string): void {
   iconSetName = pickSet(name);
   iconSetSignal.value = iconSetName;

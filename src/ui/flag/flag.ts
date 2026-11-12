@@ -1,11 +1,11 @@
 // Kingdom banners (pure helpers, no UI). Players draw their flag in a tiny Gartic-Phone-like paint
 // editor (see FlagEditor.tsx) and pick the colour of their castle. A flag is stored as a small PNG
 // data URL (120x80); the old 12x12 pixel format (144 hex digits) is still understood.
-import { h, storage } from '@ui/dom';
+import { storage } from '@ui/dom';
 
-export const FLAG_PAL = ['#1a1c2c', '#5d275d', '#b13e53', '#ef7d57', '#ffcd75', '#a7f070', '#38b764', '#257179',
+const FLAG_PAL = ['#1a1c2c', '#5d275d', '#b13e53', '#ef7d57', '#ffcd75', '#a7f070', '#38b764', '#257179',
   '#29366f', '#3b5dc9', '#41a6f6', '#73eff7', '#f4f4f4', '#94b0c2', '#566c86', '#333c57'];
-export const FLAG_N = 12;
+const FLAG_N = 12;
 export const FLAG_W = 120, FLAG_H = 80; // stored flag size (3:2)
 const MY_KEY = 'katanittes.myKingdom';
 
@@ -53,7 +53,7 @@ export function patternFlag(color: string, seed = 0, accent = 12): string {
 }
 
 export const isGrid = (f: unknown): f is string => typeof f === 'string' && f.length === FLAG_N * FLAG_N && /^[0-9a-f]+$/.test(f);
-export const isImage = (f: unknown): f is string => typeof f === 'string' && f.startsWith('data:image/') && f.length < 60000;
+const isImage = (f: unknown): f is string => typeof f === 'string' && f.startsWith('data:image/') && f.length < 60000;
 export const validFlag = (f: unknown): f is string => isGrid(f) || isImage(f);
 
 export function drawGrid(g: CanvasRenderingContext2D, flag: string, w: number, h: number): void {
@@ -79,7 +79,7 @@ export function loadImage(src: string): Promise<HTMLImageElement | null> {
   return p;
 }
 
-export type FlagCanvas = HTMLCanvasElement & { ready: Promise<FlagCanvas>; pixel?: boolean };
+type FlagCanvas = HTMLCanvasElement & { ready: Promise<FlagCanvas>; pixel?: boolean };
 
 // Canvas with the flag drawn on it. For image flags the drawing happens when the image
 // has loaded; `canvas.ready` is a promise for that moment (used by the 3D textures).
@@ -112,11 +112,6 @@ export function flagURL(flag: unknown): string {
     urlCache.set(k, u);
   }
   return u;
-}
-
-/** imperative <img> of a flag (the in-game UI is still plain DOM; Preact screens use <FlagImg>) */
-export function flagImg(flag: unknown, size = 24, cls = 'flag-img'): HTMLImageElement {
-  return h('img', { src: flagURL(flag), width: Math.round(size * 1.5), height: size, class: cls + (isGrid(flag) ? ' pixel' : ''), alt: 'cờ', draggable: 'false' });
 }
 
 export function myKingdom(): MyKingdom | null {

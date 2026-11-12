@@ -67,7 +67,7 @@ export function processFx(st: GameState): void {
   }
 }
 
-export function openGameOver(): void {
+function openGameOver(): void {
   const st = store.state.peek();
   if (st && st.phase === 'gameOver' && st.winner != null) modal.value = { kind: 'gameOver' };
 }
@@ -237,7 +237,7 @@ function bankOf(res: Res): Element | null {
 }
 
 // a card's "bump" when something lands on it; a Web Animation restarts without forcing a layout
-export function bumpEl(c: Element): void {
+function bumpEl(c: Element): void {
   const small = c.classList.contains('pcard');
   c.animate(
     [{ transform: 'none' }, { transform: small ? 'translateY(-4px) scale(1.03)' : 'translateY(-10px) scale(1.12)', offset: 0.4 }, { transform: 'none' }],

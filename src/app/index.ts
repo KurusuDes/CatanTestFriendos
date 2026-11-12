@@ -15,7 +15,6 @@ import * as store from './store';
 export { store };
 export { createSaver } from './persist';
 export type { Saver } from './persist';
-export type { AppEvents } from './events';
 
 export const SAVE_KEY = 'katanittes.save.v1';
 const SPEED_KEY = 'katanittes.speed';
@@ -24,7 +23,7 @@ const SOUND_KEY = 'katanittes.sound';
 export type ScreenFn = (root: HTMLElement, arg?: unknown) => void;
 
 /** The public surface of `App` (what src/ui and src/main.ts rely on). */
-export interface AppApi {
+interface AppApi {
   screens: Record<string, ScreenFn>;
   screen: string | null;
   state: GameState | null;
@@ -68,7 +67,7 @@ export interface AppApi {
 }
 
 /** Local (single device) game save: debounced, flushed when the tab hides. */
-export const localSaver = createSaver<GameState>(v => storage(SAVE_KEY, v));
+const localSaver = createSaver<GameState>(v => storage(SAVE_KEY, v));
 
 /** fx kinds after which bots wait longer (see scheduleBots) */
 const DRAMA_FX = ['flipAll', 'blindReveal', 'event', 'chaos', 'win'];

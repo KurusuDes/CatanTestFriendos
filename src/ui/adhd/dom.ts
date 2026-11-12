@@ -2,8 +2,8 @@
 // keep a few buttons / notes; Preact owns the frame around them).
 import { pxIcon } from '@ui/pixel';
 
-export type Kid = Node | string | number | null | false | undefined | Kid[];
-export type Props = Record<string, unknown>;
+type Kid = Node | string | number | null | false | undefined | Kid[];
+type Props = Record<string, unknown>;
 
 export function h<K extends keyof HTMLElementTagNameMap>(tag: K, props?: Props | null, ...kids: Kid[]): HTMLElementTagNameMap[K] {
   const el = document.createElement(tag);

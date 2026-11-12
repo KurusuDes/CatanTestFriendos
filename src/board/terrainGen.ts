@@ -4,7 +4,7 @@
 // Colours are plain linear-RGB numbers (what THREE.Color('#hex') holds); the maths and the prng call order are the
 // same as before the move, so the island looks exactly the same.
 import { hk } from '@engine/board';
-import { INR, L, NORMALS, TINT, fbm, pixelToHex, prng, smooth, tileLook, vnoise, type GenBounds, type GenInput, type RGB } from './terrainBase';
+import { INR, L, NORMALS, TINT, fbm, pixelToHex, prng, smooth, tileLook, vnoise, type GenInput, type RGB } from './terrainBase';
 import { computeProps } from './propsGen';
 import { computeGrass } from './grassGen';
 
@@ -268,7 +268,7 @@ export interface GenResult {
 }
 
 /** Same result as THREE.BufferGeometry.computeVertexNormals on the indexed terrain geometry. */
-export function computeNormals(pos: Float32Array, index: Uint32Array): Float32Array {
+function computeNormals(pos: Float32Array, index: Uint32Array): Float32Array {
   const n = new Float32Array(pos.length);
   for (let i = 0; i < index.length; i += 3) {
     const a = index[i]! * 3, b = index[i + 1]! * 3, c = index[i + 2]! * 3;

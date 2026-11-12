@@ -64,7 +64,7 @@ export function planPieces(inp: PlanInput): Map<string, PieceSpec> {
   return out;
 }
 
-export interface PlanDiff {
+interface PlanDiff {
   added: string[];
   removed: string[];
   /** same key, different signature: the piece is rebuilt in place (no drop-in animation) */

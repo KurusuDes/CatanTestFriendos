@@ -7,7 +7,7 @@ import type { Conn, VoteChoice } from './messages';
 export const PREFIX = 'kchx-v1-';
 export const HOST_SESSION = 'katanittes.hostSession';
 export const GUEST_SESSION = 'katanittes.guestSession';
-export const TOKEN_KEY = 'katanittes.token';
+const TOKEN_KEY = 'katanittes.token';
 export const GRACE_MS = 12000; // time to come back before the table votes
 export const PING_MS = 3000;
 export const DEAD_MS = 10000; // heartbeat: abrupt signal loss is noticed in ~10s
@@ -15,7 +15,7 @@ export const VOTE_MS = 45000;
 export const WAIT_MS = 60000; // a "wait" result gives this much extra time
 export const CONNECT_MS = 12000;
 
-export type PeerCtor = new (id?: string | PeerOptions, options?: PeerOptions) => Peer;
+type PeerCtor = new (id?: string | PeerOptions, options?: PeerOptions) => Peer;
 
 export interface Guest {
   token: string;

@@ -1,6 +1,6 @@
 // Pure rules engine. The whole game is one JSON-serializable state object that is
 // mutated only through applyAction(). No DOM access here: it runs in Node for tests.
-import { RES, COSTS, DEV_DECKS, EVENTS, TILE_INFO, DEV_INFO, isRes, resEntries } from './constants';
+import { RES, COSTS, DEV_DECKS, EVENTS, DEV_INFO, isRes, resEntries } from './constants';
 import { randInt, shuffle, pick } from './rng';
 import { generateBoard } from './board';
 import type {
@@ -130,14 +130,13 @@ export function createGame(configIn: Config): GameState {
 }
 
 // ---------------- queries ----------------
-export const B = (s: GameState) => s.board;
 
 // ---- Fog of war: per-player vision ----
 // Houses light a circle that covers the three surrounding tiles; roads light a
 // half-tile band on each side (you see the terrain but not the number token).
-export const VISION = { house: 1.25, road: 0.55 };
+const VISION = { house: 1.25, road: 0.55 };
 
-export function visionOf(s: GameState, pid: number): Vision {
+function visionOf(s: GameState, pid: number): Vision {
   const bd = s.board;
   const circles: Vision['circles'] = [], caps: Vision['caps'] = [];
   const house = (v: number) => circles.push([bd.vertices[v]!.x, bd.vertices[v]!.y, VISION.house]);
@@ -239,7 +238,7 @@ export function canSetupSettlement(s: GameState, pid: number, v: number): boolea
   return vertexOpen(s, v) && s.board.vertices[v]!.edges.some(e => s.roads[e] === undefined);
 }
 
-export function canSetupRoad(s: GameState, pid: number, e: number): boolean {
+function canSetupRoad(s: GameState, pid: number, e: number): boolean {
   const E = s.board.edges[e];
   if (!E || (E.a !== s.setup.lastVid && E.b !== s.setup.lastVid)) return false;
   if (s.setup.blindActive) return !ownBlind(s, pid).edges.has(e);
@@ -258,12 +257,12 @@ export function canBuildRoad(s: GameState, pid: number, e: number): boolean {
   return false;
 }
 
-export function canBuildSettlement(s: GameState, pid: number, v: number): boolean {
+function canBuildSettlement(s: GameState, pid: number, v: number): boolean {
   if (!s.board.vertices[v] || !vertexOpen(s, v)) return false;
   return s.board.vertices[v]!.edges.some(e => s.roads[e] === pid);
 }
 
-export const canBuildCity = (s: GameState, pid: number, v: number): boolean => {
+const canBuildCity = (s: GameState, pid: number, v: number): boolean => {
   const b = s.buildings[v];
   return !!b && b.owner === pid && b.type === 'settlement';
 };
@@ -1099,7 +1098,7 @@ H.cancelTrade = (s, a) => {
 };
 
 // next seat still in the game; `wrapped` when we pass the first player (new round)
-export function nextActive(s: GameState, from: number): { pid: number; wrapped: boolean } {
+function nextActive(s: GameState, from: number): { pid: number; wrapped: boolean } {
   const n = s.players.length;
   const pos = (p: number) => (p - s.first + n) % n;
   for (let k = 1; k <= n; k++) {
@@ -1246,4 +1245,3 @@ export function applyAction(s: GameState, a: Action): ApplyResult {
   }
 }
 
-export { TILE_INFO };

@@ -8,9 +8,9 @@ import { pxURL } from '@ui/pixel';
 import { shared } from './dispose';
 
 // ---------- atlas layout (pure: unit-tested) ----------
-export const S = 2; // atlas pixels per CSS pixel
+const S = 2; // atlas pixels per CSS pixel
 export const ATLAS_W = 1024, ATLAS_H = 512;
-export const TOKEN_PX = 60, PORT_W = 72, PORT_H = 36, RUNE_PX = 36; // logical size of a cell
+const TOKEN_PX = 60, PORT_W = 72, PORT_H = 36, RUNE_PX = 36; // logical size of a cell
 export const NUMS = [2, 3, 4, 5, 6, 8, 9, 10, 11, 12];
 export const PORT_TYPES = ['any', 'wood', 'brick', 'sheep', 'wheat', 'ore'];
 export interface Cell {
@@ -123,7 +123,7 @@ function drawAtlas(a: NonNullable<typeof atlas>) {
 }
 
 /** The shared atlas; drawn now, and again once the font and the port icons have loaded. */
-export function getAtlas(onChange?: () => void): THREE.Texture {
+function getAtlas(onChange?: () => void): THREE.Texture {
   if (!atlas) {
     const cv = document.createElement('canvas');
     cv.width = ATLAS_W;
@@ -211,7 +211,7 @@ export class LabelSet {
   private on: boolean[];
   private _v = new THREE.Vector2();
   private blinkEnd = 0;
-  constructor(private items: LabelItem[], tk: number, private invalidate: () => void) {
+  constructor(private items: LabelItem[], tk: number, invalidate: () => void) {
     const n = items.length;
     const pos = new Float32Array(n * 3), uv = new Float32Array(n * 4), uvg = new Float32Array(n * 4), inf = new Float32Array(n * 4), tkf = new Float32Array(n);
     const rect = (c: Cell) => [c.x / ATLAS_W, 1 - (c.y + c.h) / ATLAS_H, c.w / ATLAS_W, c.h / ATLAS_H];

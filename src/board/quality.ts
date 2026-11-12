@@ -70,7 +70,7 @@ export function dioramaParams(p: TierParams): TierParams {
 }
 
 // ---------- automatic detection ----------
-export interface DeviceInfo {
+interface DeviceInfo {
   cores?: number;
   memory?: number; // GB, Chrome caps it at 8
   gpu?: string; // unmasked renderer string

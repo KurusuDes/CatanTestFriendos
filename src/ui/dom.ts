@@ -2,8 +2,8 @@ import { TILE_INFO } from '@engine/constants';
 import type { TileKind } from '@engine/types';
 import { pixelize } from '@ui/pixel';
 
-export type Props = Record<string, unknown>;
-export type Child = Node | string | number | boolean | null | undefined | Child[];
+type Props = Record<string, unknown>;
+type Child = Node | string | number | boolean | null | undefined | Child[];
 
 export function h<K extends keyof HTMLElementTagNameMap>(tag: K, props?: Props | null, ...children: Child[]): HTMLElementTagNameMap[K];
 export function h(tag: string, props?: Props | null, ...children: Child[]): HTMLElement;
@@ -48,7 +48,6 @@ function append(el: Element, children: Child[]): void {
   }
 }
 
-export const $ = <E extends Element = HTMLElement>(sel: string, root: ParentNode = document): E | null => root.querySelector<E>(sel);
 
 export function clear<E extends Node>(el: E): E {
   while (el.firstChild) el.removeChild(el.firstChild);

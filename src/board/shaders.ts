@@ -7,7 +7,7 @@ import * as THREE from 'three';
 // against the landscape) and `all` = every piece ignoring occlusion, both in the owner's colour.
 // Layers: 0 landscape, 1 player pieces, 2 grass (left out of the depth pre-pass), 3 sprite labels.
 export const LAYER_PIECES = 1, LAYER_GRASS = 2, LAYER_LABELS = 3; // 3: sprite labels (never in the mask / depth passes)
-export const PASS_VS = 'varying vec2 vUv;\nvoid main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
+const PASS_VS = 'varying vec2 vUv;\nvoid main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
 // tilt-shift that leaves the pieces crisp and never smears their colour onto the blurred land
 export function tiltShader(dir: string) {
   return {
@@ -124,7 +124,7 @@ export const U = {
 };
 
 // Inject fog-of-war (+ optional wind / cloud shadows) into any built-in material.
-export interface PatchOpts {
+interface PatchOpts {
   wind?: number;
   clouds?: boolean;
   key?: string;

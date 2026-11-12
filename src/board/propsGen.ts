@@ -2,7 +2,7 @@
 import { prng, type GenTile } from './terrainBase';
 import type { TerrainField } from './terrainGen';
 
-export type PropLists = Record<string, [number, number, number, number, number][]>;
+type PropLists = Record<string, [number, number, number, number, number][]>;
 
 const DECOR = new Set(['pine', 'oak', 'bush', 'rock', 'rock#clay', 'cactus', 'crystal', 'hay', 'sheaf']);
 

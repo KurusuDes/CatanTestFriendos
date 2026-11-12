@@ -1,6 +1,6 @@
 import { render, type ComponentChildren, type JSX, type CSSProperties } from 'preact';
 
-export interface ModalProps {
+interface ModalProps {
   onClose: () => void;
   class?: string;
   style?: CSSProperties;

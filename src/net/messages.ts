@@ -20,7 +20,7 @@ export interface Meta {
   vote: VoteInfo | null;
 }
 export type VoteChoice = 'wait' | 'bot' | 'remove';
-export const VOTE_CHOICES: readonly VoteChoice[] = ['wait', 'bot', 'remove'];
+const VOTE_CHOICES: readonly VoteChoice[] = ['wait', 'bot', 'remove'];
 
 export interface LobbyPlayer {
   name: string;
@@ -89,7 +89,7 @@ const ACTION_TYPES: ReadonlySet<string> = new Set<ActionType>([
 ]);
 
 /** Shape check only (type known, pid numeric): the engine validates the rest and rejects garbage with an error. */
-export function isAction(v: unknown): v is Action {
+function isAction(v: unknown): v is Action {
   return isRec(v) && isStr(v.type) && ACTION_TYPES.has(v.type) && isNum(v.pid);
 }
 

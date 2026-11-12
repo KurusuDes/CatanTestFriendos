@@ -2,7 +2,7 @@
 import { INR, NORMALS, pixelToHex, prng, type GenTile } from './terrainBase';
 import type { TerrainField } from './terrainGen';
 
-export type GrassLists = Record<string, [number, number, number, number, number][]>;
+type GrassLists = Record<string, [number, number, number, number, number][]>;
 
 export function computeGrass(field: TerrainField, tiles: GenTile[], dens: number): GrassLists {
   const lists: GrassLists = { grass: [], wheat: [] };

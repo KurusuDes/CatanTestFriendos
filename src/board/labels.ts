@@ -5,7 +5,7 @@ import { probLook } from '@engine/constants';
 import { disposeTree } from './dispose';
 import { LAYER_LABELS } from './shaders';
 import type { BBoard, BState } from './types';
-import { LabelSet, portCell, runeCell, tokenCell, type LabelItem } from './labelsprites';
+import { LabelSet, runeCell, tokenCell, type LabelItem } from './labelsprites';
 import type { Board3D } from './Board3D';
 
 export function css2d(cls: string, html: string, tag = 'div'): CSS2DObject {
@@ -79,4 +79,3 @@ function buildTokenSprites(b: Board3D, bd: BBoard, group: THREE.Group, field: { 
   b.labelsDirty = true;
 }
 
-export { portCell };

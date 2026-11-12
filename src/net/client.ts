@@ -81,7 +81,7 @@ export function attachClient(net: Net, c: Conn, done: () => void = () => {}) {
   if (c.open) onOpen();
 }
 
-export function clientRetry(net: Net) {
+function clientRetry(net: Net) {
   if (!net.active) return;
   if (!net.reconnecting) {
     net.reconnecting = true;

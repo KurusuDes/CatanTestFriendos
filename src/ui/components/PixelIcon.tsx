@@ -6,7 +6,7 @@ import { iconSetSignal } from '@ui/iconset';
 
 const EMOJI = /(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*️?|[⭐✨])/gu;
 
-export interface PixelIconProps {
+interface PixelIconProps {
   emoji: string;
   /** px, = round(parent font-size * 1.15) like pixelize does */
   size?: number;

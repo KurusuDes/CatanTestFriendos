@@ -26,11 +26,11 @@ interface Ghost {
   parts?: Spark[];
 }
 
-export const ROCKET_MAX = 10;
-export const ROCKET_MOON = 0.01;
-export const rocketAt = (s: number): number => Math.min(ROCKET_MAX, 0.35 * s + 0.07 * s * s);
+const ROCKET_MAX = 10;
+const ROCKET_MOON = 0.01;
+const rocketAt = (s: number): number => Math.min(ROCKET_MAX, 0.35 * s + 0.07 * s * s);
 // P(it gets past xm) = (1 - m/10)^2.5: the best cash-out pays about x1.23 on average, like the old x5 rocket
-export const rocketCrashAt = (): number => (Math.random() < ROCKET_MOON ? ROCKET_MAX : Math.floor(ROCKET_MAX * (1 - Math.random() ** 0.4) * 100) / 100);
+const rocketCrashAt = (): number => (Math.random() < ROCKET_MOON ? ROCKET_MAX : Math.floor(ROCKET_MAX * (1 - Math.random() ** 0.4) * 100) / 100);
 
 export function rocket(K: Purse): MachineCore {
   const W = 90, H = 50, MAX = ROCKET_MAX;

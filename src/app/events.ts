@@ -1,5 +1,5 @@
 // Tiny typed event emitter (emote / ping / meta), alongside the legacy `App.onEmote` style callback slots.
-export type Listener<A extends unknown[]> = (...args: A) => void;
+type Listener<A extends unknown[]> = (...args: A) => void;
 
 export class Emitter<E extends { [K in keyof E]: unknown[] }> {
   private map = new Map<keyof E, Set<Listener<never>>>();

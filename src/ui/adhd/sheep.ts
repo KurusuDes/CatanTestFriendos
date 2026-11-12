@@ -14,8 +14,8 @@ interface Race {
   k: number[];
 }
 
-export const SHEEP_ODDS = [0.4, 0.3, 0.2, 0.1];
-export const SHEEP_PAY = [2.6, 3.5, 5, 10];
+const SHEEP_ODDS = [0.4, 0.3, 0.2, 0.1];
+const SHEEP_PAY = [2.6, 3.5, 5, 10];
 
 export function sheep(K: Purse): MachineCore {
   const W = 90, H = 44, LANE = 10, TOP = 2, START = 12, END = W - 12;

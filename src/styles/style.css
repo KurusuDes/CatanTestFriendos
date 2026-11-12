@@ -34,7 +34,7 @@ h1, h2, h3 { font-family: var(--display); margin: 0; }
   background: var(--panel2); color: var(--text); font-weight: 700; font-size: 14px;
   cursor: pointer; transition: transform .12s, background .15s, box-shadow .15s; white-space: nowrap;
 }
-.btn:hover:not(:disabled) { background: #3a5285; transform: translateY(-1px); }
+.btn:hover:not(:disabled) { background: #3a5285; }
 .btn:active:not(:disabled) { transform: translateY(1px); }
 .btn:disabled { opacity: .38; cursor: not-allowed; }
 .btn.primary { background: linear-gradient(180deg, #ffd25a, #f5a300); color: #2a1a00; border-color: #ffdd7a; box-shadow: 0 4px 0 #b37400; }

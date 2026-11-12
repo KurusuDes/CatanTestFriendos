@@ -21,13 +21,11 @@ import {
 import type { Conn, HostInfo, LobbyInfo, Meta, StaticBoard } from './messages';
 import { GRACE_MS, HOST_SESSION, safeClose, type Guest, type HostVote } from './session';
 
-export { myToken, HOST_SESSION, GUEST_SESSION } from './session';
-export type { Guest } from './session';
+export { HOST_SESSION, GUEST_SESSION } from './session';
 export * from './messages';
-export { redactFor, toWire } from './redact';
-export { BoardVersion } from './boardVersion';
+export { redactFor } from './redact';
 
-export interface SavedHostSession {
+interface SavedHostSession {
   code: string;
   state: GameState;
   guests: Pick<Guest, 'token' | 'name' | 'flag' | 'color' | 'seat' | 'replaced'>[];

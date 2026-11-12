@@ -5,9 +5,9 @@ import { PixelIcon } from './PixelIcon';
 
 const EMOJI = /(\p{Extended_Pictographic}(?:️|‍\p{Extended_Pictographic})*️?|[⭐✨])/gu;
 
-export type JitPart = string | { cls: string; text: string };
+type JitPart = string | { cls: string; text: string };
 
-export interface JitProps {
+interface JitProps {
   as?: 'div' | 'h2' | 'h3' | 'p' | 'span';
   class?: string;
   /** sprite size for emojis inside the text */

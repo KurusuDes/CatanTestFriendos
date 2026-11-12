@@ -35,7 +35,7 @@ import { placeProps } from './props';
 import { detailKey, dioramaParams, PARAMS, spriteLabels, type Tier, type TierParams } from './quality';
 import { applyLowFx, effective, saveSettings, SETTINGS, type Settings } from './settings';
 import { LAYER_GRASS, LAYER_LABELS, LAYER_PIECES, OutlineOverlayShader, OutlineShader, patch, pieceColorMat, tiltShader, U } from './shaders';
-import { buildHexGrid, buildTerrainMesh, smooth, terrainKey } from './terrain';
+import { buildHexGrid, buildTerrainMesh, terrainKey } from './terrain';
 import { gridHeight, spotKey, terrainOf, type GenInput, type GenResult, type HeightGrid, type TerrainField } from './terrainGen';
 import { generateIsland } from './terrainClient';
 import { buildWater } from './water';
@@ -47,10 +47,8 @@ declare global {
   }
 }
 
-export { SETTINGS };
-export { TILE_LOOKS, LOOK_OVERRIDE } from './terrain';
 
-export interface BoardOptions {
+interface BoardOptions {
   /** the rotating menu / lobby background: always the light profile, no labels, 30 fps (see dioramaParams) */
   diorama?: boolean;
 }

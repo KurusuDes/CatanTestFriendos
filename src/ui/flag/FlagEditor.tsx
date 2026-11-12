@@ -20,7 +20,7 @@ const TOOLS: Array<[Tool, string, string]> = [
 ];
 type Pt = [number, number];
 
-export interface FlagEditorOptions {
+interface FlagEditorOptions {
   flag?: string | null;
   color?: string;
   name?: string;
@@ -28,7 +28,7 @@ export interface FlagEditorOptions {
   onSave?: (r: { flag: string; color: string }) => void;
 }
 
-export function FlagEditor({ flag, color, name, title = 'Vương quốc của bạn', onSave, onClose }: FlagEditorOptions & { onClose: () => void }): JSX.Element {
+function FlagEditor({ flag, color, name, title = 'Vương quốc của bạn', onSave, onClose }: FlagEditorOptions & { onClose: () => void }): JSX.Element {
   const [col, setCol] = useState(color || '#e53935');
   const [ink, setInk] = useState('#000000');
   const [size, setSize] = useState(SIZES[2]!);

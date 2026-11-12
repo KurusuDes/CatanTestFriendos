@@ -256,7 +256,7 @@ export interface GameEvent {
   pid?: number;
 }
 
-export type TradeResponse = 'accept' | 'reject' | null;
+type TradeResponse = 'accept' | 'reject' | null;
 
 export interface Trade {
   id: number;

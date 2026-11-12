@@ -14,7 +14,7 @@ interface Flash {
   t: number;
 }
 
-export const PLINKO_MULT = [25, 5, 2, 1.2, 0.4, 1.2, 2, 5, 25];
+const PLINKO_MULT = [25, 5, 2, 1.2, 0.4, 1.2, 2, 5, 25];
 
 export function plinko(K: Purse): MachineCore {
   const W = 90, H = 72, ROWS = 8, DX = 10, DY = 7, TOP = 6, SEG = 85;

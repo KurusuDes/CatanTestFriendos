@@ -14,7 +14,7 @@ import { TopBar } from './TopBar';
 import { startController } from './controller';
 import { countRender } from './signals';
 
-export function GameScreen(): JSX.Element {
+function GameScreen(): JSX.Element {
   countRender('GameScreen');
   return (
     <>

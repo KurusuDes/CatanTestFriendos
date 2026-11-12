@@ -63,8 +63,8 @@ export function prng(seed: number) {
 // ---------- tile looks: 5 variations per resource ----------
 // Which looks each resource may use. A tile's look comes from its id and position, so every player
 // sees the same map. LOOK_OVERRIDE forces one look for a resource (samples, debugging).
-export const TILE_LOOKS: Record<string, number[]> = { wood: [0, 1, 2, 3], sheep: [0, 1, 2, 3, 4], wheat: [0, 1, 2, 4], brick: [0, 1, 2, 3, 4], ore: [0, 1, 2, 3, 4] };
-export const LOOK_OVERRIDE: Record<string, number> = {};
+const TILE_LOOKS: Record<string, number[]> = { wood: [0, 1, 2, 3], sheep: [0, 1, 2, 3, 4], wheat: [0, 1, 2, 4], brick: [0, 1, 2, 3, 4], ore: [0, 1, 2, 3, 4] };
+const LOOK_OVERRIDE: Record<string, number> = {};
 export function tileLook(res: string, seed: number) {
   if (LOOK_OVERRIDE[res] != null) return LOOK_OVERRIDE[res];
   const list = TILE_LOOKS[res];

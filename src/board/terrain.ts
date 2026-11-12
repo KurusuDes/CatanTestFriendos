@@ -7,8 +7,7 @@ import type { Textures } from './assets';
 import type { Board3D } from './Board3D';
 import type { GenResult } from './terrainGen';
 
-export { pixelToHex, INR, NORMALS, L, TINT, vnoise, fbm, smooth, prng, TILE_LOOKS, LOOK_OVERRIDE, tileLook, terrainOf } from './terrainGen';
-export type { TerrainField } from './terrainGen';
+export { smooth, terrainOf } from './terrainGen';
 
 // strength of the splatted terrain normals (the old, never-active value was 1.1)
 const NORMAL_SCALE = 0.9;
@@ -16,7 +15,7 @@ const NORMAL_SCALE = 0.9;
 // terrain material: splat 8 array-texture layers + normals + wheat furrows
 // `normals` (tiers high / ultra): the normal map is read through the same splat as the albedo. Without it the
 // material keeps a 1 px flat normal map and the splat-normal code is not compiled at all.
-export function terrainMaterial(tex: Textures, normals: boolean) {
+function terrainMaterial(tex: Textures, normals: boolean) {
   const m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.93, metalness: 0 });
   m.normalMap = new THREE.DataTexture(new Uint8Array([128, 128, 255, 255]), 1, 1);
   m.normalMap.needsUpdate = true;

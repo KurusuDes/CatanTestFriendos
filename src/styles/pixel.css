@@ -62,7 +62,7 @@ h1, h2, h3 { font-family: var(--display); font-weight: 700; line-height: 1.2; }
   padding: 10px 16px; margin: 3px; text-shadow: 2px 2px 0 rgba(0,0,0,.4);
   transition: none;
 }
-.btn:hover:not(:disabled) { background: var(--sky); transform: translate(0, -2px); }
+.btn:hover:not(:disabled) { background: var(--sky); }
 .btn:active:not(:disabled) { transform: translate(0, 2px); box-shadow: 0 0 0 3px var(--ink), inset 4px 4px 0 rgba(0,0,0,.35); }
 .btn:disabled { background: var(--slate); opacity: .55; }
 .btn.primary { background: var(--sand); color: var(--ink); text-shadow: none; box-shadow: 0 0 0 3px var(--ink), inset -4px -4px 0 #c98f3a, inset 4px 4px 0 #fff2c8, 0 6px 0 3px var(--ink); }

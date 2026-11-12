@@ -4,7 +4,7 @@ import { Button } from '@ui/components/Button';
 import { Modal, openModal } from '@ui/components/Modal';
 import { Emo, px } from '@ui/components/PixelIcon';
 
-export const REPO_URL = 'https://github.com/KurusuDes/CatanTestFriendos';
+const REPO_URL = 'https://github.com/KurusuDes/CatanTestFriendos';
 const RepoLink = (): JSX.Element => <a href={REPO_URL} target="_blank" rel="noopener">Mã nguồn trên GitHub</a>;
 
 /** the credit line under the main menu: copies of the game usually keep it, so the link travels with them */

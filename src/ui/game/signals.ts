@@ -26,7 +26,7 @@ export const countRender = (name: string): void => {
 };
 
 // ---------- select(): narrow subscriptions ----------
-export function shallowEq<T>(a: T, b: T): boolean {
+function shallowEq<T>(a: T, b: T): boolean {
   if (Object.is(a, b)) return true;
   if (typeof a !== 'object' || typeof b !== 'object' || !a || !b) return false;
   const ka = Object.keys(a), kb = Object.keys(b);
@@ -54,7 +54,7 @@ export const cur = (): GameState | null => {
 };
 
 // ---------- UI-local signals ----------
-export type ModalSpec =
+type ModalSpec =
   | { kind: 'trade' }
   | { kind: 'menu' }
   | { kind: 'gameOver' }
@@ -74,11 +74,11 @@ export const diceAnim = signal(0);
 export const topView = signal(false);
 export const emoteOpen = signal<{ top: number; left: number } | null>(null);
 
-export interface Gain { id: number; pid: number; text: string }
-export interface CardEmote { pid: number; e: string; at: number }
+interface Gain { id: number; pid: number; text: string }
+interface CardEmote { pid: number; e: string; at: number }
 export const gains = signal<Gain[]>([]);
 export const cardEmotes = signal<CardEmote[]>([]);
-export interface Announcement { id: number; icon: string; title: string; desc: string }
+interface Announcement { id: number; icon: string; title: string; desc: string }
 export const announces = signal<Announcement[]>([]);
 export const confettiOn = signal(0);
 /** forces the board to render again (icon set / graphics changed) */
@@ -106,7 +106,7 @@ function computeViewer(st: GameState, prev: number, actors: number[]): number {
   return humans[0]!;
 }
 
-export function privacyOn(st: GameState): boolean {
+function privacyOn(st: GameState): boolean {
   if (App.isOnline() || localHumans(st).length < 2) return false;
   const mode = st.config.modes.privacy || 'auto';
   if (mode === 'off') return false;
@@ -152,7 +152,7 @@ export const legalSettlements = legal(G.legalSettlements);
 export const legalCities = legal(G.legalCities);
 
 // ---------- board interaction ----------
-export function robberPick(v: number, tile: number): void {
+function robberPick(v: number, tile: number): void {
   const st = state.peek();
   if (!st) return;
   const victims = G.stealTargets(G.viewFor(st, v), v, tile);
@@ -199,7 +199,7 @@ export const PHASE_TEXT: Record<string, string> = {
 export const costIcons = (c: Partial<Record<string, number>>): string =>
   Object.entries(c).map(([r, n]) => TILE_INFO[r as keyof typeof TILE_INFO].icon.repeat(n || 0)).join('');
 
-export function bannerText(st: GameState, v: number, interKind: string | undefined): string {
+function bannerText(st: GameState, v: number, interKind: string | undefined): string {
   const cur = st.players[st.current]!;
   if (st.phase === 'gameOver') return `🏆 ${st.players[st.winner!]!.name} thắng!`;
   if (st.phase === 'setup') {
@@ -229,7 +229,7 @@ export const banner = select<string>(() => {
 export const eventDesc = (id: string): string => EVENTS.find(e => e.id === id)?.desc || '';
 
 // ---------- the trade offer panel ----------
-export interface OfferInfo {
+interface OfferInfo {
   id: number;
   from: number;
   fromName: string;

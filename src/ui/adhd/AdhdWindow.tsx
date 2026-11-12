@@ -60,7 +60,7 @@ const moneyS = signal('');
 const goalS = signal('');
 
 /** how many frames the machines drew (for measuring) */
-export const stats = { frames: 0 };
+const stats = { frames: 0 };
 
 // ---------------- mounting ----------------
 export function mountAdhd(wrap: HTMLElement, getBoard: () => BoardLike | null | undefined): void {

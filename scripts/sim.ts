@@ -1,6 +1,6 @@
 // Headless self-play: runs many bot-only games over every map/mode combination and
 // checks rule invariants after every single action.  Usage: pnpm sim [games]
-import { createGame, applyAction, pendingActors, victoryPoints, handSize, canBuildRoad } from '@engine/game';
+import { createGame, applyAction, pendingActors, victoryPoints, canBuildRoad } from '@engine/game';
 import { botAct } from '@engine/bot';
 import { defaultConfig, MODES, PLAYER_COLORS } from '@engine/config';
 import { SHAPES } from '@engine/board';

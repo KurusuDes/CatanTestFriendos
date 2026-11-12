@@ -89,7 +89,7 @@ interface JointMats {
   bed: THREE.Material;
 }
 const jm = new Map<string, JointMats>();
-export function jointMats(board: Board3D, color: string, gold = 0): JointMats {
+function jointMats(board: Board3D, color: string, gold = 0): JointMats {
   if (gold) {
     // gold road edges: the bed under the planks turns gold (and shines at level 5)
     const key = color + '|' + gold;
@@ -121,7 +121,7 @@ export function jointMats(board: Board3D, color: string, gold = 0): JointMats {
 }
 
 // how gilded a player's pieces are: their ADHD wins this match, up to 5
-export function goldLevel(_board: Board3D, p: BPlayer | undefined) {
+function goldLevel(_board: Board3D, p: BPlayer | undefined) {
   return p ? Math.min(5, p.adhdWins || 0) : 0;
 }
 

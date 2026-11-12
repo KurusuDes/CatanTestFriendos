@@ -23,7 +23,7 @@ export const MAPS_KEY = 'katanittes.maps';
 type SeatKind = 'human' | 'bot' | 'remote';
 type LPlayer = Omit<PlayerConfig, 'kind'> & { kind: SeatKind };
 type LCfg = Omit<Config, 'players'> & { players: LPlayer[] };
-export interface LobbyArg { online?: 'host'; capacity?: number }
+interface LobbyArg { online?: 'host'; capacity?: number }
 
 // ---------- mini map thumbnails ----------
 interface Mini { viewBox: string; polys: Array<{ points: string; fill: string }> }
@@ -130,7 +130,7 @@ export function Lobby({ arg }: { arg?: LobbyArg }): JSX.Element {
   const cfgRef = useRef<LCfg | null>(null);
   if (!cfgRef.current) cfgRef.current = initCfg(opts);
   const cfg = cfgRef.current;
-  const [tick, setTick] = useState(0);
+  const [, setTick] = useState(0);
   const [fillBots, setFillBots] = useState(true);
   const bump = () => setTick(n => n + 1);
   const save = () => { storage(CFG_KEY, cfg); };

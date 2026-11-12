@@ -3,7 +3,7 @@ import { toast } from '@ui/dom';
 import { h, setText, rich } from './dom';
 
 export const BG = '#0f1020';
-export const BETS = [5, 10, 25, 50, 100];
+const BETS = [5, 10, 25, 50, 100];
 
 export const round = (n: number): number => Math.round(n * 100) / 100;
 export const fmt = (n: number): string => '$' + (Number.isInteger(n) ? n : n.toFixed(2));
@@ -39,8 +39,8 @@ export interface Machine extends MachineCore {
 export type MachineFactory = (K: Purse) => MachineCore;
 
 // font sizes in the CSS -> sprite size (round(font * 1.15)): .adhd-note 12px, .btn.sm 13px
-export const NOTE_PX = 14;
-export const BTN_PX = 15;
+const NOTE_PX = 14;
+const BTN_PX = 15;
 
 export function note(first: string): HTMLDivElement {
   const el = h('div', { class: 'adhd-note nopx' });
@@ -61,7 +61,7 @@ export function betButton(get: () => number, set: (n: number) => void): HTMLButt
   return b;
 }
 
-export interface Auto {
+interface Auto {
   on: boolean;
   /** next automatic play (ms) */
   at: number;

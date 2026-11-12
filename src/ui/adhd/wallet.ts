@@ -21,7 +21,7 @@ interface Store {
 export const freshWallet = (wins = 0): Wallet => ({ money: START, level: 1, wins });
 
 /** the match seed: a wallet saved for another match is not ours */
-export function gameId(): number {
+function gameId(): number {
   return App.state && App.state.config ? App.state.config.seed : 0;
 }
 

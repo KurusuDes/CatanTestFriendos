@@ -2,13 +2,14 @@
 import * as THREE from 'three';
 import type { Board3D } from './Board3D';
 
-export const FOV = 32, TOP_FOV = 11; // the normal lens and the narrow one of the top view
-export interface View {
+export const FOV = 32;
+const TOP_FOV = 11; // the normal lens and the narrow one of the top view
+interface View {
   target: THREE.Vector3;
   pos: THREE.Vector3;
   fov: number;
 }
-export const TOKEN_SPAN = 0.75; // widest a number token gets on the map, in world units (a hex is 1.73 across)
+const TOKEN_SPAN = 0.75; // widest a number token gets on the map, in world units (a hex is 1.73 across)
 
 // page coordinates -> point on the terrain (null outside the island's area)
 export function pickGround(board: Board3D, cx: number, cy: number) {

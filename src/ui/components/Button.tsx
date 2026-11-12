@@ -1,8 +1,8 @@
 import type { ComponentChildren, JSX, ButtonHTMLAttributes } from 'preact';
 
-export type ButtonVariant = 'primary' | 'green' | 'pink' | 'ghost';
+type ButtonVariant = 'primary' | 'green' | 'pink' | 'ghost';
 
-export interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'size' | 'class'> {
+interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'size' | 'class'> {
   variant?: ButtonVariant;
   sm?: boolean;
   big?: boolean;

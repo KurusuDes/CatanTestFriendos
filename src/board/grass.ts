@@ -4,7 +4,7 @@ import { LAYER_GRASS, patch } from './shaders';
 import type { Board3D } from './Board3D';
 
 // a tuft of grass (or wheat): a few thin tapered blades with a vertical colour gradient
-export function tuftGeometry(blades: number, height: number, width: number, base: string, tip: string) {
+function tuftGeometry(blades: number, height: number, width: number, base: string, tip: string) {
   const pos = [], col = [];
   const cb = new THREE.Color(base), ct = new THREE.Color(tip);
   for (let i = 0; i < blades; i++) {

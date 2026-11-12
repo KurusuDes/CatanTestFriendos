@@ -193,7 +193,7 @@ function hello(net: Net, conn: Conn, msg: Extract<ClientMessage, { type: 'hello'
   net.onChange();
 }
 
-export function lost(net: Net, conn: Conn, now = false) {
+function lost(net: Net, conn: Conn, now = false) {
   const g = net.guests.find(x => x.conn === conn);
   if (!g) return;
   g.conn = null;
@@ -292,7 +292,7 @@ function finishVote(net: Net, result: 'wait' | 'bot' | 'remove') {
   App.changed();
 }
 
-export function cancelVote(net: Net, seat: number) {
+function cancelVote(net: Net, seat: number) {
   if (!net.vote || net.vote.seat !== seat) return;
   clearInterval(net.voteTimer);
   net.vote = null;
@@ -376,7 +376,7 @@ export function broadcastState(net: Net, st: GameState) {
 }
 
 /** What the host session save contains (built when it is written, not on every action). */
-export function hostSnapshot(net: Net) {
+function hostSnapshot(net: Net) {
   return {
     code: net.code,
     state: App.state,

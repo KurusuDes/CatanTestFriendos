@@ -3,7 +3,7 @@
 import { pxURL } from '@ui/pixel';
 import { h } from './dom';
 
-export type Ctx = CanvasRenderingContext2D;
+type Ctx = CanvasRenderingContext2D;
 
 export function canvas(w: number, hh: number): [HTMLCanvasElement, Ctx] {
   const c = h('canvas', { width: w, height: hh, class: 'adhd-cv' });
@@ -19,7 +19,7 @@ export function setSpriteHook(fn: () => void): void {
 }
 
 const IMGS: Record<string, HTMLImageElement> = {};
-export function sprite(e: string): HTMLImageElement {
+function sprite(e: string): HTMLImageElement {
   let i = IMGS[e];
   if (!i) {
     i = IMGS[e] = new Image();

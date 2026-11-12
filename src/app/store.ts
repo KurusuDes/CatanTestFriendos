@@ -8,7 +8,7 @@ import type { GameState, GameView } from '@engine/types';
 import type { Meta } from '@net/messages';
 import { storage } from '@ui/dom';
 
-export type ScreenName = string;
+type ScreenName = string;
 
 export const state = signal<GameState | null>(null);
 /** bumped by `commit()` after every in-place mutation of `state` */
