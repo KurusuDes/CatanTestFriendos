@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "npx -y pnpm@12.15.0 install --frozen-lockfile",
+  "buildCommand": "npx -y pnpm@12.15.0 typecheck && npx -y pnpm@12.15.0 test && npx -y pnpm@12.15.0 build",
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+    }
+  ]
+}
