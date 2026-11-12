@@ -22,5 +22,5 @@ description: Đóng phiên: ghi lại tiến độ vào vault Obsidian, tạo c�
 5. **Active Context.** Viết lại `CatanVault/01 - Active Context (VI).md`: phiên gần nhất (kèm liên kết), «Commit gần nhất đã ghi tài liệu» (commit làm việc cuối cùng của phiên này, trước commit đóng phiên), trạng thái trong một đoạn và bước tiếp theo.
 6. **Chỉ mục.** Nếu kiến trúc thay đổi (file hoặc hệ thống mới), cập nhật bảng trong `CatanVault/00 - Index (VI).md`.
 7. **Test.** Nếu còn code chưa commit, chạy `pnpm test`. Nếu lỗi thì đừng push: giữ nguyên commit đã tạo và báo tôi.
-8. **Commit và push.** `git add -A`, commit với thông điệp `S{NN}: tóm tắt` (phần thân gồm các gạch đầu dòng theo khối; trailer `Co-Authored-By` và `Claude-Session` lấy từ system-reminder) rồi `git push origin main`. Lưu ý: push sẽ xuất bản game lên GitHub Pages. Nếu push lỗi, giữ nguyên commit và báo lại.
+8. **Commit và push.** `git add -A`, commit với thông điệp `S{NN}: tóm tắt` (phần thân gồm các gạch đầu dòng theo khối; trailer `Co-Authored-By` và `Claude-Session` lấy từ system-reminder) rồi `git push origin main`. Lưu ý: push sẽ xuất bản game lên Vercel (https://hex-island.vercel.app). Nếu push lỗi, giữ nguyên commit và báo lại.
 9. **Báo cáo** (tối đa 120 từ): hash commit, ghi chú đã tạo, các việc đã đóng và đã tạo, bước tiếp theo. Không nhắc lại phiên: nó đã nằm trong ghi chú.

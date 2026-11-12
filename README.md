@@ -1,12 +1,13 @@
 # Katanittes
 
-**Trò chơi khai hoang lấy cảm hứng từ Catan, chơi ngay trên trình duyệt.** Bản đồ tự tạo, những chế độ chơi không có trong hộp, bot chơi rất gắt, chơi online với bạn bè, bàn cờ 3D kiểu sa bàn với giao diện pixel art, và một góc trò chơi may rủi để giết thời gian trong lúc chờ người khác đi (tiền ảo 100%).
+**Trò chơi khai hoang lấy cảm hứng từ Catan, chơi ngay trên trình duyệt.** Bản đồ tự tạo, những chế độ chơi không có trong hộp, bot chơi rất gắt, chơi online với bạn bè và bàn cờ 3D kiểu sa bàn với giao diện pixel art.
 
 Miễn phí, không quảng cáo, không cần tài khoản, không cần cài đặt. Chạy trên cả máy tính và điện thoại.
 
 | | |
 |---|---|
-| 🎮 **Chơi ngay** | https://kurusudes.github.io/CatanTestFriendos/ |
+| 🎮 **Chơi ngay** | **https://hex-island.vercel.app** |
+| 💻 **Mã nguồn** | https://github.com/phuonglat142/Hex-Island |
 
 ---
 
@@ -67,7 +68,7 @@ Miễn phí, không quảng cáo, không cần tài khoản, không cần cài �
 
 ## Kỹ thuật
 
-- **Ngăn xếp:** [Vite 8](https://vite.dev/), TypeScript strict (không còn file JS trong `src/`), [Preact](https://preactjs.com/) + [Signals](https://preactjs.com/guide/v10/signals/) cho giao diện, [three.js](https://threejs.org/) 0.187 cho bàn cờ 3D, [PeerJS](https://peerjs.com/) cho WebRTC, [Comlink](https://github.com/GoogleChromeLabs/comlink) để chạy việc nặng trong Web Worker, mô hình nén meshopt (`gltfpack`), font cài qua [@fontsource](https://fontsource.org/) (Be Vietnam Pro và Baloo 2, có tiếng Việt). Quản lý gói bằng pnpm; GitHub Actions tự build và đưa lên GitHub Pages mỗi lần đẩy lên `main`.
+- **Ngăn xếp:** [Vite 8](https://vite.dev/), TypeScript strict (không còn file JS trong `src/`), [Preact](https://preactjs.com/) + [Signals](https://preactjs.com/guide/v10/signals/) cho giao diện, [three.js](https://threejs.org/) 0.187 cho bàn cờ 3D, [PeerJS](https://peerjs.com/) cho WebRTC, [Comlink](https://github.com/GoogleChromeLabs/comlink) để chạy việc nặng trong Web Worker, mô hình nén meshopt (`gltfpack`), font cài qua [@fontsource](https://fontsource.org/) (Be Vietnam Pro và Baloo 2, có tiếng Việt). Quản lý gói bằng pnpm.
 - **Engine luật** (`src/engine/`): hàm thuần. `applyAction(state, action)` kiểm tra và áp dụng mọi nước đi, còn hiệu ứng hình ảnh được trả về dưới dạng danh sách sự kiện, nên cùng một engine chạy ván chơi một máy, ván online (trên máy chủ phòng) và các bài test. Engine không bao giờ import `app/`, `ui/`, `net/` hay `board/` (có script kiểm tra: `pnpm check:imports`).
 - **Mức chất lượng của bàn cờ 3D:** Cực đẹp, Cao, Vừa và **Máy yếu**; tự nhận diện theo máy, đổi được trong cài đặt. Mức thấp bỏ hậu kỳ nặng (AO, viền bằng pass), giảm bóng, cỏ, vật trang trí, dùng texture nhỏ và hạ tần số hoạt ảnh nền.
 - **Vẽ theo nhu cầu (render-on-demand):** bàn cờ chỉ vẽ lại khi có thay đổi (camera, trạng thái ván, hoạt ảnh đang chạy); khi không ai chạm vào, GPU gần như nghỉ. Địa hình, cỏ và vật trang trí được sinh trong worker; bóng, nhãn và mask chỉ cập nhật khi cần.
@@ -88,6 +89,10 @@ Miễn phí, không quảng cáo, không cần tài khoản, không cần cài �
 | Tài nguyên | `public/assets/`, `tools/` (`optimize-assets.mjs`, `source/`, `blender/`) | Texture, mô hình `kit.glb` (nén), biểu tượng, và script tạo ra chúng; xem `docs/assets.md` |
 | Script | `scripts/` | `sim`, `determinism`, `baseline`, `check-imports`, `verify-kit`... |
 | Test | `tests/` | Test luật, sim bot đấu bot có kiểm tra bất biến, redact, bàn cờ, giao diện, quy ước import |
+
+## Triển khai
+
+Game được host trên **[Vercel](https://vercel.com/)** tại https://hex-island.vercel.app. Mỗi lần đẩy lên `main`, Vercel tự chạy `typecheck`, `test` rồi `build` (cấu hình trong [`vercel.json`](vercel.json)) và xuất bản thư mục `dist/`; nếu typecheck hoặc test lỗi thì bản cũ vẫn giữ nguyên. Các nhánh khác có bản xem trước riêng. File trong `/assets/` được cache lâu dài vì tên đã kèm hash.
 
 ## Chạy trên máy
 

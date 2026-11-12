@@ -8,8 +8,8 @@ Bản dịch của [[00 - Index]].
 
 Game xây dựng định cư lấy cảm hứng từ Catan, chạy trên trình duyệt (Vite + TypeScript + Preact, build ra trang tĩnh), có bản đồ tùy chỉnh, chế độ riêng, bot, online P2P và bản đồ 3D dạng mô hình với giao diện pixel art. Chỉ có tiếng Việt. Trước đây tên là Katan x Amiguites và Catan x Kchudites.
 
-- **Chơi:** https://kurusudes.github.io/CatanTestFriendos/ (GitHub Pages từ `main`: mỗi lần push là xuất bản)
-- **Repo:** https://github.com/KurusuDes/CatanTestFriendos
+- **Chơi:** https://hex-island.vercel.app (Vercel từ `main`: mỗi lần push là xuất bản)
+- **Repo:** https://github.com/phuonglat142/Hex-Island
 
 ## Các ghi chú trong vault
 - [[01 - Active Context (VI)]] — hiện đang ở đâu và bước tiếp theo (viết lại sau mỗi lần đóng phiên)
